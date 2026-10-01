@@ -7,6 +7,8 @@
 - `docs/architecture/01-architectural-skyscraper-topology.md`: Skyscraper architectural blueprint, spatial elevation matrix, and conduit ADRs.
 - `specs/02-layered-rectangular-architecture.md`: Master specification for Transformer/DeepSeek-style 3D layered rectangular architecture.
 - `docs/architecture/02-layered-rectangular-architecture.md`: Blueprint and design specifications for layer trays and component cuboids.
+- `specs/03-horizontal-node-peers-and-diff-engine.md`: Master specification for horizontal node peers, 3D semantic git-diff engine, and universal cluster exporter.
+- `docs/architecture/03-horizontal-node-peers-and-diff-engine.md`: Blueprint for single worker deck layout, volumetric diffing, and export CLI.
 - `docs/MAP.md`: This symbol and directory reference map.
 
 ## 3D Asset Pipeline (Blender `bpy`)
