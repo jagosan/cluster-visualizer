@@ -3,37 +3,326 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Cluster Visualizer — SPEC-00</title>
+    <title>Cluster Visualizer — 3D Kubernetes Comparison & Topology</title>
     <style>
-      html,
-      body {
+      :root {
+        --bg-main: #0a0e14;
+        --bg-panel: #111827;
+        --border-subtle: #1f2937;
+        --text-primary: #f3f4f6;
+        --text-secondary: #9ca3af;
+        --accent-blue: #38bdf8;
+        --accent-emerald: #10b981;
+        --accent-amber: #f59e0b;
+        --accent-rose: #ef4444;
+        --accent-purple: #d946ef;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html, body {
         margin: 0;
         padding: 0;
         width: 100%;
         height: 100%;
         overflow: hidden;
-        background: #0a0e12;
-        color: #d7e0e0;
-        font-family: ui-monospace, "JetBrains Mono", monospace;
+        background: var(--bg-main);
+        color: var(--text-primary);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", monospace;
       }
       #app {
+        display: flex;
+        flex-direction: column;
         width: 100%;
         height: 100%;
       }
-      #hud {
-        position: fixed;
-        top: 12px;
+      /* Header & Controls */
+      #topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 20px;
+        background: rgba(17, 24, 39, 0.95);
+        backdrop-filter: blur(12px);
+        border-bottom: 1px solid var(--border-subtle);
+        z-index: 100;
+        height: 56px;
+      }
+      .brand-group {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .brand-title {
+        font-weight: 700;
+        font-size: 15px;
+        letter-spacing: 0.05em;
+        color: #fff;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .brand-title span {
+        color: var(--accent-blue);
+      }
+      .summary-pills {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .pill {
+        font-size: 11px;
+        font-weight: 600;
+        padding: 3px 10px;
+        border-radius: 9999px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .pill-identical { background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); }
+      .pill-skew { background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.4); }
+      .pill-missing { background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.4); }
+      .pill-added { background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.4); }
+
+      .controls-group {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .btn {
+        background: #1f2937;
+        color: #e5e7eb;
+        border: 1px solid #374151;
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 500;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        transition: all 0.15s ease;
+      }
+      .btn:hover {
+        background: #374151;
+        border-color: #4b5563;
+      }
+      .btn.active {
+        background: rgba(56, 189, 248, 0.2);
+        color: #38bdf8;
+        border-color: #38bdf8;
+      }
+
+      /* Dual Viewport Canvas Area */
+      #viewports-wrapper {
+        display: flex;
+        flex: 1;
+        position: relative;
+        width: 100%;
+        height: calc(100% - 56px);
+      }
+      .viewport-pane {
+        flex: 1;
+        position: relative;
+        height: 100%;
+        overflow: hidden;
+      }
+      .viewport-divider {
+        width: 2px;
+        background: var(--border-subtle);
+        height: 100%;
+        position: relative;
+        z-index: 10;
+      }
+      .viewport-title {
+        position: absolute;
+        top: 14px;
         left: 16px;
         font-size: 12px;
+        font-weight: 700;
         letter-spacing: 0.08em;
-        opacity: 0.85;
+        text-transform: uppercase;
+        background: rgba(17, 24, 39, 0.85);
+        backdrop-filter: blur(8px);
+        padding: 5px 12px;
+        border-radius: 6px;
+        border: 1px solid var(--border-subtle);
         pointer-events: none;
+        display: flex;
+        align-items: center;
+        gap: 8px;
       }
+      .badge-cluster-alpha { color: var(--accent-blue); }
+      .badge-cluster-beta { color: var(--accent-purple); }
+
+      /* Tooltip & Drawer */
+      .node-tooltip {
+        position: fixed;
+        background: rgba(17, 24, 39, 0.95);
+        backdrop-filter: blur(10px);
+        border: 1px solid #374151;
+        padding: 8px 12px;
+        border-radius: 6px;
+        pointer-events: none;
+        z-index: 1000;
+        font-size: 12px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+      }
+      .tooltip-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 700;
+      }
+      .tooltip-meta {
+        color: var(--text-secondary);
+        font-size: 11px;
+        margin-top: 4px;
+      }
+
+      .diff-drawer {
+        position: fixed;
+        top: 56px;
+        right: -420px;
+        width: 400px;
+        height: calc(100% - 56px);
+        background: rgba(17, 24, 39, 0.96);
+        backdrop-filter: blur(16px);
+        border-left: 1px solid var(--border-subtle);
+        z-index: 200;
+        transition: right 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        display: flex;
+        flex-direction: column;
+        box-shadow: -10px 0 30px rgba(0, 0, 0, 0.6);
+      }
+      .diff-drawer.open {
+        right: 0;
+      }
+      .diff-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px;
+        border-bottom: 1px solid var(--border-subtle);
+      }
+      .diff-title {
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+      }
+      .close-btn {
+        background: transparent;
+        border: none;
+        color: var(--text-secondary);
+        font-size: 20px;
+        cursor: pointer;
+      }
+      .diff-body {
+        flex: 1;
+        overflow-y: auto;
+        padding: 18px;
+      }
+      .node-name {
+        margin: 8px 0 16px 0;
+        font-size: 18px;
+        font-weight: 700;
+        word-break: break-all;
+      }
+      .meta-row {
+        font-size: 13px;
+        margin-bottom: 8px;
+        display: flex;
+        justify-content: space-between;
+        color: var(--text-secondary);
+      }
+      .meta-row strong {
+        color: var(--text-primary);
+      }
+      .code-tag {
+        font-family: ui-monospace, monospace;
+        font-size: 11px;
+        background: #1f2937;
+        padding: 2px 6px;
+        border-radius: 4px;
+        color: #38bdf8;
+      }
+      .diff-alert {
+        margin: 16px 0;
+        padding: 12px;
+        background: rgba(245, 158, 11, 0.1);
+        border: 1px solid rgba(245, 158, 11, 0.3);
+        border-radius: 6px;
+      }
+      .alert-title {
+        font-size: 12px;
+        font-weight: 700;
+        color: #f59e0b;
+        margin-bottom: 6px;
+      }
+      .diff-alert ul {
+        margin: 0;
+        padding-left: 18px;
+        font-size: 12px;
+        color: #fcd34d;
+      }
+      .diff-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+        margin-top: 12px;
+      }
+      .diff-table th, .diff-table td {
+        padding: 6px 8px;
+        text-align: left;
+        border-bottom: 1px solid #1f2937;
+      }
+      .skew-val {
+        color: #f59e0b;
+        font-weight: 600;
+      }
+      .json-preview {
+        background: #0f172a;
+        padding: 10px;
+        border-radius: 6px;
+        font-size: 11px;
+        font-family: ui-monospace, monospace;
+        color: #94a3b8;
+        overflow-x: auto;
+      }
+
+      /* Badges */
+      .badge-version_skew, .pill-version_skew { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
+      .badge-missing, .pill-missing { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+      .badge-added, .pill-added { background: rgba(16, 185, 129, 0.2); color: #10b981; }
+      .badge-identical, .pill-identical { background: rgba(56, 189, 248, 0.2); color: #38bdf8; }
     </style>
   </head>
   <body>
-    <div id="app"></div>
-    <div id="hud">CLUSTER-VIS // scaffolding — dual viewport pending Phase 4</div>
+    <div id="app">
+      <header id="topbar">
+        <div class="brand-group">
+          <div class="brand-title">
+            CLUSTER<span>VIS</span> // 3D K8s Skew Explorer
+          </div>
+          <div class="summary-pills" id="summary-pills">
+            <!-- Dynamically populated diff pills -->
+          </div>
+        </div>
+
+        <div class="controls-group">
+          <button class="btn active" id="btn-sync-cam">🔗 Link Cameras</button>
+          <button class="btn active" id="btn-toggle-flows">🌊 Animate Flows</button>
+          <button class="btn" id="btn-reset-cam">🔄 Reset View</button>
+        </div>
+      </header>
+
+      <main id="viewports-wrapper">
+        <div class="viewport-pane" id="viewport-a"></div>
+        <div class="viewport-divider"></div>
+        <div class="viewport-pane" id="viewport-b"></div>
+      </main>
+    </div>
+
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
