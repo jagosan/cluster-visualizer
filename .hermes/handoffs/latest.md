@@ -29,7 +29,7 @@
    - Dynamic curved Bezier data flow streams with animated pulse particles (Postgres WAL replication in amber, Raylet RPC in magenta, Spark shuffle in cyan, etcd writes in emerald).
    - Glowing diff accent rings on meshes (amber for version skew, crimson for missing in peer, emerald for added).
    - Interactive Raycast picking and Component Inspector drawer showing side-by-side version/image/digest comparison tables.
-   - Built with Vite and served live at `http://localhost:5173`.
+   - Built with Vite and served live at `http://localhost:5180`.
 
 5. **QA & Documentation:**
    - 4/4 passing unit tests in `tests/test_ingestion_and_diff.py`.
