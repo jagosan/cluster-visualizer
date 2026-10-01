@@ -6,8 +6,12 @@ export default defineConfig({
   base: './',
   publicDir: 'public',
   server: {
-    port: 5173,
-    strictPort: false,
+    port: 5180,
+    strictPort: true,
+  },
+  preview: {
+    port: 5180,
+    strictPort: true,
   },
   build: {
     target: 'es2022',
