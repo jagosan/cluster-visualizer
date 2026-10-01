@@ -1,0 +1,109 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: workloads
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres-primary
+  namespace: workloads
+  labels:
+    app.kubernetes.io/name: postgresql
+    app.kubernetes.io/component: primary
+    app.kubernetes.io/version: "17.11"
+spec:
+  serviceName: postgres-primary
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: postgresql
+      app.kubernetes.io/component: primary
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: postgresql
+        app.kubernetes.io/component: primary
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:17.11
+        env:
+        - name: POSTGRES_PASSWORD
+          value: "cluster-vis-demo"
+        ports:
+        - containerPort: 5432
+          name: postgres
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-cluster
+  namespace: workloads
+  labels:
+    app.kubernetes.io/name: redis
+    app.kubernetes.io/version: "7.4.2"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: redis
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: redis
+    spec:
+      containers:
+      - name: redis
+        image: redis:7.4.2
+        ports:
+        - containerPort: 6379
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spark-driver
+  namespace: workloads
+  labels:
+    spark-role: driver
+    app.kubernetes.io/name: spark
+    app.kubernetes.io/version: "4.2.0"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      spark-role: driver
+  template:
+    metadata:
+      labels:
+        spark-role: driver
+    spec:
+      containers:
+      - name: spark-driver
+        image: apache/spark:4.2.0
+        ports:
+        - containerPort: 7077
+        - containerPort: 4040
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spark-executor
+  namespace: workloads
+  labels:
+    spark-role: executor
+    app.kubernetes.io/name: spark
+    app.kubernetes.io/version: "4.2.0"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      spark-role: executor
+  template:
+    metadata:
+      labels:
+        spark-role: executor
+    spec:
+      containers:
+      - name: spark-executor
+        image: apache/spark:4.2.0
