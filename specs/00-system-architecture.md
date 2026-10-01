@@ -75,15 +75,15 @@
 
 ---
 
-## 4. Graph Data Contract (`ClusterGraph` Schema v1)
+4. **Graph Data Contract (`ClusterGraph` Schema v1)**
 
 ```json
 {
   "$schema": "https://cluster-vis.jagosan.com/schemas/cluster-graph-v1.json",
   "metadata": {
-    "cluster_name": "prod-us-west-2",
-    "kubernetes_version": "v1.31.1",
-    "distribution": "EKS",
+    "cluster_name": "cluster-alpha",
+    "kubernetes_version": "v1.37.0",
+    "distribution": "kind",
     "timestamp": "2026-09-30T19:00:00Z"
   },
   "nodes": [
@@ -93,8 +93,8 @@
       "kind": "APIServer",
       "name": "kube-apiserver",
       "namespace": "kube-system",
-      "version": "v1.31.1",
-      "image": "registry.k8s.io/kube-apiserver:v1.31.1",
+      "version": "v1.37.0",
+      "image": "registry.k8s.io/kube-apiserver:v1.37.0",
       "digest": "sha256:4a8b...",
       "status": "Healthy",
       "metrics": { "cpu_cores": 4, "memory_gb": 16 },
