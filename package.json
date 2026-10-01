@@ -1,0 +1,20 @@
+{
+  "name": "cluster-vis",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Cluster Visualizer - Kubernetes 3D comparison & dependency engine (SPEC-00)",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "three": "^0.180.0"
+  },
+  "devDependencies": {
+    "@types/three": "^0.180.0",
+    "typescript": "^5.9.0",
+    "vite": "^7.1.0"
+  }
+}
