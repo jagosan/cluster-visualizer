@@ -4,6 +4,8 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { FlowParticleSystem } from './flow_particles.js';
 import { ConduitManager } from './conduits.js';
 import type { ConduitEdge, ConduitType } from './conduits.js';
+import { LayerTrayManager } from './layer_trays.js';
+import { FlankLabelManager } from './flank_labels.js';
 
 export interface ClusterNodeData {
   id: string;
@@ -59,6 +61,8 @@ export class ClusterViewport {
   public controls: OrbitControls;
   public flowSystem: FlowParticleSystem;
   public conduitManager: ConduitManager;
+  public layerTrayManager: LayerTrayManager;
+  public flankLabelManager: FlankLabelManager;
   private assetPrototypes: Map<string, THREE.Object3D> = new Map();
   private nodeMeshes: Map<string, THREE.Object3D> = new Map();
   private raycaster = new THREE.Raycaster();
@@ -107,6 +111,8 @@ export class ClusterViewport {
     this.scene.add(this.flowSystem.group);
 
     this.conduitManager = new ConduitManager(this.scene);
+    this.layerTrayManager = new LayerTrayManager(this.scene);
+    this.flankLabelManager = new FlankLabelManager(this.scene);
 
     // Label overlay
     const titleTag = document.createElement('div');
@@ -151,11 +157,27 @@ export class ClusterViewport {
 
   public setClusterData(data: ClusterGraphData, diffMap?: Map<string, { status: any; diffDetails: string[] }>) {
     this.clusterData = data;
-    // Clear existing nodes and conduits
+    // Clear existing nodes, conduits, trays, and flank labels
     this.nodeMeshes.forEach((mesh) => this.scene.remove(mesh));
     this.nodeMeshes.clear();
     this.flowSystem.clear();
     this.conduitManager.clear();
+    this.layerTrayManager.clear();
+    this.flankLabelManager.clear();
+
+    // Determine cluster characteristics for tower trays and flank labels
+    const workerCount = data.nodes.filter(
+      (n) => n.layer === 'node' || n.kind.toLowerCase() === 'node'
+    ).length || 3;
+    const hasRay = data.nodes.some(
+      (n) => n.name.toLowerCase().includes('ray') || n.kind.toLowerCase().includes('ray')
+    );
+
+    // Build layered architectural trays and outer structural cage
+    this.layerTrayManager.buildTowerTrays(workerCount, hasRay);
+
+    // Build flank typographic billboard labels
+    this.flankLabelManager.buildLabels(workerCount, hasRay);
 
     const nodePositions = new Map<string, THREE.Vector3>();
 
@@ -167,12 +189,22 @@ export class ClusterViewport {
         node.diffDetails = d.diffDetails;
       }
 
-      const proto = this.assetPrototypes.get(node.spatial.asset_type) || this.createFallbackMesh(node);
+      let assetKey = node.spatial.asset_type;
+      if (
+        assetKey === 'Database_Postgres' ||
+        assetKey === 'Cache_Redis' ||
+        assetKey === 'Module_PodCapsule' ||
+        assetKey === 'Pod_Cylinder'
+      ) {
+        assetKey = 'Cuboid_Pod';
+      }
+
+      const proto = this.assetPrototypes.get(assetKey) || this.createFallbackMesh(node);
       const instance = proto.clone(true);
       instance.position.set(node.spatial.x, node.spatial.y, node.spatial.z);
       instance.userData = { nodeData: node };
 
-      // Apply diff color accent rings / glow
+      // Apply diff color accent rectangular brackets / glow
       this.applyDiffVisuals(instance, node.diffStatus);
 
       this.scene.add(instance);
@@ -259,24 +291,34 @@ export class ClusterViewport {
       glowOpacity = 0.6;
     }
 
-    const beaconGeo = new THREE.TorusGeometry(0.8, 0.04, 8, 32);
-    const beaconMat = new THREE.MeshBasicMaterial({
+    // Rectangular base bracket outline (strictly no circles)
+    const bracketGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(1.2, 0.04, 0.9));
+    const bracketMat = new THREE.LineBasicMaterial({
       color: ringColor,
       transparent: true,
       opacity: glowOpacity,
-      blending: THREE.AdditiveBlending,
     });
-    const ring = new THREE.Mesh(beaconGeo, beaconMat);
-    ring.rotation.x = Math.PI / 2;
-    ring.position.y = -0.15;
-    mesh.add(ring);
+    const bracket = new THREE.LineSegments(bracketGeo, bracketMat);
+    bracket.position.y = -0.15;
+    mesh.add(bracket);
   }
 
   private createFallbackMesh(node: ClusterNodeData): THREE.Object3D {
-    const geo = new THREE.CylinderGeometry(0.5, 0.5, 0.8, 16);
-    const mat = new THREE.MeshStandardMaterial({ color: 0x475569 });
+    const geo = new THREE.BoxGeometry(0.85, 0.55, 0.45);
+    const mat = new THREE.MeshStandardMaterial({
+      color: 0x334155,
+      roughness: 0.3,
+      metalness: 0.5,
+    });
     const mesh = new THREE.Mesh(geo, mat);
     mesh.name = node.id;
+
+    // Glowing edge contour
+    const edgeGeo = new THREE.EdgesGeometry(geo);
+    const edgeMat = new THREE.LineBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.6 });
+    const edges = new THREE.LineSegments(edgeGeo, edgeMat);
+    mesh.add(edges);
+
     return mesh;
   }
 

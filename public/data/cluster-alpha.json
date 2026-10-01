@@ -4,7 +4,7 @@
     "cluster_name": "kind-cluster-alpha",
     "kubernetes_version": "v1.36.4",
     "distribution": "kind",
-    "timestamp": "2026-10-01T07:28:51.589366+00:00",
+    "timestamp": "2026-10-01T20:07:54.950513+00:00",
     "node_count": 1,
     "pod_count": 14
   },
@@ -29,9 +29,9 @@
       },
       "spatial": {
         "x": 0.0,
-        "y": 0.0,
+        "y": 0.5,
         "z": 0.0,
-        "asset_type": "Skyscraper_FloorTray"
+        "asset_type": "LayerTray_Worker"
       },
       "raw_labels": {
         "beta.kubernetes.io/arch": "amd64",
@@ -56,10 +56,10 @@
         "component": "coredns"
       },
       "spatial": {
-        "x": 0.2,
-        "y": 0.45,
-        "z": 0.4,
-        "asset_type": "Module_PodCapsule"
+        "x": 0.0,
+        "y": 0.75,
+        "z": 0.5,
+        "asset_type": "Cuboid_Pod"
       },
       "raw_labels": {
         "k8s-app": "kube-dns",
@@ -80,10 +80,10 @@
         "component": "coredns"
       },
       "spatial": {
-        "x": 0.9,
-        "y": 0.45,
-        "z": 0.4,
-        "asset_type": "Module_PodCapsule"
+        "x": 1.1,
+        "y": 0.75,
+        "z": 0.5,
+        "asset_type": "Cuboid_Pod"
       },
       "raw_labels": {
         "k8s-app": "kube-dns",
@@ -105,9 +105,9 @@
       },
       "spatial": {
         "x": 0.0,
-        "y": 4.5,
+        "y": 5.5,
         "z": -3.5,
-        "asset_type": "ControlPlane_Vault"
+        "asset_type": "Cuboid_etcd"
       },
       "raw_labels": {
         "component": "etcd",
@@ -128,10 +128,10 @@
         "component": "kindnet"
       },
       "spatial": {
-        "x": 1.6,
-        "y": 0.45,
-        "z": 0.4,
-        "asset_type": "Module_PodCapsule"
+        "x": 2.2,
+        "y": 0.75,
+        "z": 0.5,
+        "asset_type": "Cuboid_Pod"
       },
       "raw_labels": {
         "app": "kindnet",
@@ -156,9 +156,9 @@
       },
       "spatial": {
         "x": 0.0,
-        "y": 6.0,
+        "y": 7.0,
         "z": 0.0,
-        "asset_type": "ControlPlane_Cube"
+        "asset_type": "Cuboid_APIServer"
       },
       "raw_labels": {
         "component": "kube-apiserver",
@@ -181,10 +181,10 @@
         ]
       },
       "spatial": {
-        "x": 2.3,
-        "y": 0.45,
-        "z": 0.4,
-        "asset_type": "Module_PodCapsule"
+        "x": 0.0,
+        "y": 0.75,
+        "z": -0.5,
+        "asset_type": "Cuboid_Pod"
       },
       "raw_labels": {
         "app": "local-path-provisioner",
@@ -207,9 +207,9 @@
         ]
       },
       "spatial": {
-        "x": 0.2,
-        "y": 0.45,
-        "z": -0.4,
+        "x": 1.1,
+        "y": 0.75,
+        "z": -0.5,
         "asset_type": "Database_Postgres"
       },
       "raw_labels": {
@@ -236,9 +236,9 @@
         ]
       },
       "spatial": {
-        "x": 0.9,
-        "y": 0.45,
-        "z": -0.4,
+        "x": 2.2,
+        "y": 0.75,
+        "z": -0.5,
         "asset_type": "Database_Postgres"
       },
       "raw_labels": {
@@ -265,9 +265,9 @@
         ]
       },
       "spatial": {
-        "x": 1.6,
-        "y": 0.45,
-        "z": -0.4,
+        "x": 0.0,
+        "y": 0.75,
+        "z": 0.5,
         "asset_type": "Database_Postgres"
       },
       "raw_labels": {
@@ -294,9 +294,9 @@
         ]
       },
       "spatial": {
-        "x": 2.3,
-        "y": 0.45,
-        "z": -0.4,
+        "x": 1.1,
+        "y": 0.75,
+        "z": 0.5,
         "asset_type": "Cache_Redis"
       },
       "raw_labels": {
@@ -320,9 +320,9 @@
         ]
       },
       "spatial": {
-        "x": 0.2,
-        "y": 0.45,
-        "z": 0.4,
+        "x": 2.2,
+        "y": 0.75,
+        "z": 0.5,
         "asset_type": "Cache_Redis"
       },
       "raw_labels": {
@@ -346,7 +346,7 @@
       },
       "spatial": {
         "x": -1.4,
-        "y": 11.0,
+        "y": 12.0,
         "z": 6.0,
         "asset_type": "Client_Slab"
       },
@@ -367,7 +367,7 @@
       },
       "spatial": {
         "x": 1.4,
-        "y": 11.0,
+        "y": 12.0,
         "z": 6.0,
         "asset_type": "Client_Slab"
       },
@@ -388,10 +388,10 @@
         "node": "cluster-alpha-control-plane"
       },
       "spatial": {
-        "x": -1.5,
-        "y": 0.35,
+        "x": -2.2,
+        "y": 0.75,
         "z": 0.0,
-        "asset_type": "Module_Kubelet"
+        "asset_type": "Cuboid_Kubelet"
       },
       "raw_labels": {}
     },
@@ -410,10 +410,10 @@
         "node": "cluster-alpha-control-plane"
       },
       "spatial": {
-        "x": -0.7,
-        "y": 0.35,
+        "x": -1.2,
+        "y": 0.75,
         "z": 0.0,
-        "asset_type": "Module_Containerd"
+        "asset_type": "Cuboid_Containerd"
       },
       "raw_labels": {}
     }
