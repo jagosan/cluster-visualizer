@@ -1,7 +1,7 @@
 # SPEC-00: Cluster Visualizer (Kubernetes 3D Comparison & Dependency Engine)
 
 ## 1. Executive Summary & Vision
-**Cluster Visualizer** (`cluster-vis`) is a high-fidelity interactive 3D topology and diff visualization engine inspired by modern architectural explorers (e.g., Peter Gostev's Transformer Architecture 3D explorer). It ingests live or static manifests/snapshots from any two arbitrary Kubernetes clusters, constructs a normalized directed dependency and data-flow graph across control plane, system components, custom resources, frameworks (Ray, Spark), and stateful workloads (PostgreSQL, Redis), renders them in 3D using programmatic Blender asset pipelines exported to binary glTF/GLB with Three.js WebGL client-side rendering, and provides synchronous dual-viewport side-by-side inspection, component version diffing, and animated traffic/data flow simulation.
+**Cluster Visualizer** (`cluster-vis`) is a high-fidelity interactive 3D topology and diff visualization engine inspired by modern architectural explorers (e.g., Peter Gostev's Transformer Architecture 3D explorer). It ingests live or static manifests/snapshots from any two arbitrary Kubernetes clusters (including local Kind testbeds `cluster-alpha` and `cluster-beta`), constructs a normalized directed dependency and data-flow graph across control plane, system components, custom resources, frameworks (Ray, Spark), and stateful workloads (PostgreSQL, Redis), renders them in 3D using programmatic Blender asset pipelines exported to binary glTF/GLB with Three.js WebGL client-side rendering, and provides synchronous dual-viewport side-by-side inspection, component version diffing, and animated traffic/data flow simulation.
 
 ---
 
