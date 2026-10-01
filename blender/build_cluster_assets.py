@@ -53,6 +53,20 @@ COL_REDIS_CORE = (0.95, 0.55, 0.50, 1.0)
 COL_CONDUIT = (0.10, 0.70, 0.75, 1.0) # network teal
 COL_CONDUIT_FLANGE = (0.55, 0.60, 0.62, 1.0)
 
+# Skyscraper & Conduit Architecture Colors
+COL_SKYSCRAPER_TRAY = (0.12, 0.14, 0.17, 1.0)
+COL_SKYSCRAPER_RIM = (0.05, 0.85, 0.95, 1.0) # cyan LED
+COL_PENTHOUSE = (0.15, 0.25, 0.45, 0.8)     # glass canopy
+COL_PENTHOUSE_CORE = (0.95, 0.80, 0.20, 1.0) # golden aggregation core
+COL_VAULT = (0.20, 0.22, 0.25, 1.0)         # etcd heavy slate
+COL_VAULT_ACCENT = (1.0, 0.60, 0.10, 1.0)   # etcd amber raft LED
+COL_KUBELET = (0.15, 0.40, 0.35, 1.0)       # kubelet teal
+COL_CONTAINERD = (0.30, 0.32, 0.35, 1.0)    # containerd steel
+COL_POD_CAPSULE = (0.95, 0.55, 0.15, 1.0)   # pod orange
+COL_CONDUIT_PIPE = (0.10, 0.75, 0.85, 1.0)  # conduit glass cyan
+COL_CLIENT_PAD = (0.08, 0.10, 0.14, 1.0)    # dark client console
+COL_CLIENT_GLOW = (0.30, 0.70, 1.0, 1.0)    # client holographic glow
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -397,6 +411,173 @@ def build_conduit_link():
 
 
 # ---------------------------------------------------------------------------
+# Skyscraper & Procedural Conduit Stack Builders (SPEC-01)
+# ---------------------------------------------------------------------------
+def build_skyscraper_floor_tray():
+    """Skyscraper_FloorTray: Sleek beveled rectangular node platform with LED perimeter rim."""
+    tray_mat = pbr("M_Skyscraper_Tray", COL_SKYSCRAPER_TRAY, metallic=0.75, roughness=0.35)
+    rim_mat = pbr("M_Skyscraper_Rim", COL_SKYSCRAPER_RIM, metallic=0.0, roughness=0.2,
+                  emission_color=COL_SKYSCRAPER_RIM, emission_strength=3.5)
+    plating_mat = pbr("M_Skyscraper_Plating", (0.22, 0.25, 0.28, 1.0), metallic=0.9, roughness=0.25)
+
+    tray = primitive_box("Skyscraper_FloorTray", tray_mat, size=(3.6, 2.4, 0.28))
+    # LED Perimeter Rims
+    rim_f = primitive_box("tray_rim_f", rim_mat, size=(3.6, 0.06, 0.05), loc=(0, -1.17, 0.14))
+    rim_b = primitive_box("tray_rim_b", rim_mat, size=(3.6, 0.06, 0.05), loc=(0, 1.17, 0.14))
+    rim_l = primitive_box("tray_rim_l", rim_mat, size=(0.06, 2.34, 0.05), loc=(-1.77, 0, 0.14))
+    rim_r = primitive_box("tray_rim_r", rim_mat, size=(0.06, 2.34, 0.05), loc=(1.77, 0, 0.14))
+    
+    # Floor plating divisions
+    plates = []
+    for i in range(3):
+        x = -1.0 + i * 1.0
+        plates.append(primitive_box("tray_plate_%d" % i, plating_mat, size=(0.10, 2.2, 0.04), loc=(x, 0, 0.15)))
+    
+    join_to(tray, [rim_f, rim_b, rim_l, rim_r] + plates)
+    return tray
+
+
+def build_skyscraper_penthouse():
+    """Skyscraper_Penthouse: Glass/canopy penthouse enclosure for API aggregation."""
+    glass_mat = pbr("M_Penthouse_Glass", COL_PENTHOUSE, metallic=0.1, roughness=0.1)
+    core_mat = pbr("M_Penthouse_Core", COL_PENTHOUSE_CORE, metallic=0.2, roughness=0.2,
+                   emission_color=COL_PENTHOUSE_CORE, emission_strength=4.0)
+    frame_mat = pbr("M_Penthouse_Frame", (0.35, 0.38, 0.42, 1.0), metallic=0.9, roughness=0.2)
+
+    base = primitive_box("Skyscraper_Penthouse", glass_mat, size=(2.8, 1.8, 0.55))
+    core = primitive_box("penthouse_core", core_mat, size=(0.8, 0.8, 0.7), loc=(0, 0, 0.1))
+    
+    # 4 Corner support pillars
+    pillars = []
+    for x in (-1.3, 1.3):
+        for y in (-0.8, 0.8):
+            pillars.append(primitive_cyl("penthouse_pillar", frame_mat, radius=0.08, depth=0.6, loc=(x, y, 0)))
+    
+    join_to(base, [core] + pillars)
+    return base
+
+
+def build_control_plane_vault():
+    """ControlPlane_Vault: Heavy reinforced metallic vault box for etcd backing store."""
+    vault_mat = pbr("M_Vault_Body", COL_VAULT, metallic=0.85, roughness=0.35)
+    accent_mat = pbr("M_Vault_Accent", COL_VAULT_ACCENT, metallic=0.1, roughness=0.2,
+                     emission_color=COL_VAULT_ACCENT, emission_strength=4.0)
+    fin_mat = pbr("M_Vault_Fins", (0.12, 0.13, 0.15, 1.0), metallic=0.9, roughness=0.3)
+
+    vault = primitive_box("ControlPlane_Vault", vault_mat, size=(2.2, 1.6, 1.2))
+    
+    # Cooling ribs / fins on left and right
+    ribs = []
+    for i in range(6):
+        y = -0.6 + i * 0.24
+        ribs.append(primitive_box("vault_rib_l_%d" % i, fin_mat, size=(0.10, 0.05, 1.0), loc=(-1.15, y, 0)))
+        ribs.append(primitive_box("vault_rib_r_%d" % i, fin_mat, size=(0.10, 0.05, 1.0), loc=(1.15, y, 0)))
+    
+    # Amber consensus status bar on front face
+    led = primitive_box("vault_led", accent_mat, size=(1.8, 0.06, 0.10), loc=(0, -0.83, 0.35))
+    join_to(vault, ribs + [led])
+    return vault
+
+
+def build_module_kubelet():
+    """Module_Kubelet: Compact control terminal box with vertical transmitter antenna."""
+    kubelet_mat = pbr("M_Kubelet_Body", COL_KUBELET, metallic=0.6, roughness=0.4)
+    ant_mat = pbr("M_Kubelet_Ant", (0.85, 0.85, 0.90, 1.0), metallic=0.9, roughness=0.2)
+    screen_mat = pbr("M_Kubelet_Screen", COL_CLIENT_GLOW, metallic=0.0, roughness=0.2,
+                     emission_color=COL_CLIENT_GLOW, emission_strength=2.5)
+
+    box = primitive_box("Module_Kubelet", kubelet_mat, size=(0.65, 0.65, 0.45))
+    antenna = primitive_cyl("kubelet_antenna", ant_mat, radius=0.03, depth=0.35, loc=(0.2, 0.2, 0.35))
+    screen = primitive_box("kubelet_screen", screen_mat, size=(0.4, 0.04, 0.25), loc=(0, -0.33, 0.05))
+    join_to(box, [antenna, screen])
+    return box
+
+
+def build_module_containerd():
+    """Module_Containerd: Container runtime housing with socket intake ports and heatsinks."""
+    containerd_mat = pbr("M_Containerd_Body", COL_CONTAINERD, metallic=0.8, roughness=0.3)
+    fin_mat = pbr("M_Containerd_Fins", (0.15, 0.16, 0.18, 1.0), metallic=0.9, roughness=0.2)
+
+    box = primitive_box("Module_Containerd", containerd_mat, size=(0.75, 0.75, 0.45))
+    
+    # Socket connector ports on sides
+    ports = []
+    for y in (-0.18, 0.18):
+        ports.append(primitive_cyl("c_port_l", containerd_mat, radius=0.05, depth=0.10, loc=(-0.40, y, 0)))
+        ports.append(primitive_cyl("c_port_r", containerd_mat, radius=0.05, depth=0.10, loc=(0.40, y, 0)))
+    
+    # Top heat sink fins
+    fins = []
+    for i in range(5):
+        x = -0.24 + i * 0.12
+        fins.append(primitive_box("c_fin_%d" % i, fin_mat, size=(0.03, 0.60, 0.08), loc=(x, 0, 0.26)))
+        
+    join_to(box, ports + fins)
+    return box
+
+
+def build_module_pod_capsule():
+    """Module_PodCapsule: Capsule pod unit with workload status glow band."""
+    pod_mat = pbr("M_PodCapsule_Body", COL_POD_CAPSULE, metallic=0.5, roughness=0.35)
+    ring_mat = pbr("M_PodCapsule_Ring", COL_CLIENT_GLOW, metallic=0.0, roughness=0.2,
+                   emission_color=COL_CLIENT_GLOW, emission_strength=3.0)
+    cap_mat = pbr("M_PodCapsule_Cap", (0.25, 0.27, 0.30, 1.0), metallic=0.85, roughness=0.25)
+
+    body = primitive_cyl("Module_PodCapsule", pod_mat, radius=0.25, depth=0.7)
+    ring = primitive_cyl("pod_ring", ring_mat, radius=0.27, depth=0.12, loc=(0, 0, 0))
+    cap_top = primitive_cyl("pod_cap_t", cap_mat, radius=0.23, depth=0.08, loc=(0, 0, 0.38))
+    cap_bot = primitive_cyl("pod_cap_b", cap_mat, radius=0.23, depth=0.08, loc=(0, 0, -0.38))
+    join_to(body, [ring, cap_top, cap_bot])
+    return body
+
+
+def build_conduit_vertical_shaft():
+    """Conduit_VerticalShaft: Vertical cylindrical conduit pipe with connector flanges."""
+    pipe_mat = pbr("M_Conduit_Pipe", COL_CONDUIT_PIPE, metallic=0.3, roughness=0.2,
+                   emission_color=COL_CONDUIT_PIPE, emission_strength=0.8)
+    flange_mat = pbr("M_Conduit_Flange", (0.50, 0.55, 0.60, 1.0), metallic=0.9, roughness=0.25)
+
+    pipe = primitive_cyl("Conduit_VerticalShaft", pipe_mat, radius=0.12, depth=2.0)
+    flange_t = primitive_cyl("c_flange_t", flange_mat, radius=0.18, depth=0.10, loc=(0, 0, 0.95))
+    flange_b = primitive_cyl("c_flange_b", flange_mat, radius=0.18, depth=0.10, loc=(0, 0, -0.95))
+    join_to(pipe, [flange_t, flange_b])
+    return pipe
+
+
+def build_conduit_elbow():
+    """Conduit_Elbow: 90-degree curved conduit elbow connector."""
+    pipe_mat = pbr("M_Conduit_Elbow", COL_CONDUIT_PIPE, metallic=0.3, roughness=0.2,
+                   emission_color=COL_CONDUIT_PIPE, emission_strength=0.8)
+    flange_mat = pbr("M_Conduit_Flange", (0.50, 0.55, 0.60, 1.0), metallic=0.9, roughness=0.25)
+
+    vert = primitive_cyl("Conduit_Elbow", pipe_mat, radius=0.12, depth=0.5, loc=(0, 0, 0.25))
+    corner = primitive_box("c_elbow_corner", pipe_mat, size=(0.28, 0.28, 0.28), loc=(0, 0, 0.5))
+    horiz = primitive_box("c_elbow_h", pipe_mat, size=(0.50, 0.24, 0.24), loc=(0.25, 0, 0.5))
+    flange = primitive_box("c_elbow_flange", flange_mat, size=(0.08, 0.32, 0.32), loc=(0.52, 0, 0.5))
+    join_to(vert, [corner, horiz, flange])
+    return vert
+
+
+def build_client_slab():
+    """Client_Slab: Floating minimalist terminal pad representing remote client tooling."""
+    pad_mat = pbr("M_Client_Pad", COL_CLIENT_PAD, metallic=0.8, roughness=0.3)
+    glow_mat = pbr("M_Client_Glow", COL_CLIENT_GLOW, metallic=0.0, roughness=0.2,
+                   emission_color=COL_CLIENT_GLOW, emission_strength=3.0)
+    pip_mat = pbr("M_Client_Pip", (0.80, 0.82, 0.85, 1.0), metallic=0.9, roughness=0.2)
+
+    slab = primitive_box("Client_Slab", pad_mat, size=(1.2, 0.8, 0.08))
+    screen = primitive_box("client_screen", glow_mat, size=(1.0, 0.6, 0.02), loc=(0, 0, 0.045))
+    
+    pips = []
+    for sx in (-0.52, 0.52):
+        for sy in (-0.32, 0.32):
+            pips.append(primitive_cyl("client_pip", pip_mat, radius=0.02, depth=0.04, loc=(sx, sy, 0.05)))
+            
+    join_to(slab, [screen] + pips)
+    return slab
+
+
+# ---------------------------------------------------------------------------
 # Scene setup / export
 # ---------------------------------------------------------------------------
 def reset_scene():
@@ -424,6 +605,16 @@ def main():
         build_database_postgres,
         build_cache_redis,
         build_conduit_link,
+        # New Skyscraper & Procedural Conduit Stack builders
+        build_skyscraper_floor_tray,
+        build_skyscraper_penthouse,
+        build_control_plane_vault,
+        build_module_kubelet,
+        build_module_containerd,
+        build_module_pod_capsule,
+        build_conduit_vertical_shaft,
+        build_conduit_elbow,
+        build_client_slab,
     ]
 
     # Lay assets out in a row along +X with even pitch for kit browsing.
@@ -431,13 +622,18 @@ def main():
     for i, fn in enumerate(builders):
         obj = fn()
         obj.location = (i * pitch, 0.0, 0.0)
-        print("[build] %-20s verts=%d mats=%d" %
+        print("[build] %-24s verts=%d mats=%d" %
               (obj.name, len(obj.data.vertices), len(obj.data.materials)))
 
     # Verify required names exist before export.
-    required = ["NodeTray", "ControlPlane_Cube", "Pod_Cylinder",
-                "Framework_Ray", "Framework_Spark", "Database_Postgres",
-                "Cache_Redis", "Conduit_Link"]
+    required = [
+        "NodeTray", "ControlPlane_Cube", "Pod_Cylinder",
+        "Framework_Ray", "Framework_Spark", "Database_Postgres",
+        "Cache_Redis", "Conduit_Link",
+        "Skyscraper_FloorTray", "Skyscraper_Penthouse", "ControlPlane_Vault",
+        "Module_Kubelet", "Module_Containerd", "Module_PodCapsule",
+        "Conduit_VerticalShaft", "Conduit_Elbow", "Client_Slab"
+    ]
     present = {o.name for o in bpy.context.scene.objects}
     missing = [n for n in required if n not in present]
     if missing:

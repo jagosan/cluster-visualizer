@@ -73,7 +73,7 @@ metadata:
     app.kubernetes.io/name: redis
     app.kubernetes.io/version: "8.10.2"
 spec:
-  replicas: 3
+  replicas: 2
   selector:
     matchLabels:
       app.kubernetes.io/name: redis
@@ -87,53 +87,3 @@ spec:
         image: redis:8.10.2
         ports:
         - containerPort: 6379
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: ray-head
-  namespace: workloads
-  labels:
-    ray.io/node-type: head
-    app.kubernetes.io/name: ray
-    app.kubernetes.io/version: "2.58.0"
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      ray.io/node-type: head
-  template:
-    metadata:
-      labels:
-        ray.io/node-type: head
-    spec:
-      containers:
-      - name: ray-head
-        image: rayproject/ray:2.58.0
-        ports:
-        - containerPort: 6379
-        - containerPort: 8265
-        - containerPort: 10001
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: ray-worker
-  namespace: workloads
-  labels:
-    ray.io/node-type: worker
-    app.kubernetes.io/name: ray
-    app.kubernetes.io/version: "2.58.0"
-spec:
-  replicas: 3
-  selector:
-    matchLabels:
-      ray.io/node-type: worker
-  template:
-    metadata:
-      labels:
-        ray.io/node-type: worker
-    spec:
-      containers:
-      - name: ray-worker
-        image: rayproject/ray:2.58.0

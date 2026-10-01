@@ -14,8 +14,7 @@ from src.ingestion.models import (
 )
 from src.ingestion.frameworks import enrich_framework_components
 from src.ingestion.differ import diff_clusters
-from src.ingestion.layout import apply_spatial_layout, ELEVATION_TIERS
-
+from src.ingestion.layout import apply_spatial_layout, generate_skyscraper_edges, ELEVATION_TIERS
 
 class TestClusterIngestionAndDiff(unittest.TestCase):
     def setUp(self):
@@ -28,9 +27,11 @@ class TestClusterIngestionAndDiff(unittest.TestCase):
         self.assertGreater(os.path.getsize(glb_path), 5000, "GLB must exceed 5KB")
 
     def test_elevation_tiers_consistency(self):
-        """Verify spatial layout applies architectural elevation tiers."""
+        """Verify spatial layout applies skyscraper architectural elevation tiers."""
         nodes = [
+            NodeComponent(id="cl-1", layer="ingress", kind="Client", name="kubectl-cli"),
             NodeComponent(id="cp-1", layer="control-plane", kind="APIServer", name="kube-apiserver"),
+            NodeComponent(id="et-1", layer="control-plane", kind="etcd", name="etcd-0"),
             NodeComponent(id="fw-1", layer="framework", kind="RayHead", name="ray-head"),
             NodeComponent(id="wl-1", layer="workload", kind="Pod", name="postgres-primary-0"),
             NodeComponent(id="nd-1", layer="node", kind="Node", name="node-1"),
@@ -39,11 +40,17 @@ class TestClusterIngestionAndDiff(unittest.TestCase):
         laid_out = apply_spatial_layout(nodes)
         by_id = {n.id: n for n in laid_out}
 
-        self.assertEqual(by_id["ig-1"].spatial.y, ELEVATION_TIERS["ingress"])
-        self.assertEqual(by_id["cp-1"].spatial.y, ELEVATION_TIERS["control-plane"])
+        self.assertEqual(by_id["cl-1"].spatial.y, ELEVATION_TIERS["client"])
+        self.assertEqual(by_id["ig-1"].spatial.y, ELEVATION_TIERS["aggregation"])
+        self.assertEqual(by_id["cp-1"].spatial.y, ELEVATION_TIERS["apiserver"])
+        self.assertEqual(by_id["et-1"].spatial.y, ELEVATION_TIERS["vault"])
+        self.assertEqual(by_id["et-1"].spatial.z, -3.5, "etcd must be placed behind API server at Z=-3.5")
         self.assertEqual(by_id["fw-1"].spatial.y, ELEVATION_TIERS["framework"])
-        self.assertEqual(by_id["wl-1"].spatial.y, ELEVATION_TIERS["workload"])
-        self.assertEqual(by_id["nd-1"].spatial.y, ELEVATION_TIERS["node"])
+        self.assertEqual(by_id["nd-1"].spatial.y, ELEVATION_TIERS["worker_base"])
+        self.assertEqual(by_id["wl-1"].spatial.y, ELEVATION_TIERS["worker_base"] + 0.45)
+        self.assertEqual(by_id["nd-1"].spatial.asset_type, "Skyscraper_FloorTray")
+        self.assertEqual(by_id["et-1"].spatial.asset_type, "ControlPlane_Vault")
+        self.assertEqual(by_id["cl-1"].spatial.asset_type, "Client_Slab")
 
     def test_framework_detection_and_edge_generation(self):
         """Verify Ray, Spark, and Postgres frameworks generate valid topologies and data-flow edges."""
@@ -94,6 +101,24 @@ class TestClusterIngestionAndDiff(unittest.TestCase):
         flow_types = [e.flow_type for e in edges]
         self.assertIn("framework_control", flow_types)
         self.assertIn("data_replication", flow_types)
+
+    def test_skyscraper_conduit_routes(self):
+        """Verify skyscraper layout generates the correct data-flow conduits."""
+        nodes = [
+            NodeComponent(id="cl-1", layer="ingress", kind="Client", name="kubectl-cli"),
+            NodeComponent(id="ig-1", layer="ingress", kind="Ingress", name="kube-aggregator"),
+            NodeComponent(id="cp-1", layer="control-plane", kind="APIServer", name="kube-apiserver-0"),
+            NodeComponent(id="et-1", layer="control-plane", kind="etcd", name="etcd-0"),
+            NodeComponent(id="nd-1", layer="node", kind="Kubelet", name="kubelet-node1")
+        ]
+        laid_out = apply_spatial_layout(nodes)
+        edges = generate_skyscraper_edges(laid_out)
+        
+        protocols = [e.protocol for e in edges]
+        self.assertIn("HTTPS/443", protocols, "Client to Ingress edge missing")
+        self.assertIn("HTTPS/6443", protocols, "Ingress to API server edge missing")
+        self.assertIn("gRPC/2379", protocols, "API server to etcd edge missing")
+        self.assertIn("HTTPS/6443/Heartbeat", protocols, "Kubelet to API server heartbeat missing")
 
     def test_diff_engine_version_skew_classification(self):
         """Verify diff classifier correctly flags version skews and image drift."""

@@ -2,10 +2,10 @@
   "source_cluster": "kind-cluster-alpha",
   "target_cluster": "kind-cluster-beta",
   "summary": {
-    "identical_nodes": 2,
-    "version_skew_nodes": 8,
-    "missing_in_target": 7,
-    "added_in_target": 3
+    "identical_nodes": 5,
+    "version_skew_nodes": 9,
+    "missing_in_target": 2,
+    "added_in_target": 8
   },
   "nodes": [
     {
@@ -77,55 +77,68 @@
       ]
     },
     {
-      "node_id": "pod/workloads/ray-head-845cf7dbb8-h6kz2",
-      "status": "missing",
-      "source_version": "2.58.0",
-      "target_version": null,
-      "source_image": "docker.io/rayproject/ray:2.58.0",
-      "target_image": null,
-      "source_digest": "sha256:61fee5839b2c5e640059a132be3312019c61badbb2396b513d8536b6db82ac4d",
+      "node_id": "pod/workloads/ray-head-6884b584b7-fhmrz",
+      "status": "added",
+      "source_version": null,
+      "target_version": "2.58.0",
+      "source_image": null,
+      "target_image": "rayproject/ray:2.58.0",
+      "source_digest": null,
       "target_digest": null,
       "diff_details": [
-        "Present in kind-cluster-alpha, absent in kind-cluster-beta"
+        "Absent in kind-cluster-alpha, present in kind-cluster-beta"
       ]
     },
     {
-      "node_id": "pod/workloads/ray-worker-9f85f7d8f-4bnjd",
-      "status": "missing",
-      "source_version": "2.58.0",
-      "target_version": null,
-      "source_image": "docker.io/rayproject/ray:2.58.0",
-      "target_image": null,
-      "source_digest": "sha256:61fee5839b2c5e640059a132be3312019c61badbb2396b513d8536b6db82ac4d",
+      "node_id": "pod/workloads/kuberay-operator-f65c67487-2hv6d",
+      "status": "added",
+      "source_version": null,
+      "target_version": "1.3.0",
+      "source_image": null,
+      "target_image": "kuberay/operator:1.3.0",
+      "source_digest": null,
       "target_digest": null,
       "diff_details": [
-        "Present in kind-cluster-alpha, absent in kind-cluster-beta"
+        "Absent in kind-cluster-alpha, present in kind-cluster-beta"
       ]
     },
     {
-      "node_id": "pod/workloads/ray-worker-9f85f7d8f-htlhz",
-      "status": "missing",
-      "source_version": "2.58.0",
-      "target_version": null,
-      "source_image": "docker.io/rayproject/ray:2.58.0",
-      "target_image": null,
-      "source_digest": "sha256:61fee5839b2c5e640059a132be3312019c61badbb2396b513d8536b6db82ac4d",
+      "node_id": "pod/workloads/ray-worker-8f88bd9f6-mqgmm",
+      "status": "added",
+      "source_version": null,
+      "target_version": "2.58.0",
+      "source_image": null,
+      "target_image": "rayproject/ray:2.58.0",
+      "source_digest": null,
       "target_digest": null,
       "diff_details": [
-        "Present in kind-cluster-alpha, absent in kind-cluster-beta"
+        "Absent in kind-cluster-alpha, present in kind-cluster-beta"
       ]
     },
     {
-      "node_id": "pod/workloads/ray-worker-9f85f7d8f-skbvv",
-      "status": "missing",
-      "source_version": "2.58.0",
-      "target_version": null,
-      "source_image": "docker.io/rayproject/ray:2.58.0",
-      "target_image": null,
-      "source_digest": "sha256:61fee5839b2c5e640059a132be3312019c61badbb2396b513d8536b6db82ac4d",
+      "node_id": "pod/workloads/ray-worker-8f88bd9f6-rk8sp",
+      "status": "added",
+      "source_version": null,
+      "target_version": "2.58.0",
+      "source_image": null,
+      "target_image": "rayproject/ray:2.58.0",
+      "source_digest": null,
       "target_digest": null,
       "diff_details": [
-        "Present in kind-cluster-alpha, absent in kind-cluster-beta"
+        "Absent in kind-cluster-alpha, present in kind-cluster-beta"
+      ]
+    },
+    {
+      "node_id": "pod/workloads/ray-worker-8f88bd9f6-ttpxf",
+      "status": "added",
+      "source_version": null,
+      "target_version": "2.58.0",
+      "source_image": null,
+      "target_image": "rayproject/ray:2.58.0",
+      "source_digest": null,
+      "target_digest": null,
+      "diff_details": [
+        "Absent in kind-cluster-alpha, present in kind-cluster-beta"
       ]
     },
     {
@@ -165,6 +178,52 @@
       "target_digest": "sha256:fc64959c04bd87b0ac686be9aaa9008b69cdb1afc695400528279c8b01f43d89",
       "diff_details": [
         "Absent in kind-cluster-alpha, present in kind-cluster-beta"
+      ]
+    },
+    {
+      "node_id": "kind-cluster-alpha/client-crd-watcher",
+      "status": "identical",
+      "source_version": "v1.0.0",
+      "target_version": "v1.0.0",
+      "source_image": null,
+      "target_image": null,
+      "source_digest": null,
+      "target_digest": null,
+      "diff_details": []
+    },
+    {
+      "node_id": "kind-cluster-alpha/client-kubectl",
+      "status": "identical",
+      "source_version": "v1.31.0",
+      "target_version": "v1.31.0",
+      "source_image": null,
+      "target_image": null,
+      "source_digest": null,
+      "target_digest": null,
+      "diff_details": []
+    },
+    {
+      "node_id": "node/cluster-alpha-control-plane/containerd",
+      "status": "identical",
+      "source_version": "v1.7.20",
+      "target_version": "v1.7.20",
+      "source_image": null,
+      "target_image": null,
+      "source_digest": null,
+      "target_digest": null,
+      "diff_details": []
+    },
+    {
+      "node_id": "node/cluster-alpha-control-plane/kubelet",
+      "status": "version_skew",
+      "source_version": "v1.36.4",
+      "target_version": "v1.35.8",
+      "source_image": null,
+      "target_image": null,
+      "source_digest": null,
+      "target_digest": null,
+      "diff_details": [
+        "Version skew: 'v1.36.4' vs 'v1.35.8'"
       ]
     },
     {
@@ -233,21 +292,6 @@
       ]
     },
     {
-      "node_id": "pod/workloads/redis-cluster-6587c5bb48-hjkvm",
-      "status": "version_skew",
-      "source_version": "8.10.2",
-      "target_version": "7.4.2",
-      "source_image": "docker.io/library/redis:8.10.2",
-      "target_image": "docker.io/library/redis:7.4.2",
-      "source_digest": "sha256:6f81e8915c60b065a524e6967e0ad1c639ba6efa84d669f823683ea04d9150ee",
-      "target_digest": "sha256:fbdbaea47b9ae4ecc2082ecdb4e1cea81e32176ffb1dcf643d422ad07427e5d9",
-      "diff_details": [
-        "Version skew: '8.10.2' vs '7.4.2'",
-        "Image tag drift: 'docker.io/library/redis:8.10.2' vs 'docker.io/library/redis:7.4.2'",
-        "Image digest skew: sha256:6f81e8915... vs sha256:fbdbaea47..."
-      ]
-    },
-    {
       "node_id": "pod/workloads/redis-cluster-6587c5bb48-rshcr",
       "status": "version_skew",
       "source_version": "8.10.2",
@@ -264,15 +308,17 @@
     },
     {
       "node_id": "pod/workloads/redis-cluster-6587c5bb48-wvv9g",
-      "status": "missing",
+      "status": "version_skew",
       "source_version": "8.10.2",
-      "target_version": null,
+      "target_version": "7.4.2",
       "source_image": "docker.io/library/redis:8.10.2",
-      "target_image": null,
+      "target_image": "docker.io/library/redis:7.4.2",
       "source_digest": "sha256:6f81e8915c60b065a524e6967e0ad1c639ba6efa84d669f823683ea04d9150ee",
-      "target_digest": null,
+      "target_digest": "sha256:fbdbaea47b9ae4ecc2082ecdb4e1cea81e32176ffb1dcf643d422ad07427e5d9",
       "diff_details": [
-        "Excess replica in source cluster"
+        "Version skew: '8.10.2' vs '7.4.2'",
+        "Image tag drift: 'docker.io/library/redis:8.10.2' vs 'docker.io/library/redis:7.4.2'",
+        "Image digest skew: sha256:6f81e8915... vs sha256:fbdbaea47..."
       ]
     }
   ],

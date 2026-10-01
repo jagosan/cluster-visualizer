@@ -30,6 +30,7 @@
 - `index.html`: Entry HTML with dual viewport split-screen canvas and HUD overlay.
 - `src/main.ts`: Application bootstrap, event listeners, and viewport layout controller.
 - `src/scene/cluster_viewport.ts`: `ClusterViewport` Three.js scene manager, camera, lighting, and raycaster.
+- `src/scene/conduits.ts`: 3D procedural conduit pipe mesh generator and route splines.
 - `src/scene/camera_sync.ts`: Synchronous dual-orbit camera controller.
 - `src/scene/flow_particles.ts`: GPU / instanced particle system animating traffic and replication streams.
 - `src/ui/diff_inspector.ts`: Side-by-side comparison drawer, version mismatch highlights, and metric bars.

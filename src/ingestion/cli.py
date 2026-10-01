@@ -13,9 +13,9 @@ from pathlib import Path
 
 from .extractor import extract_cluster_state
 from .frameworks import enrich_framework_components
-from .layout import apply_spatial_layout
+from .layout import apply_spatial_layout, generate_skyscraper_edges
 from .differ import diff_clusters
-from .models import ClusterGraph, ClusterMetadata
+from .models import ClusterGraph, ClusterMetadata, NodeComponent, Spatial
 
 
 def ingest_cluster(context_name: str) -> ClusterGraph:
@@ -28,14 +28,69 @@ def ingest_cluster(context_name: str) -> ClusterGraph:
     print(f"🔍 Detecting frameworks & stateful topologies for '{context_name}'...")
     enriched_nodes, enriched_edges = enrich_framework_components(nodes, edges)
 
-    print(f"📐 Applying 3D spatial elevation tiers and planar layout...")
-    spatially_laid_nodes = apply_spatial_layout(enriched_nodes)
+    # Inject SPEC-01 skyscraper distant clients
+    client_nodes = [
+        NodeComponent(
+            id=f"{context_name}/client-kubectl",
+            layer="ingress",
+            kind="Client",
+            name="kubectl-cli",
+            namespace="external",
+            version="v1.31.0",
+            status="Healthy",
+            metrics={"tool": "kubectl", "command": "list pods"},
+            spatial=Spatial(asset_type="Client_Slab"),
+        ),
+        NodeComponent(
+            id=f"{context_name}/client-crd-watcher",
+            layer="ingress",
+            kind="Client",
+            name="client-crd-watcher",
+            namespace="external",
+            version="v1.0.0",
+            status="Healthy",
+            metrics={"watch": "rayclusters.ray.io"},
+            spatial=Spatial(asset_type="Client_Slab"),
+        )
+    ]
+
+    # Inject Kubelet and Containerd modules for each worker node floor
+    runtime_nodes = []
+    for mn in [n for n in enriched_nodes if n.layer == "node"]:
+        runtime_nodes.append(NodeComponent(
+            id=f"{mn.id}/kubelet",
+            layer="node",
+            kind="Kubelet",
+            name=f"kubelet-{mn.name}",
+            namespace="kube-system",
+            version=mn.version,
+            status="Healthy",
+            metrics={"component": "kubelet", "node": mn.name},
+            spatial=Spatial(asset_type="Module_Kubelet"),
+        ))
+        runtime_nodes.append(NodeComponent(
+            id=f"{mn.id}/containerd",
+            layer="node",
+            kind="Containerd",
+            name=f"containerd-{mn.name}",
+            namespace="kube-system",
+            version="v1.7.20",
+            status="Healthy",
+            metrics={"runtime": "containerd", "node": mn.name},
+            spatial=Spatial(asset_type="Module_Containerd"),
+        ))
+
+    all_nodes = enriched_nodes + client_nodes + runtime_nodes
+
+    print(f"📐 Applying 3D skyscraper spatial elevation tiers and planar layout...")
+    spatially_laid_nodes = apply_spatial_layout(all_nodes)
+    skyscraper_edges = generate_skyscraper_edges(spatially_laid_nodes)
 
     meta = ClusterMetadata(**raw["metadata"])
     graph = ClusterGraph(
         metadata=meta,
         nodes=spatially_laid_nodes,
-        edges=enriched_edges,
+        edges=enriched_edges + skyscraper_edges,
     )
     return graph
 
