@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { FlowParticleSystem } from './flow_particles.js';
+import { ConduitManager } from './conduits.js';
+import type { ConduitEdge, ConduitType } from './conduits.js';
 
 export interface ClusterNodeData {
   id: string;
@@ -56,6 +58,7 @@ export class ClusterViewport {
   public renderer: THREE.WebGLRenderer;
   public controls: OrbitControls;
   public flowSystem: FlowParticleSystem;
+  public conduitManager: ConduitManager;
   private assetPrototypes: Map<string, THREE.Object3D> = new Map();
   private nodeMeshes: Map<string, THREE.Object3D> = new Map();
   private raycaster = new THREE.Raycaster();
@@ -82,7 +85,7 @@ export class ClusterViewport {
       0.1,
       1000
     );
-    this.camera.position.set(12, 10, 15);
+    this.camera.position.set(16, 7, 20);
 
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
     this.renderer.setSize(container.clientWidth, container.clientHeight);
@@ -94,7 +97,7 @@ export class ClusterViewport {
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
     this.controls.enableDamping = true;
     this.controls.dampingFactor = 0.05;
-    this.controls.target.set(0, 1.0, 0);
+    this.controls.target.set(0, 3.5, 0);
     this.controls.update();
 
     this.setupLighting();
@@ -102,6 +105,8 @@ export class ClusterViewport {
 
     this.flowSystem = new FlowParticleSystem();
     this.scene.add(this.flowSystem.group);
+
+    this.conduitManager = new ConduitManager(this.scene);
 
     // Label overlay
     const titleTag = document.createElement('div');
@@ -129,27 +134,9 @@ export class ClusterViewport {
   }
 
   private setupGrid() {
-    const grid = new THREE.GridHelper(30, 30, 0x1f2937, 0x111827);
-    grid.position.y = -1.5;
+    const grid = new THREE.GridHelper(40, 40, 0x1f2937, 0x111827);
+    grid.position.y = -5.0; // Base foundation level
     this.scene.add(grid);
-
-    // Subtle elevation tier guide planes
-    const createTierRing = (y: number, color: number) => {
-      const ringGeo = new THREE.RingGeometry(8.8, 9.0, 64);
-      const ringMat = new THREE.MeshBasicMaterial({
-        color,
-        side: THREE.DoubleSide,
-        transparent: true,
-        opacity: 0.15,
-      });
-      const ring = new THREE.Mesh(ringGeo, ringMat);
-      ring.rotation.x = Math.PI / 2;
-      ring.position.y = y;
-      this.scene.add(ring);
-    };
-    createTierRing(2.5, 0x38bdf8); // Control plane cyan ring
-    createTierRing(1.0, 0xd946ef); // Framework magenta ring
-    createTierRing(0.0, 0x10b981); // Workload emerald ring
   }
 
   public async loadAssets(glbUrl: string): Promise<void> {
@@ -164,10 +151,11 @@ export class ClusterViewport {
 
   public setClusterData(data: ClusterGraphData, diffMap?: Map<string, { status: any; diffDetails: string[] }>) {
     this.clusterData = data;
-    // Clear existing nodes
+    // Clear existing nodes and conduits
     this.nodeMeshes.forEach((mesh) => this.scene.remove(mesh));
     this.nodeMeshes.clear();
     this.flowSystem.clear();
+    this.conduitManager.clear();
 
     const nodePositions = new Map<string, THREE.Vector3>();
 
@@ -192,18 +180,65 @@ export class ClusterViewport {
       nodePositions.set(node.id, new THREE.Vector3(node.spatial.x, node.spatial.y, node.spatial.z));
     }
 
-    // Connect edges
-    for (const edge of data.edges) {
+    // Connect conduits and animated flow pulses
+    const conduitEdges: ConduitEdge[] = [];
+    for (let i = 0; i < data.edges.length; i++) {
+      const edge = data.edges[i]!;
       const srcPos = nodePositions.get(edge.source);
       const tgtPos = nodePositions.get(edge.target);
-      if (srcPos && tgtPos) {
-        this.flowSystem.addFlowEdge({
-          sourcePos: srcPos,
-          targetPos: tgtPos,
-          flowType: edge.flow_type,
-          volumeLabel: edge.volume_label,
-        });
+      if (!srcPos || !tgtPos) continue;
+
+      let ctype: ConduitType = 'heartbeat-riser';
+      const p = edge.protocol.toLowerCase();
+      const v = (edge.volume_label || '').toLowerCase();
+      const s = edge.source.toLowerCase();
+
+      if (p.includes('heartbeat') || v.includes('heartbeat') || s.includes('kubelet')) {
+        ctype = 'heartbeat-riser';
+      } else if (p.includes('2379') || v.includes('raft') || s.includes('apiserver') && edge.target.includes('etcd')) {
+        ctype = 'etcd-backing';
+      } else if (s.includes('client') || v.includes('watch') || v.includes('list')) {
+        ctype = 'client-stream';
+      } else if (v.includes('peer') || (s.includes('apiserver') && edge.target.includes('apiserver'))) {
+        ctype = 'api-bridge';
+      } else if (edge.flow_type === 'framework_control' || v.includes('tensor') || s.includes('ray')) {
+        ctype = 'framework-bypass';
       }
+
+      conduitEdges.push({
+        id: `conduit-${i}-${edge.source}-${edge.target}`,
+        type: ctype,
+        source: srcPos,
+        target: tgtPos,
+      });
+    }
+
+    // Build 3D conduit pipes
+    this.conduitManager.generate(conduitEdges);
+
+    // Pulse particles along exact conduit curves
+    const records = this.conduitManager.getConduitCurves();
+    for (const rec of records) {
+      let colorHex = 0x00ffcc;
+      let speed = 0.25;
+      if (rec.type === 'heartbeat-riser') {
+        colorHex = 0x10b981; // Emerald green heartbeat pulse
+        speed = 0.35;
+      } else if (rec.type === 'etcd-backing') {
+        colorHex = 0xf59e0b; // Amber etcd write pulse
+        speed = 0.40;
+      } else if (rec.type === 'client-stream') {
+        colorHex = 0xffd700; // Gold client query stream
+        speed = 0.50;
+      } else if (rec.type === 'api-bridge') {
+        colorHex = 0x06b6d4; // Cyan inter-server sync
+        speed = 0.30;
+      } else if (rec.type === 'framework-bypass') {
+        colorHex = 0xa855f7; // Purple tensor bypass stream
+        speed = 0.60;
+      }
+
+      this.flowSystem.addCurveParticle(rec.curve, colorHex, speed, 0.12);
     }
   }
 

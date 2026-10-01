@@ -4,9 +4,9 @@
     "cluster_name": "kind-cluster-alpha",
     "kubernetes_version": "v1.36.4",
     "distribution": "kind",
-    "timestamp": "2026-10-01T02:23:55.815009+00:00",
+    "timestamp": "2026-10-01T07:28:51.589366+00:00",
     "node_count": 1,
-    "pod_count": 19
+    "pod_count": 14
   },
   "nodes": [
     {
@@ -29,9 +29,9 @@
       },
       "spatial": {
         "x": 0.0,
-        "y": -1.5,
+        "y": 0.0,
         "z": 0.0,
-        "asset_type": "NodeTray"
+        "asset_type": "Skyscraper_FloorTray"
       },
       "raw_labels": {
         "beta.kubernetes.io/arch": "amd64",
@@ -56,10 +56,10 @@
         "component": "coredns"
       },
       "spatial": {
-        "x": 2.8,
-        "y": 2.5,
-        "z": 0.0,
-        "asset_type": "ControlPlane_Cube"
+        "x": 0.2,
+        "y": 0.45,
+        "z": 0.4,
+        "asset_type": "Module_PodCapsule"
       },
       "raw_labels": {
         "k8s-app": "kube-dns",
@@ -80,10 +80,10 @@
         "component": "coredns"
       },
       "spatial": {
-        "x": 0.87,
-        "y": 2.5,
-        "z": 2.66,
-        "asset_type": "ControlPlane_Cube"
+        "x": 0.9,
+        "y": 0.45,
+        "z": 0.4,
+        "asset_type": "Module_PodCapsule"
       },
       "raw_labels": {
         "k8s-app": "kube-dns",
@@ -104,10 +104,10 @@
         "component": "etcd"
       },
       "spatial": {
-        "x": -2.27,
-        "y": 2.5,
-        "z": 1.65,
-        "asset_type": "ControlPlane_Cube"
+        "x": 0.0,
+        "y": 4.5,
+        "z": -3.5,
+        "asset_type": "ControlPlane_Vault"
       },
       "raw_labels": {
         "component": "etcd",
@@ -128,10 +128,10 @@
         "component": "kindnet"
       },
       "spatial": {
-        "x": -2.27,
-        "y": 2.5,
-        "z": -1.65,
-        "asset_type": "ControlPlane_Cube"
+        "x": 1.6,
+        "y": 0.45,
+        "z": 0.4,
+        "asset_type": "Module_PodCapsule"
       },
       "raw_labels": {
         "app": "kindnet",
@@ -155,9 +155,9 @@
         "component": "kube-apiserver"
       },
       "spatial": {
-        "x": 0.87,
-        "y": 2.5,
-        "z": -2.66,
+        "x": 0.0,
+        "y": 6.0,
+        "z": 0.0,
         "asset_type": "ControlPlane_Cube"
       },
       "raw_labels": {
@@ -181,10 +181,10 @@
         ]
       },
       "spatial": {
-        "x": -1.0,
-        "y": 0.0,
-        "z": 3.0,
-        "asset_type": "Pod_Cylinder"
+        "x": 2.3,
+        "y": 0.45,
+        "z": 0.4,
+        "asset_type": "Module_PodCapsule"
       },
       "raw_labels": {
         "app": "local-path-provisioner",
@@ -207,9 +207,9 @@
         ]
       },
       "spatial": {
-        "x": -4.5,
-        "y": 0.0,
-        "z": -1.5,
+        "x": 0.2,
+        "y": 0.45,
+        "z": -0.4,
         "asset_type": "Database_Postgres"
       },
       "raw_labels": {
@@ -236,9 +236,9 @@
         ]
       },
       "spatial": {
-        "x": -3.1,
-        "y": 0.0,
-        "z": -1.5,
+        "x": 0.9,
+        "y": 0.45,
+        "z": -0.4,
         "asset_type": "Database_Postgres"
       },
       "raw_labels": {
@@ -265,9 +265,9 @@
         ]
       },
       "spatial": {
-        "x": -1.7,
-        "y": 0.0,
-        "z": -1.5,
+        "x": 1.6,
+        "y": 0.45,
+        "z": -0.4,
         "asset_type": "Database_Postgres"
       },
       "raw_labels": {
@@ -276,136 +276,6 @@
         "apps.kubernetes.io/pod-index": "1",
         "controller-revision-hash": "postgres-replica-5fc646659d",
         "statefulset.kubernetes.io/pod-name": "postgres-replica-1"
-      }
-    },
-    {
-      "id": "pod/workloads/ray-head-845cf7dbb8-h6kz2",
-      "layer": "framework",
-      "kind": "RayHead",
-      "name": "ray-head-845cf7dbb8-h6kz2",
-      "namespace": "workloads",
-      "version": "2.58.0",
-      "image": "docker.io/rayproject/ray:2.58.0",
-      "digest": "sha256:61fee5839b2c5e640059a132be3312019c61badbb2396b513d8536b6db82ac4d",
-      "status": "Degraded",
-      "metrics": {
-        "containers": [
-          "ray-head"
-        ]
-      },
-      "spatial": {
-        "x": 3.8,
-        "y": 1.0,
-        "z": 0.0,
-        "asset_type": "Framework_Ray"
-      },
-      "raw_labels": {
-        "pod-template-hash": "845cf7dbb8",
-        "ray.io/node-type": "head"
-      }
-    },
-    {
-      "id": "pod/workloads/ray-worker-9f85f7d8f-4bnjd",
-      "layer": "framework",
-      "kind": "RayWorker",
-      "name": "ray-worker-9f85f7d8f-4bnjd",
-      "namespace": "workloads",
-      "version": "2.58.0",
-      "image": "docker.io/rayproject/ray:2.58.0",
-      "digest": "sha256:61fee5839b2c5e640059a132be3312019c61badbb2396b513d8536b6db82ac4d",
-      "status": "Degraded",
-      "metrics": {
-        "containers": [
-          "ray-worker"
-        ]
-      },
-      "spatial": {
-        "x": 0.0,
-        "y": 1.0,
-        "z": 3.8,
-        "asset_type": "Framework_Ray"
-      },
-      "raw_labels": {
-        "pod-template-hash": "9f85f7d8f",
-        "ray.io/node-type": "worker"
-      }
-    },
-    {
-      "id": "pod/workloads/ray-worker-9f85f7d8f-htlhz",
-      "layer": "framework",
-      "kind": "RayWorker",
-      "name": "ray-worker-9f85f7d8f-htlhz",
-      "namespace": "workloads",
-      "version": "2.58.0",
-      "image": "docker.io/rayproject/ray:2.58.0",
-      "digest": "sha256:61fee5839b2c5e640059a132be3312019c61badbb2396b513d8536b6db82ac4d",
-      "status": "Degraded",
-      "metrics": {
-        "containers": [
-          "ray-worker"
-        ]
-      },
-      "spatial": {
-        "x": -3.8,
-        "y": 1.0,
-        "z": 0.0,
-        "asset_type": "Framework_Ray"
-      },
-      "raw_labels": {
-        "pod-template-hash": "9f85f7d8f",
-        "ray.io/node-type": "worker"
-      }
-    },
-    {
-      "id": "pod/workloads/ray-worker-9f85f7d8f-skbvv",
-      "layer": "framework",
-      "kind": "RayWorker",
-      "name": "ray-worker-9f85f7d8f-skbvv",
-      "namespace": "workloads",
-      "version": "2.58.0",
-      "image": "docker.io/rayproject/ray:2.58.0",
-      "digest": "sha256:61fee5839b2c5e640059a132be3312019c61badbb2396b513d8536b6db82ac4d",
-      "status": "Degraded",
-      "metrics": {
-        "containers": [
-          "ray-worker"
-        ]
-      },
-      "spatial": {
-        "x": -0.0,
-        "y": 1.0,
-        "z": -3.8,
-        "asset_type": "Framework_Ray"
-      },
-      "raw_labels": {
-        "pod-template-hash": "9f85f7d8f",
-        "ray.io/node-type": "worker"
-      }
-    },
-    {
-      "id": "pod/workloads/redis-cluster-6587c5bb48-hjkvm",
-      "layer": "workload",
-      "kind": "RedisNode",
-      "name": "redis-cluster-6587c5bb48-hjkvm",
-      "namespace": "workloads",
-      "version": "8.10.2",
-      "image": "docker.io/library/redis:8.10.2",
-      "digest": "sha256:6f81e8915c60b065a524e6967e0ad1c639ba6efa84d669f823683ea04d9150ee",
-      "status": "Healthy",
-      "metrics": {
-        "containers": [
-          "redis"
-        ]
-      },
-      "spatial": {
-        "x": 2.5,
-        "y": 0.0,
-        "z": -1.5,
-        "asset_type": "Cache_Redis"
-      },
-      "raw_labels": {
-        "app.kubernetes.io/name": "redis",
-        "pod-template-hash": "6587c5bb48"
       }
     },
     {
@@ -424,9 +294,9 @@
         ]
       },
       "spatial": {
-        "x": 3.9,
-        "y": 0.0,
-        "z": -1.5,
+        "x": 2.3,
+        "y": 0.45,
+        "z": -0.4,
         "asset_type": "Cache_Redis"
       },
       "raw_labels": {
@@ -450,15 +320,102 @@
         ]
       },
       "spatial": {
-        "x": 5.3,
-        "y": 0.0,
-        "z": -1.5,
+        "x": 0.2,
+        "y": 0.45,
+        "z": 0.4,
         "asset_type": "Cache_Redis"
       },
       "raw_labels": {
         "app.kubernetes.io/name": "redis",
         "pod-template-hash": "6587c5bb48"
       }
+    },
+    {
+      "id": "kind-cluster-alpha/client-kubectl",
+      "layer": "ingress",
+      "kind": "Client",
+      "name": "kubectl-cli",
+      "namespace": "external",
+      "version": "v1.31.0",
+      "image": null,
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "tool": "kubectl",
+        "command": "list pods"
+      },
+      "spatial": {
+        "x": -1.4,
+        "y": 11.0,
+        "z": 6.0,
+        "asset_type": "Client_Slab"
+      },
+      "raw_labels": {}
+    },
+    {
+      "id": "kind-cluster-alpha/client-crd-watcher",
+      "layer": "ingress",
+      "kind": "Client",
+      "name": "client-crd-watcher",
+      "namespace": "external",
+      "version": "v1.0.0",
+      "image": null,
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "watch": "rayclusters.ray.io"
+      },
+      "spatial": {
+        "x": 1.4,
+        "y": 11.0,
+        "z": 6.0,
+        "asset_type": "Client_Slab"
+      },
+      "raw_labels": {}
+    },
+    {
+      "id": "node/cluster-alpha-control-plane/kubelet",
+      "layer": "node",
+      "kind": "Kubelet",
+      "name": "kubelet-cluster-alpha-control-plane",
+      "namespace": "kube-system",
+      "version": "v1.36.4",
+      "image": null,
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "component": "kubelet",
+        "node": "cluster-alpha-control-plane"
+      },
+      "spatial": {
+        "x": -1.5,
+        "y": 0.35,
+        "z": 0.0,
+        "asset_type": "Module_Kubelet"
+      },
+      "raw_labels": {}
+    },
+    {
+      "id": "node/cluster-alpha-control-plane/containerd",
+      "layer": "node",
+      "kind": "Containerd",
+      "name": "containerd-cluster-alpha-control-plane",
+      "namespace": "kube-system",
+      "version": "v1.7.20",
+      "image": null,
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "runtime": "containerd",
+        "node": "cluster-alpha-control-plane"
+      },
+      "spatial": {
+        "x": -0.7,
+        "y": 0.35,
+        "z": 0.0,
+        "asset_type": "Module_Containerd"
+      },
+      "raw_labels": {}
     }
   ],
   "edges": [
@@ -490,33 +447,6 @@
       "volume_label": null
     },
     {
-      "source": "pod/workloads/ray-head-845cf7dbb8-h6kz2",
-      "target": "pod/workloads/ray-worker-9f85f7d8f-4bnjd",
-      "flow_type": "framework_control",
-      "protocol": "gRPC/10001",
-      "direction": "bidirectional",
-      "animated": true,
-      "volume_label": "Raylet Task Stream"
-    },
-    {
-      "source": "pod/workloads/ray-head-845cf7dbb8-h6kz2",
-      "target": "pod/workloads/ray-worker-9f85f7d8f-htlhz",
-      "flow_type": "framework_control",
-      "protocol": "gRPC/10001",
-      "direction": "bidirectional",
-      "animated": true,
-      "volume_label": "Raylet Task Stream"
-    },
-    {
-      "source": "pod/workloads/ray-head-845cf7dbb8-h6kz2",
-      "target": "pod/workloads/ray-worker-9f85f7d8f-skbvv",
-      "flow_type": "framework_control",
-      "protocol": "gRPC/10001",
-      "direction": "bidirectional",
-      "animated": true,
-      "volume_label": "Raylet Task Stream"
-    },
-    {
       "source": "pod/workloads/postgres-primary-0",
       "target": "pod/workloads/postgres-replica-0",
       "flow_type": "data_replication",
@@ -533,12 +463,48 @@
       "direction": "unidirectional",
       "animated": true,
       "volume_label": "Async Streaming Replication"
+    },
+    {
+      "source": "kind-cluster-alpha/client-kubectl",
+      "target": "control-plane/kube-system/kube-apiserver-cluster-alpha-control-plane",
+      "flow_type": "traffic",
+      "protocol": "HTTPS/443",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "list pods"
+    },
+    {
+      "source": "kind-cluster-alpha/client-crd-watcher",
+      "target": "control-plane/kube-system/kube-apiserver-cluster-alpha-control-plane",
+      "flow_type": "traffic",
+      "protocol": "HTTPS/443",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "watch CRDs"
+    },
+    {
+      "source": "control-plane/kube-system/kube-apiserver-cluster-alpha-control-plane",
+      "target": "control-plane/kube-system/etcd-cluster-alpha-control-plane",
+      "flow_type": "control_plane",
+      "protocol": "gRPC/2379",
+      "direction": "bidirectional",
+      "animated": true,
+      "volume_label": "raft KV"
+    },
+    {
+      "source": "node/cluster-alpha-control-plane/kubelet",
+      "target": "control-plane/kube-system/kube-apiserver-cluster-alpha-control-plane",
+      "flow_type": "control_plane",
+      "protocol": "HTTPS/6443/Heartbeat",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "lease heartbeat"
     }
   ],
   "diff_summary": {
-    "identical_nodes": 2,
-    "version_skew_nodes": 8,
-    "missing_in_target": 7,
-    "added_in_target": 3
+    "identical_nodes": 5,
+    "version_skew_nodes": 9,
+    "missing_in_target": 2,
+    "added_in_target": 8
   }
 }

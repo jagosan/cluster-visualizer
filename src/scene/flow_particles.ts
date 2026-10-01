@@ -9,10 +9,10 @@ export interface FlowEdgeData {
 
 export class FlowParticleSystem {
   public group: THREE.Group = new THREE.Group();
-  private curves: THREE.QuadraticBezierCurve3[] = [];
+  private curves: THREE.Curve<THREE.Vector3>[] = [];
   private particles: {
     mesh: THREE.Mesh;
-    curve: THREE.QuadraticBezierCurve3;
+    curve: THREE.Curve<THREE.Vector3>;
     progress: number;
     speed: number;
   }[] = [];
@@ -38,6 +38,32 @@ export class FlowParticleSystem {
     }
     this.curves = [];
     this.particles = [];
+  }
+
+  public addCurveParticle(
+    curve: THREE.Curve<THREE.Vector3>,
+    colorHex: number = 0x00ffcc,
+    speed: number = 0.25,
+    size: number = 0.12
+  ) {
+    this.curves.push(curve);
+
+    const particleGeo = new THREE.SphereGeometry(size, 8, 8);
+    const particleMat = new THREE.MeshBasicMaterial({
+      color: colorHex,
+      transparent: true,
+      opacity: 0.95,
+      blending: THREE.AdditiveBlending,
+    });
+    const particleMesh = new THREE.Mesh(particleGeo, particleMat);
+    this.group.add(particleMesh);
+
+    this.particles.push({
+      mesh: particleMesh,
+      curve,
+      progress: Math.random(),
+      speed: speed + Math.random() * 0.05,
+    });
   }
 
   public addFlowEdge(edge: FlowEdgeData) {
