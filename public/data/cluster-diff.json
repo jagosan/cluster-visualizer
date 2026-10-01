@@ -82,9 +82,9 @@
       "source_version": null,
       "target_version": "2.58.0",
       "source_image": null,
-      "target_image": "rayproject/ray:2.58.0",
+      "target_image": "docker.io/rayproject/ray:2.58.0",
       "source_digest": null,
-      "target_digest": null,
+      "target_digest": "sha256:61fee5839b2c5e640059a132be3312019c61badbb2396b513d8536b6db82ac4d",
       "diff_details": [
         "Absent in kind-cluster-alpha, present in kind-cluster-beta"
       ]
@@ -108,9 +108,9 @@
       "source_version": null,
       "target_version": "2.58.0",
       "source_image": null,
-      "target_image": "rayproject/ray:2.58.0",
+      "target_image": "docker.io/rayproject/ray:2.58.0",
       "source_digest": null,
-      "target_digest": null,
+      "target_digest": "sha256:61fee5839b2c5e640059a132be3312019c61badbb2396b513d8536b6db82ac4d",
       "diff_details": [
         "Absent in kind-cluster-alpha, present in kind-cluster-beta"
       ]
@@ -121,9 +121,9 @@
       "source_version": null,
       "target_version": "2.58.0",
       "source_image": null,
-      "target_image": "rayproject/ray:2.58.0",
+      "target_image": "docker.io/rayproject/ray:2.58.0",
       "source_digest": null,
-      "target_digest": null,
+      "target_digest": "sha256:61fee5839b2c5e640059a132be3312019c61badbb2396b513d8536b6db82ac4d",
       "diff_details": [
         "Absent in kind-cluster-alpha, present in kind-cluster-beta"
       ]
@@ -134,9 +134,9 @@
       "source_version": null,
       "target_version": "2.58.0",
       "source_image": null,
-      "target_image": "rayproject/ray:2.58.0",
+      "target_image": "docker.io/rayproject/ray:2.58.0",
       "source_digest": null,
-      "target_digest": null,
+      "target_digest": "sha256:61fee5839b2c5e640059a132be3312019c61badbb2396b513d8536b6db82ac4d",
       "diff_details": [
         "Absent in kind-cluster-alpha, present in kind-cluster-beta"
       ]

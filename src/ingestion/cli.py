@@ -66,7 +66,7 @@ def ingest_cluster(context_name: str) -> ClusterGraph:
             version=mn.version,
             status="Healthy",
             metrics={"component": "kubelet", "node": mn.name},
-            spatial=Spatial(asset_type="Module_Kubelet"),
+            spatial=Spatial(asset_type="Cuboid_Kubelet"),
         ))
         runtime_nodes.append(NodeComponent(
             id=f"{mn.id}/containerd",
@@ -77,7 +77,7 @@ def ingest_cluster(context_name: str) -> ClusterGraph:
             version="v1.7.20",
             status="Healthy",
             metrics={"runtime": "containerd", "node": mn.name},
-            spatial=Spatial(asset_type="Module_Containerd"),
+            spatial=Spatial(asset_type="Cuboid_Containerd"),
         ))
 
     all_nodes = enriched_nodes + client_nodes + runtime_nodes

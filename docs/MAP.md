@@ -5,6 +5,8 @@
 - `docs/architecture/00-system-architecture.md`: Architecture blueprint, spatial layout, data flows, and hosting portability.
 - `specs/01-architectural-skyscraper-topology.md`: Skyscraper topology, layered building levels, client horizion, and procedural conduits.
 - `docs/architecture/01-architectural-skyscraper-topology.md`: Skyscraper architectural blueprint, spatial elevation matrix, and conduit ADRs.
+- `specs/02-layered-rectangular-architecture.md`: Master specification for Transformer/DeepSeek-style 3D layered rectangular architecture.
+- `docs/architecture/02-layered-rectangular-architecture.md`: Blueprint and design specifications for layer trays and component cuboids.
 - `docs/MAP.md`: This symbol and directory reference map.
 
 ## 3D Asset Pipeline (Blender `bpy`)
@@ -30,6 +32,8 @@
 - `index.html`: Entry HTML with dual viewport split-screen canvas and HUD overlay.
 - `src/main.ts`: Application bootstrap, event listeners, and viewport layout controller.
 - `src/scene/cluster_viewport.ts`: `ClusterViewport` Three.js scene manager, camera, lighting, and raycaster.
+- `src/scene/layer_trays.ts`: `LayerTrayManager` procedural semi-transparent floor trays and structural tower cage.
+- `src/scene/flank_labels.ts`: `FlankLabelManager` typographic billboard sprites floating on tower flanks.
 - `src/scene/conduits.ts`: 3D procedural conduit pipe mesh generator and route splines.
 - `src/scene/camera_sync.ts`: Synchronous dual-orbit camera controller.
 - `src/scene/flow_particles.ts`: GPU / instanced particle system animating traffic and replication streams.

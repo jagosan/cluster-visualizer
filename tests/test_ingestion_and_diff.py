@@ -47,9 +47,10 @@ class TestClusterIngestionAndDiff(unittest.TestCase):
         self.assertEqual(by_id["et-1"].spatial.z, -3.5, "etcd must be placed behind API server at Z=-3.5")
         self.assertEqual(by_id["fw-1"].spatial.y, ELEVATION_TIERS["framework"])
         self.assertEqual(by_id["nd-1"].spatial.y, ELEVATION_TIERS["worker_base"])
-        self.assertEqual(by_id["wl-1"].spatial.y, ELEVATION_TIERS["worker_base"] + 0.45)
-        self.assertEqual(by_id["nd-1"].spatial.asset_type, "Skyscraper_FloorTray")
-        self.assertEqual(by_id["et-1"].spatial.asset_type, "ControlPlane_Vault")
+        self.assertEqual(by_id["wl-1"].spatial.y, ELEVATION_TIERS["worker_base"] + 0.25)
+        self.assertEqual(by_id["nd-1"].spatial.asset_type, "LayerTray_Worker")
+        self.assertEqual(by_id["cp-1"].spatial.asset_type, "Cuboid_APIServer")
+        self.assertEqual(by_id["et-1"].spatial.asset_type, "Cuboid_etcd")
         self.assertEqual(by_id["cl-1"].spatial.asset_type, "Client_Slab")
 
     def test_framework_detection_and_edge_generation(self):
