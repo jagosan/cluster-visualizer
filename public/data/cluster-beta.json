@@ -1,0 +1,407 @@
+{
+  "$schema": "https://cluster-vis.jagosan.com/schemas/cluster-graph-v1.json",
+  "metadata": {
+    "cluster_name": "kind-cluster-beta",
+    "kubernetes_version": "v1.35.8",
+    "distribution": "kind",
+    "timestamp": "2026-10-01T02:23:55.897620+00:00",
+    "node_count": 1,
+    "pod_count": 15
+  },
+  "nodes": [
+    {
+      "id": "node/cluster-beta-control-plane",
+      "layer": "node",
+      "kind": "Node",
+      "name": "cluster-beta-control-plane",
+      "namespace": "cluster",
+      "version": "v1.35.8",
+      "image": null,
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "cpu_capacity": "16",
+        "memory_capacity": "15580536Ki",
+        "cpu_allocatable": "16",
+        "memory_allocatable": "15580536Ki",
+        "os_image": "Debian GNU/Linux 13 (trixie)",
+        "unschedulable": false
+      },
+      "spatial": {
+        "x": 0.0,
+        "y": -1.5,
+        "z": 0.0,
+        "asset_type": "NodeTray"
+      },
+      "raw_labels": {
+        "beta.kubernetes.io/arch": "amd64",
+        "beta.kubernetes.io/os": "linux",
+        "kubernetes.io/arch": "amd64",
+        "kubernetes.io/hostname": "cluster-beta-control-plane",
+        "kubernetes.io/os": "linux",
+        "node-role.kubernetes.io/control-plane": ""
+      }
+    },
+    {
+      "id": "control-plane/kube-system/coredns-7d764666f9-sf62q",
+      "layer": "control-plane",
+      "kind": "Pod",
+      "name": "coredns-7d764666f9-sf62q",
+      "namespace": "kube-system",
+      "version": "v1.13.1",
+      "image": "registry.k8s.io/coredns/coredns:v1.13.1",
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "component": "coredns"
+      },
+      "spatial": {
+        "x": 2.8,
+        "y": 2.5,
+        "z": 0.0,
+        "asset_type": "ControlPlane_Cube"
+      },
+      "raw_labels": {
+        "k8s-app": "kube-dns",
+        "pod-template-hash": "7d764666f9"
+      }
+    },
+    {
+      "id": "control-plane/kube-system/coredns-7d764666f9-w8p9g",
+      "layer": "control-plane",
+      "kind": "Pod",
+      "name": "coredns-7d764666f9-w8p9g",
+      "namespace": "kube-system",
+      "version": "v1.13.1",
+      "image": "registry.k8s.io/coredns/coredns:v1.13.1",
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "component": "coredns"
+      },
+      "spatial": {
+        "x": 0.87,
+        "y": 2.5,
+        "z": 2.66,
+        "asset_type": "ControlPlane_Cube"
+      },
+      "raw_labels": {
+        "k8s-app": "kube-dns",
+        "pod-template-hash": "7d764666f9"
+      }
+    },
+    {
+      "id": "control-plane/kube-system/etcd-cluster-beta-control-plane",
+      "layer": "control-plane",
+      "kind": "Pod",
+      "name": "etcd-cluster-beta-control-plane",
+      "namespace": "kube-system",
+      "version": "3.6.6-0",
+      "image": "registry.k8s.io/etcd:3.6.6-0",
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "component": "etcd"
+      },
+      "spatial": {
+        "x": -2.27,
+        "y": 2.5,
+        "z": 1.65,
+        "asset_type": "ControlPlane_Cube"
+      },
+      "raw_labels": {
+        "component": "etcd",
+        "tier": "control-plane"
+      }
+    },
+    {
+      "id": "control-plane/kube-system/kindnet-qp5vd",
+      "layer": "control-plane",
+      "kind": "Pod",
+      "name": "kindnet-qp5vd",
+      "namespace": "kube-system",
+      "version": "v20260820-69b56db7",
+      "image": "docker.io/kindest/kindnetd:v20260820-69b56db7",
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "component": "kindnet"
+      },
+      "spatial": {
+        "x": -2.27,
+        "y": 2.5,
+        "z": -1.65,
+        "asset_type": "ControlPlane_Cube"
+      },
+      "raw_labels": {
+        "app": "kindnet",
+        "controller-revision-hash": "75bfb6859f",
+        "k8s-app": "kindnet",
+        "pod-template-generation": "1",
+        "tier": "node"
+      }
+    },
+    {
+      "id": "control-plane/kube-system/kube-apiserver-cluster-beta-control-plane",
+      "layer": "control-plane",
+      "kind": "Pod",
+      "name": "kube-apiserver-cluster-beta-control-plane",
+      "namespace": "kube-system",
+      "version": "v1.35.8",
+      "image": "registry.k8s.io/kube-apiserver-amd64:v1.35.8",
+      "digest": "sha256:8e41799cf8c3df55aa00caa3e0fca38e93616e3932cb027b84b49d668d5c5b3e",
+      "status": "Healthy",
+      "metrics": {
+        "component": "kube-apiserver"
+      },
+      "spatial": {
+        "x": 0.87,
+        "y": 2.5,
+        "z": -2.66,
+        "asset_type": "ControlPlane_Cube"
+      },
+      "raw_labels": {
+        "component": "kube-apiserver",
+        "tier": "control-plane"
+      }
+    },
+    {
+      "id": "pod/local-path-storage/local-path-provisioner-67b778fdf6-pp858",
+      "layer": "workload",
+      "kind": "Pod",
+      "name": "local-path-provisioner-67b778fdf6-pp858",
+      "namespace": "local-path-storage",
+      "version": "v20260820-69b56db7",
+      "image": "docker.io/kindest/local-path-provisioner:v20260820-69b56db7",
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "containers": [
+          "local-path-provisioner"
+        ]
+      },
+      "spatial": {
+        "x": -1.0,
+        "y": 0.0,
+        "z": 3.0,
+        "asset_type": "Pod_Cylinder"
+      },
+      "raw_labels": {
+        "app": "local-path-provisioner",
+        "pod-template-hash": "67b778fdf6"
+      }
+    },
+    {
+      "id": "pod/workloads/postgres-primary-0",
+      "layer": "workload",
+      "kind": "PostgresPrimary",
+      "name": "postgres-primary-0",
+      "namespace": "workloads",
+      "version": "17.11",
+      "image": "docker.io/library/postgres:17.11",
+      "digest": "sha256:d74eeac9a635390a49bc21bd49fccd973de707e2a53a76ac49b552b8712ec46f",
+      "status": "Healthy",
+      "metrics": {
+        "containers": [
+          "postgres"
+        ]
+      },
+      "spatial": {
+        "x": -4.5,
+        "y": 0.0,
+        "z": -1.5,
+        "asset_type": "Database_Postgres"
+      },
+      "raw_labels": {
+        "app.kubernetes.io/component": "primary",
+        "app.kubernetes.io/name": "postgresql",
+        "apps.kubernetes.io/pod-index": "0",
+        "controller-revision-hash": "postgres-primary-5f9f54d6c4",
+        "statefulset.kubernetes.io/pod-name": "postgres-primary-0"
+      }
+    },
+    {
+      "id": "pod/workloads/redis-cluster-84475f8ffc-55jzn",
+      "layer": "workload",
+      "kind": "RedisNode",
+      "name": "redis-cluster-84475f8ffc-55jzn",
+      "namespace": "workloads",
+      "version": "7.4.2",
+      "image": "docker.io/library/redis:7.4.2",
+      "digest": "sha256:fbdbaea47b9ae4ecc2082ecdb4e1cea81e32176ffb1dcf643d422ad07427e5d9",
+      "status": "Healthy",
+      "metrics": {
+        "containers": [
+          "redis"
+        ]
+      },
+      "spatial": {
+        "x": 2.5,
+        "y": 0.0,
+        "z": -1.5,
+        "asset_type": "Cache_Redis"
+      },
+      "raw_labels": {
+        "app.kubernetes.io/name": "redis",
+        "pod-template-hash": "84475f8ffc"
+      }
+    },
+    {
+      "id": "pod/workloads/redis-cluster-84475f8ffc-qbtwr",
+      "layer": "workload",
+      "kind": "RedisNode",
+      "name": "redis-cluster-84475f8ffc-qbtwr",
+      "namespace": "workloads",
+      "version": "7.4.2",
+      "image": "docker.io/library/redis:7.4.2",
+      "digest": "sha256:fbdbaea47b9ae4ecc2082ecdb4e1cea81e32176ffb1dcf643d422ad07427e5d9",
+      "status": "Healthy",
+      "metrics": {
+        "containers": [
+          "redis"
+        ]
+      },
+      "spatial": {
+        "x": 3.9,
+        "y": 0.0,
+        "z": -1.5,
+        "asset_type": "Cache_Redis"
+      },
+      "raw_labels": {
+        "app.kubernetes.io/name": "redis",
+        "pod-template-hash": "84475f8ffc"
+      }
+    },
+    {
+      "id": "pod/workloads/spark-driver-7d94c89996-78xx4",
+      "layer": "framework",
+      "kind": "SparkDriver",
+      "name": "spark-driver-7d94c89996-78xx4",
+      "namespace": "workloads",
+      "version": "4.2.0",
+      "image": "docker.io/apache/spark:4.2.0",
+      "digest": "sha256:fc64959c04bd87b0ac686be9aaa9008b69cdb1afc695400528279c8b01f43d89",
+      "status": "Degraded",
+      "metrics": {
+        "containers": [
+          "spark-driver"
+        ]
+      },
+      "spatial": {
+        "x": 3.8,
+        "y": 1.0,
+        "z": 0.0,
+        "asset_type": "Framework_Spark"
+      },
+      "raw_labels": {
+        "pod-template-hash": "7d94c89996",
+        "spark-role": "driver"
+      }
+    },
+    {
+      "id": "pod/workloads/spark-executor-5c5ff8f74b-lzkk8",
+      "layer": "framework",
+      "kind": "SparkExecutor",
+      "name": "spark-executor-5c5ff8f74b-lzkk8",
+      "namespace": "workloads",
+      "version": "4.2.0",
+      "image": "docker.io/apache/spark:4.2.0",
+      "digest": "sha256:fc64959c04bd87b0ac686be9aaa9008b69cdb1afc695400528279c8b01f43d89",
+      "status": "Degraded",
+      "metrics": {
+        "containers": [
+          "spark-executor"
+        ]
+      },
+      "spatial": {
+        "x": -1.9,
+        "y": 1.0,
+        "z": 3.29,
+        "asset_type": "Framework_Spark"
+      },
+      "raw_labels": {
+        "pod-template-hash": "5c5ff8f74b",
+        "spark-role": "executor"
+      }
+    },
+    {
+      "id": "pod/workloads/spark-executor-5c5ff8f74b-smjdw",
+      "layer": "framework",
+      "kind": "SparkExecutor",
+      "name": "spark-executor-5c5ff8f74b-smjdw",
+      "namespace": "workloads",
+      "version": "4.2.0",
+      "image": "docker.io/apache/spark:4.2.0",
+      "digest": "sha256:fc64959c04bd87b0ac686be9aaa9008b69cdb1afc695400528279c8b01f43d89",
+      "status": "Degraded",
+      "metrics": {
+        "containers": [
+          "spark-executor"
+        ]
+      },
+      "spatial": {
+        "x": -1.9,
+        "y": 1.0,
+        "z": -3.29,
+        "asset_type": "Framework_Spark"
+      },
+      "raw_labels": {
+        "pod-template-hash": "5c5ff8f74b",
+        "spark-role": "executor"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "source": "control-plane/kube-system/kube-apiserver-cluster-beta-control-plane",
+      "target": "control-plane/kube-system/etcd-cluster-beta-control-plane",
+      "flow_type": "control_plane",
+      "protocol": "gRPC",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "etcd writes"
+    },
+    {
+      "source": "control-plane/kube-system/kube-apiserver-cluster-beta-control-plane",
+      "target": "control-plane/kube-system/coredns-7d764666f9-sf62q",
+      "flow_type": "control_plane",
+      "protocol": "TCP",
+      "direction": "unidirectional",
+      "animated": false,
+      "volume_label": null
+    },
+    {
+      "source": "control-plane/kube-system/kube-apiserver-cluster-beta-control-plane",
+      "target": "control-plane/kube-system/coredns-7d764666f9-w8p9g",
+      "flow_type": "control_plane",
+      "protocol": "TCP",
+      "direction": "unidirectional",
+      "animated": false,
+      "volume_label": null
+    },
+    {
+      "source": "pod/workloads/spark-driver-7d94c89996-78xx4",
+      "target": "pod/workloads/spark-executor-5c5ff8f74b-lzkk8",
+      "flow_type": "framework_control",
+      "protocol": "Spark/7077",
+      "direction": "bidirectional",
+      "animated": true,
+      "volume_label": "Shuffle / Task Scheduling"
+    },
+    {
+      "source": "pod/workloads/spark-driver-7d94c89996-78xx4",
+      "target": "pod/workloads/spark-executor-5c5ff8f74b-smjdw",
+      "flow_type": "framework_control",
+      "protocol": "Spark/7077",
+      "direction": "bidirectional",
+      "animated": true,
+      "volume_label": "Shuffle / Task Scheduling"
+    }
+  ],
+  "diff_summary": {
+    "identical_nodes": 2,
+    "version_skew_nodes": 8,
+    "missing_in_target": 7,
+    "added_in_target": 3
+  }
+}
