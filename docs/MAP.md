@@ -3,6 +3,8 @@
 ## Specifications & Architecture
 - `specs/00-system-architecture.md`: Master specification, data contracts, and acceptance criteria.
 - `docs/architecture/00-system-architecture.md`: Architecture blueprint, spatial layout, data flows, and hosting portability.
+- `specs/01-architectural-skyscraper-topology.md`: Skyscraper topology, layered building levels, client horizion, and procedural conduits.
+- `docs/architecture/01-architectural-skyscraper-topology.md`: Skyscraper architectural blueprint, spatial elevation matrix, and conduit ADRs.
 - `docs/MAP.md`: This symbol and directory reference map.
 
 ## 3D Asset Pipeline (Blender `bpy`)
