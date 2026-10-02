@@ -3,6 +3,9 @@ import type { ClusterGraphData } from './scene/cluster_viewport.js';
 import { CameraSyncController } from './scene/camera_sync.js';
 import { DiffInspectorDrawer } from './ui/diff_inspector.js';
 import { LiveStreamManager } from './scene/live_stream.js';
+import { TimelinePlayer } from './scene/timeline_player.js';
+import type { ClusterTimelineData } from './scene/timeline_player.js';
+import { TimelineScrubber } from './ui/timeline_scrubber.js';
 
 interface DiffReportData {
   source_cluster: string;
@@ -222,21 +225,53 @@ async function bootstrap() {
     liveStream.connect(streamParam);
   }
 
-  // 9. Expose globals for debugging and testing
+  // 9. Time-Travel Playback & Historical Scrubber Engine (SPEC-05)
+  const timelinePlayer = new TimelinePlayer();
+  timelinePlayer.attachViewport(viewportA);
+
+  const timelineScrubber = new TimelineScrubber();
+  timelineScrubber.attachPlayer(timelinePlayer);
+
+  // Auto-load synthetic rollout timeline if available
+  fetch('./data/timelines/synthetic_rollout.json')
+    .then((r) => {
+      if (r.ok) return r.json();
+      throw new Error('Default synthetic rollout timeline not found');
+    })
+    .then((timeline: ClusterTimelineData) => {
+      timelinePlayer.loadTimeline(timeline);
+      timelineScrubber.renderKeyframePins(timeline);
+    })
+    .catch((err) => {
+      console.log('Historical timeline auto-load skipped:', err);
+    });
+
+  const btnTimeline = document.getElementById('btn-timeline');
+  if (btnTimeline) {
+    btnTimeline.addEventListener('click', () => {
+      timelineScrubber.toggle();
+      btnTimeline.classList.toggle('active');
+    });
+  }
+
+  // 10. Expose globals for debugging and testing
   (window as any).__viewportA = viewportA;
   (window as any).__viewportB = viewportB;
   (window as any).__inspector = inspector;
   (window as any).__dataA = dataA;
   (window as any).__dataB = dataB;
   (window as any).__liveStream = liveStream;
+  (window as any).__timelinePlayer = timelinePlayer;
+  (window as any).__timelineScrubber = timelineScrubber;
 
-  // 10. Animation Loop
+  // 11. Animation Loop
   let lastTime = performance.now();
   function animate(now: number) {
     requestAnimationFrame(animate);
     const delta = (now - lastTime) / 1000;
     lastTime = now;
 
+    timelinePlayer.update(delta);
     viewportA.render(delta);
     viewportB.render(delta);
   }
