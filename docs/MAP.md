@@ -9,37 +9,38 @@
 - `docs/architecture/02-layered-rectangular-architecture.md`: Blueprint and design specifications for layer trays and component cuboids.
 - `specs/03-horizontal-node-peers-and-diff-engine.md`: Master specification for horizontal node peers, 3D semantic git-diff engine, and universal cluster exporter.
 - `docs/architecture/03-horizontal-node-peers-and-diff-engine.md`: Blueprint for single worker deck layout, volumetric diffing, and export CLI.
-- `specs/04-in-cluster-streaming-operator.md`: Optional in-cluster CRD (`clustervis.io/v1alpha1`) & real-time SSE topology streaming operator.
+- `specs/04-in-cluster-streaming-operator.md`: In-cluster CRD (`clustervis.io/v1alpha1`) & real-time SSE topology streaming operator.
+- `docs/architecture/04-in-cluster-streaming-operator.md`: Blueprint for SSE event streaming, dynamic mutations, and secret scrubbing.
 - `specs/05-time-travel-topology-scrubber.md`: Time-travel cluster topology playback, delta recording, and HUD scrubber controls.
+- `docs/architecture/05-time-travel-topology-scrubber.md`: Blueprint for chronological keyframes, spatial tweening, and timeline scrubber HUD.
 - `docs/MAP.md`: This symbol and directory reference map.
 
 ## 3D Asset Pipeline (Blender `bpy`)
-- `blender/build_cluster_assets.py`: Headless Blender script generating procedural models with PBR materials.
-- `public/assets/cluster-kit.glb`: Exported binary glTF asset library containing:
-  - `LayerTray_WorkerDeck`: Wide horizontal base tray for N worker node peers.
-  - `Cuboid_DaemonSet`: Infrastructure daemonset module (kube-proxy, cilium, node-exporter).
-  - `Cuboid_APIServer` / `Cuboid_etcd` / `Cuboid_Supervisor`: Control plane cuboids.
-  - `Framework_Ray` / `Framework_Spark`: Distributed framework operator and worker meshes.
-  - `Database_Postgres` / `Cache_Redis`: Data layer workload meshes.
+- `blender/build_cluster_assets.py`: Headless Blender script generating procedural models with PBR materials into `public/assets/cluster-kit.glb`.
 
-## Ingestion & Graph Engine (Python)
+## Ingestion, Graph Engine & Time-Travel (Python)
 - `src/ingestion/models.py`: Pydantic models for `ClusterGraph`, `NodeComponent`, `DataFlowEdge`, `DiffReport`.
+- `src/ingestion/timeline_models.py`: Pydantic models for `TimelineEvent`, `ClusterTimelineKeyframe`, `ClusterTimeline`.
 - `src/ingestion/extractor.py`: Static Kubernetes manifest topology extractor.
 - `src/ingestion/exporter.py`: Universal dynamic cluster exporter CLI (`cluster-vis dump`) querying live kubeconfigs.
+- `src/ingestion/recorder.py`: Time-travel cluster topology recorder CLI (`cluster-vis record`) with delta deduplication.
 - `src/ingestion/frameworks.py`: Specialized detectors for Ray, Spark, PostgreSQL, and Redis CRDs and workloads.
 - `src/ingestion/differ.py`: Side-by-side graph diff classifier comparing two clusters.
 - `src/ingestion/layout.py`: Spatial layout generator for horizontal worker deck ($Y = 0.5$) and control plane tiers.
+- `scripts/generate_synthetic_timeline.py`: Synthetic rollout testbed generator for multi-keyframe timeline testing.
 
 ## In-Cluster Operator & Streaming Server (Python)
-- `deploy/crd/clustervis.io_clustertopologysnapshots.yaml`: CRD manifest for `ClusterTopologySnapshot` (`clustervis.io/v1alpha1`).
-- `deploy/operator/operator.yaml`: Kubernetes Deployment, ServiceAccount, ClusterRole, and ClusterRoleBinding for in-cluster operator.
+- `deploy/crd/clustervis.io_clustertopologysnapshots.yaml`: CRD manifest for `ClusterTopologySnapshot`.
+- `deploy/operator/operator.yaml`: Kubernetes Deployment, ServiceAccount, and RBAC manifests.
 - `src/operator/controller.py`: In-cluster Kubernetes watch informer loop reconciling pods, nodes, and CRDs.
 - `src/operator/server.py`: Lightweight HTTP & SSE streaming server (`/api/v1/topology/stream`, `/snapshot`, `/healthz`).
 
 ## Frontend WebGL Client (Vite + TypeScript + Three.js)
-- `index.html`: Entry HTML with dual viewport split-screen canvas and HUD overlay.
+- `index.html`: Entry HTML with dual viewport split-screen canvas, HUD overlay, and timeline scrubber container `#timeline-scrubber-dock`.
 - `src/main.ts`: Application bootstrap, event listeners, and viewport layout controller.
-- `src/scene/cluster_viewport.ts`: `ClusterViewport` Three.js scene manager, camera, lighting, and raycaster.
+- `src/scene/cluster_viewport.ts`: `ClusterViewport` Three.js scene manager, dynamic mutation animations, camera, and raycaster.
+- `src/scene/timeline_player.ts`: `TimelinePlayer` engine handling keyframe playback, seek interpolation, and delta transitions.
+- `src/ui/timeline_scrubber.ts`: `TimelineScrubber` bottom-docked HUD with scrub bar, event pins, play/pause, and speed multipliers.
 - `src/scene/live_stream.ts`: `LiveStreamManager` SSE client handling reconnection, heartbeat, and real-time topology mutation events.
 - `src/scene/layer_trays.ts`: `LayerTrayManager` procedural semi-transparent floor trays and structural tower cage.
 - `src/scene/flank_labels.ts`: `FlankLabelManager` typographic billboard sprites floating on tower flanks.

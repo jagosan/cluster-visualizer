@@ -1,38 +1,53 @@
-# Milestone Handoff: Cluster Visualizer (`cluster-vis`)
+# Milestone Handoff: Cluster Visualizer (`cluster-vis`) — SPEC-04
 
-**Date:** 2026-09-30  
-**Active Branch / Commit:** `main` (`6c15839`)  
-**Status:** Live & Verified  
+**Date:** 2026-10-02  
+**Active Branch / Commit:** `main` (`e40195a`)  
+**Status:** Live, Fully Implemented & Swarm-Verified  
 
 ---
 
-## 1. What Was Delivered & Verified
+## 1. Summary of Completed Deliverables (SPEC-04)
 
-1. **Dual Kind Kubernetes Testbed:**
-   - `kind-cluster-alpha`: Kubernetes v1.36.4 with PostgreSQL 18.6 StatefulSet (primary + 2 replicas), Redis 8.10.2 (3 replicas), and Ray 2.58.0 (head + 3 workers).
-   - `kind-cluster-beta`: Kubernetes v1.35.8 with PostgreSQL 17.11 StatefulSet (primary), Redis 7.4.2 (2 replicas), and Apache Spark 4.2.0 (driver + 2 executors).
+- **CRD & Kubernetes Deployment Manifests:**
+  - `deploy/crd/clustervis.io_clustertopologysnapshots.yaml`: CRD manifest for `ClusterTopologySnapshot` (`clustervis.io/v1alpha1`).
+  - `deploy/operator/operator.yaml`: Kubernetes Deployment, ServiceAccount, read-only ClusterRole, ClusterRoleBinding, and Service exposing port `:8080` under $<50\text{MB}$ memory footprint.
 
-2. **Headless Blender Procedural Asset Pipeline (`bpy` 4.2):**
-   - Procedural 3D model generator: `blender/build_cluster_assets.py` (executed via `/home/jagosan/.hermes/toolchains/bpy_env/bin/python`).
-   - Exported binary glTF asset library: `public/assets/cluster-kit.glb` (28.6 KB) with clean PBR materials and 8 distinct named components (`NodeTray`, `ControlPlane_Cube`, `Pod_Cylinder`, `Framework_Ray`, `Framework_Spark`, `Database_Postgres`, `Cache_Redis`, `Conduit_Link`).
+- **In-Cluster Topology Controller (`src/operator/controller.py`):**
+  - Maintains in-memory topology mirror, secret scrubbing, and dynamic re-layout integration.
+  - Multi-listener thread-safe queue broadcasting for real-time mutation events (`node_added`, `node_removed`, `node_modified`, `edge_updated`).
+  - Reentrant `RLock` synchronization and synthetic mutation simulation.
 
-3. **Topology Ingestion, Framework Detection & Diff Engine:**
-   - `src/ingestion/models.py`: Pydantic models for `ClusterGraph`, `NodeComponent`, `DataFlowEdge`, `DiffReport`.
-   - `src/ingestion/extractor.py`: Live `kubectl` JSON extractor capturing exact images, tags, and sha256 digests.
-   - `src/ingestion/frameworks.py`: Specialized detectors for Ray, Spark, PostgreSQL, and Redis.
-   - `src/ingestion/differ.py`: Precise semantic version skew, image tag drift, digest drift, and topology diff classifier.
-   - `src/ingestion/layout.py`: 3D spatial layout generator placing nodes across elevation tiers ($Y=4.0$ Ingress, $Y=2.5$ Control Plane, $Y=1.0$ Frameworks, $Y=0.0$ Workloads/DB, $Y=-1.5$ Node Tray).
-   - `src/ingestion/cli.py`: Ingestion orchestrator exporting `public/data/cluster-alpha.json`, `cluster-beta.json`, and `cluster-diff.json`.
+- **Lightweight SSE HTTP Server (`src/operator/server.py`):**
+  - Zero third-party dependencies using Python stdlib `http.server.ThreadingHTTPServer`.
+  - Exposes `GET /api/v1/healthz`, `GET /api/v1/topology/snapshot`, and `GET /api/v1/topology/stream` (`text/event-stream`).
+  - Native initial snapshot frame, live mutation broadcasting, and periodic 15-second heartbeats.
 
-4. **Synchronized Dual-Viewport 3D WebGL Client (Three.js):**
-   - Side-by-side interactive viewports with linked OrbitControls camera synchronization.
-   - Dynamic curved Bezier data flow streams with animated pulse particles (Postgres WAL replication in amber, Raylet RPC in magenta, Spark shuffle in cyan, etcd writes in emerald).
-   - Glowing diff accent rings on meshes (amber for version skew, crimson for missing in peer, emerald for added).
-   - Interactive Raycast picking and Component Inspector drawer showing side-by-side version/image/digest comparison tables.
-   - Built with Vite and served live at `http://localhost:5180`.
+- **Frontend Live Stream Client (`src/scene/live_stream.ts`):**
+  - Browser-native `EventSource` client managing reconnection with exponential backoff (1s, 2s, 4s, 8s, max 15s).
+  - Strongly-typed callbacks for snapshot ingestion and incremental mutations.
 
-5. **QA & Documentation:**
-   - 4/4 passing unit tests in `tests/test_ingestion_and_diff.py`.
-   - Operational runbook at `/home/jagosan/obsidian/vault/runbooks/cluster-visualizer-operations.md`.
-   - Dedicated Obsidian Kanban board at `/home/jagosan/obsidian/vault/boards/Kanban-Cluster-Visualizer.md` with all 13 tasks marked completed.
-   - Remote repository up to date on `origin/main`.
+- **Dynamic Three.js Delta Animations (`src/scene/cluster_viewport.ts`):**
+  - `addNode`: Smooth emerald entrance scale transition (0.1 -> 1.0 over 600ms).
+  - `removeNode`: Red wireframe ghost decay ($opacity = 0.45 \to 0.0$ and scale $\to 0$ over 3.0s before scene cleanup).
+  - `modifyNode`: Real-time amber version skew and hazard diff updates.
+
+- **HUD Controls & URL Integration (`index.html`, `src/main.ts`):**
+  - Added `📡 LIVE STREAM` button with colored status dot indicator (Green = Connected, Amber = Reconnecting, Gray = Offline).
+  - URL parameter auto-connection: `?stream=<endpoint>`.
+  - Offline fallback preserved: 100% static file mode is completely unimpaired when stream server is unreachable.
+
+- **QA & Verification:**
+  - 17/17 automated unit tests passing (`python3 -m unittest discover tests`).
+  - Production TypeScript build verified (`npm run build`).
+  - Git commit `e40195a` pushed to `origin/main`.
+  - Kanban board `Kanban-Cluster-Visualizer.md` updated with all SPEC-04 tasks marked Done.
+
+---
+
+## 2. Next Milestone (SPEC-05)
+
+- **[TASK-CV-601 to TASK-CV-606] Time-Travel Topology Scrubber:**
+  - `src/ingestion/timeline_models.py`: Timeline event and keyframe data schemas.
+  - `src/ingestion/recorder.py`: Topology recorder CLI capturing periodic delta keyframes.
+  - `src/scene/timeline_player.ts`: Keyframe interpolation and transition engine.
+  - `src/ui/timeline_scrubber.ts`: HUD time scrubber bar with play/pause and keyframe markers.

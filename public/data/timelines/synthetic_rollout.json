@@ -1,0 +1,1437 @@
+{
+  "$schema": "https://cluster-vis.jagosan.com/schemas/cluster-timeline-v1.json",
+  "cluster_name": "cluster-alpha",
+  "start_time": "2026-10-02T14:00:00Z",
+  "end_time": "2026-10-02T14:01:00Z",
+  "duration_seconds": 60.0,
+  "keyframes": [
+    {
+      "timestamp": "2026-10-02T14:00:00Z",
+      "snapshot_index": 0,
+      "time_offset_seconds": 0.0,
+      "graph": {
+        "$schema": "https://cluster-vis.jagosan.com/schemas/cluster-graph-v1.json",
+        "metadata": {
+          "cluster_name": "cluster-alpha",
+          "kubernetes_version": "v1.36.4",
+          "distribution": "kind",
+          "timestamp": "2026-10-02T14:00:00Z",
+          "node_count": 2,
+          "pod_count": 2
+        },
+        "nodes": [
+          {
+            "id": "control-plane/default/kube-apiserver",
+            "layer": "control-plane",
+            "kind": "APIServer",
+            "name": "kube-apiserver",
+            "namespace": "default",
+            "version": "v1.28.0",
+            "image": "k8s.gcr.io/kube-apiserver:v1.28.0",
+            "digest": null,
+            "status": "Healthy",
+            "metrics": {},
+            "spatial": {
+              "x": 0.0,
+              "y": 2.5,
+              "z": -2.0,
+              "asset_type": "Cuboid_APIServer"
+            },
+            "raw_labels": {}
+          },
+          {
+            "id": "control-plane/default/etcd-0",
+            "layer": "control-plane",
+            "kind": "etcd",
+            "name": "etcd-0",
+            "namespace": "default",
+            "version": "v3.5.9",
+            "image": "quay.io/coreos/etcd:v3.5.9",
+            "digest": null,
+            "status": "Healthy",
+            "metrics": {},
+            "spatial": {
+              "x": 0.0,
+              "y": 1.5,
+              "z": -3.0,
+              "asset_type": "Cuboid_etcd"
+            },
+            "raw_labels": {}
+          },
+          {
+            "id": "node/default/worker-1",
+            "layer": "node",
+            "kind": "WorkerNode",
+            "name": "worker-1",
+            "namespace": "default",
+            "version": "v1.28.0",
+            "image": "k8s.gcr.io/kubelet:v1.28.0",
+            "digest": null,
+            "status": "Healthy",
+            "metrics": {},
+            "spatial": {
+              "x": -3.0,
+              "y": 0.5,
+              "z": 0.0,
+              "asset_type": "LayerTray_WorkerDeck"
+            },
+            "raw_labels": {}
+          },
+          {
+            "id": "node/default/worker-2",
+            "layer": "node",
+            "kind": "WorkerNode",
+            "name": "worker-2",
+            "namespace": "default",
+            "version": "v1.28.0",
+            "image": "k8s.gcr.io/kubelet:v1.28.0",
+            "digest": null,
+            "status": "Healthy",
+            "metrics": {},
+            "spatial": {
+              "x": 3.0,
+              "y": 0.5,
+              "z": 0.0,
+              "asset_type": "LayerTray_WorkerDeck"
+            },
+            "raw_labels": {}
+          },
+          {
+            "id": "workload/default/redis-cache",
+            "layer": "workload",
+            "kind": "Cache",
+            "name": "redis-cache",
+            "namespace": "default",
+            "version": "v7.0",
+            "image": "redis:7.0",
+            "digest": null,
+            "status": "Healthy",
+            "metrics": {},
+            "spatial": {
+              "x": 4.0,
+              "y": 0.5,
+              "z": 0.0,
+              "asset_type": "Cache_Redis"
+            },
+            "raw_labels": {}
+          },
+          {
+            "id": "workload/default/postgres-primary",
+            "layer": "workload",
+            "kind": "Database",
+            "name": "postgres-primary",
+            "namespace": "default",
+            "version": "v15.2",
+            "image": "postgres:15.2",
+            "digest": null,
+            "status": "Healthy",
+            "metrics": {},
+            "spatial": {
+              "x": -2.0,
+              "y": 0.5,
+              "z": 0.0,
+              "asset_type": "Database_Postgres"
+            },
+            "raw_labels": {}
+          }
+        ],
+        "edges": [],
+        "diff_summary": null
+      },
+      "nodes": [
+        {
+          "id": "control-plane/default/kube-apiserver",
+          "layer": "control-plane",
+          "kind": "APIServer",
+          "name": "kube-apiserver",
+          "namespace": "default",
+          "version": "v1.28.0",
+          "image": "k8s.gcr.io/kube-apiserver:v1.28.0",
+          "digest": null,
+          "status": "Healthy",
+          "metrics": {},
+          "spatial": {
+            "x": 0.0,
+            "y": 2.5,
+            "z": -2.0,
+            "asset_type": "Cuboid_APIServer"
+          },
+          "raw_labels": {}
+        },
+        {
+          "id": "control-plane/default/etcd-0",
+          "layer": "control-plane",
+          "kind": "etcd",
+          "name": "etcd-0",
+          "namespace": "default",
+          "version": "v3.5.9",
+          "image": "quay.io/coreos/etcd:v3.5.9",
+          "digest": null,
+          "status": "Healthy",
+          "metrics": {},
+          "spatial": {
+            "x": 0.0,
+            "y": 1.5,
+            "z": -3.0,
+            "asset_type": "Cuboid_etcd"
+          },
+          "raw_labels": {}
+        },
+        {
+          "id": "node/default/worker-1",
+          "layer": "node",
+          "kind": "WorkerNode",
+          "name": "worker-1",
+          "namespace": "default",
+          "version": "v1.28.0",
+          "image": "k8s.gcr.io/kubelet:v1.28.0",
+          "digest": null,
+          "status": "Healthy",
+          "metrics": {},
+          "spatial": {
+            "x": -3.0,
+            "y": 0.5,
+            "z": 0.0,
+            "asset_type": "LayerTray_WorkerDeck"
+          },
+          "raw_labels": {}
+        },
+        {
+          "id": "node/default/worker-2",
+          "layer": "node",
+          "kind": "WorkerNode",
+          "name": "worker-2",
+          "namespace": "default",
+          "version": "v1.28.0",
+          "image": "k8s.gcr.io/kubelet:v1.28.0",
+          "digest": null,
+          "status": "Healthy",
+          "metrics": {},
+          "spatial": {
+            "x": 3.0,
+            "y": 0.5,
+            "z": 0.0,
+            "asset_type": "LayerTray_WorkerDeck"
+          },
+          "raw_labels": {}
+        },
+        {
+          "id": "workload/default/redis-cache",
+          "layer": "workload",
+          "kind": "Cache",
+          "name": "redis-cache",
+          "namespace": "default",
+          "version": "v7.0",
+          "image": "redis:7.0",
+          "digest": null,
+          "status": "Healthy",
+          "metrics": {},
+          "spatial": {
+            "x": 4.0,
+            "y": 0.5,
+            "z": 0.0,
+            "asset_type": "Cache_Redis"
+          },
+          "raw_labels": {}
+        },
+        {
+          "id": "workload/default/postgres-primary",
+          "layer": "workload",
+          "kind": "Database",
+          "name": "postgres-primary",
+          "namespace": "default",
+          "version": "v15.2",
+          "image": "postgres:15.2",
+          "digest": null,
+          "status": "Healthy",
+          "metrics": {},
+          "spatial": {
+            "x": -2.0,
+            "y": 0.5,
+            "z": 0.0,
+            "asset_type": "Database_Postgres"
+          },
+          "raw_labels": {}
+        }
+      ],
+      "edges": [],
+      "events": [
+        {
+          "timestamp": "2026-10-02T14:00:00Z",
+          "event_type": "custom",
+          "summary": "Baseline healthy cluster state initialized",
+          "affected_node_ids": [],
+          "metadata": {}
+        }
+      ],
+      "delta_summary": null
+    },
+    {
+      "timestamp": "2026-10-02T14:00:15Z",
+      "snapshot_index": 1,
+      "time_offset_seconds": 15.0,
+      "graph": {
+        "$schema": "https://cluster-vis.jagosan.com/schemas/cluster-graph-v1.json",
+        "metadata": {
+          "cluster_name": "cluster-alpha",
+          "kubernetes_version": "v1.36.4",
+          "distribution": "kind",
+          "timestamp": "2026-10-02T14:00:15Z",
+          "node_count": 2,
+          "pod_count": 3
+        },
+        "nodes": [
+          {
+            "id": "control-plane/default/kube-apiserver",
+            "layer": "control-plane",
+            "kind": "APIServer",
+            "name": "kube-apiserver",
+            "namespace": "default",
+            "version": "v1.28.0",
+            "image": "k8s.gcr.io/kube-apiserver:v1.28.0",
+            "digest": null,
+            "status": "Healthy",
+            "metrics": {},
+            "spatial": {
+              "x": 0.0,
+              "y": 2.5,
+              "z": -2.0,
+              "asset_type": "Cuboid_APIServer"
+            },
+            "raw_labels": {}
+          },
+          {
+            "id": "control-plane/default/etcd-0",
+            "layer": "control-plane",
+            "kind": "etcd",
+            "name": "etcd-0",
+            "namespace": "default",
+            "version": "v3.5.9",
+            "image": "quay.io/coreos/etcd:v3.5.9",
+            "digest": null,
+            "status": "Healthy",
+            "metrics": {},
+            "spatial": {
+              "x": 0.0,
+              "y": 1.5,
+              "z": -3.0,
+              "asset_type": "Cuboid_etcd"
+            },
+            "raw_labels": {}
+          },
+          {
+            "id": "node/default/worker-1",
+            "layer": "node",
+            "kind": "WorkerNode",
+            "name": "worker-1",
+            "namespace": "default",
+            "version": "v1.28.0",
+            "image": "k8s.gcr.io/kubelet:v1.28.0",
+            "digest": null,
+            "status": "Healthy",
+            "metrics": {},
+            "spatial": {
+              "x": -3.0,
+              "y": 0.5,
+              "z": 0.0,
+              "asset_type": "LayerTray_WorkerDeck"
+            },
+            "raw_labels": {}
+          },
+          {
+            "id": "node/default/worker-2",
+            "layer": "node",
+            "kind": "WorkerNode",
+            "name": "worker-2",
+            "namespace": "default",
+            "version": "v1.28.0",
+            "image": "k8s.gcr.io/kubelet:v1.28.0",
+            "digest": null,
+            "status": "Healthy",
+            "metrics": {},
+            "spatial": {
+              "x": 3.0,
+              "y": 0.5,
+              "z": 0.0,
+              "asset_type": "LayerTray_WorkerDeck"
+            },
+            "raw_labels": {}
+          },
+          {
+            "id": "workload/default/redis-cache",
+            "layer": "workload",
+            "kind": "Cache",
+            "name": "redis-cache",
+            "namespace": "default",
+            "version": "v7.0",
+            "image": "redis:7.0",
+            "digest": null,
+            "status": "Healthy",
+            "metrics": {},
+            "spatial": {
+              "x": 4.0,
+              "y": 0.5,
+              "z": 0.0,
+              "asset_type": "Cache_Redis"
+            },
+            "raw_labels": {}
+          },
+          {
+            "id": "workload/default/postgres-primary",
+            "layer": "workload",
+            "kind": "Database",
+            "name": "postgres-primary",
+            "namespace": "default",
+            "version": "v15.2",
+            "image": "postgres:15.2",
+            "digest": null,
+            "status": "Healthy",
+            "metrics": {},
+            "spatial": {
+              "x": -2.0,
+              "y": 0.5,
+              "z": 0.0,
+              "asset_type": "Database_Postgres"
+            },
+            "raw_labels": {}
+          },
+          {
+            "id": "workload/default/postgres-primary-canary",
+            "layer": "workload",
+            "kind": "Database",
+            "name": "postgres-primary-canary",
+            "namespace": "default",
+            "version": "v16.1",
+            "image": "postgres:16.1",
+            "digest": null,
+            "status": "Pending",
+            "metrics": {},
+            "spatial": {
+              "x": 2.0,
+              "y": 0.5,
+              "z": 0.0,
+              "asset_type": "Database_Postgres"
+            },
+            "raw_labels": {}
+          }
+        ],
+        "edges": [],
+        "diff_summary": null
+      },
+      "nodes": [
+        {
+          "id": "control-plane/default/kube-apiserver",
+          "layer": "control-plane",
+          "kind": "APIServer",
+          "name": "kube-apiserver",
+          "namespace": "default",
+          "version": "v1.28.0",
+          "image": "k8s.gcr.io/kube-apiserver:v1.28.0",
+          "digest": null,
+          "status": "Healthy",
+          "metrics": {},
+          "spatial": {
+            "x": 0.0,
+            "y": 2.5,
+            "z": -2.0,
+            "asset_type": "Cuboid_APIServer"
+          },
+          "raw_labels": {}
+        },
+        {
+          "id": "control-plane/default/etcd-0",
+          "layer": "control-plane",
+          "kind": "etcd",
+          "name": "etcd-0",
+          "namespace": "default",
+          "version": "v3.5.9",
+          "image": "quay.io/coreos/etcd:v3.5.9",
+          "digest": null,
+          "status": "Healthy",
+          "metrics": {},
+          "spatial": {
+            "x": 0.0,
+            "y": 1.5,
+            "z": -3.0,
+            "asset_type": "Cuboid_etcd"
+          },
+          "raw_labels": {}
+        },
+        {
+          "id": "node/default/worker-1",
+          "layer": "node",
+          "kind": "WorkerNode",
+          "name": "worker-1",
+          "namespace": "default",
+          "version": "v1.28.0",
+          "image": "k8s.gcr.io/kubelet:v1.28.0",
+          "digest": null,
+          "status": "Healthy",
+          "metrics": {},
+          "spatial": {
+            "x": -3.0,
+            "y": 0.5,
+            "z": 0.0,
+            "asset_type": "LayerTray_WorkerDeck"
+          },
+          "raw_labels": {}
+        },
+        {
+          "id": "node/default/worker-2",
+          "layer": "node",
+          "kind": "WorkerNode",
+          "name": "worker-2",
+          "namespace": "default",
+          "version": "v1.28.0",
+          "image": "k8s.gcr.io/kubelet:v1.28.0",
+          "digest": null,
+          "status": "Healthy",
+          "metrics": {},
+          "spatial": {
+            "x": 3.0,
+            "y": 0.5,
+            "z": 0.0,
+            "asset_type": "LayerTray_WorkerDeck"
+          },
+          "raw_labels": {}
+        },
+        {
+          "id": "workload/default/redis-cache",
+          "layer": "workload",
+          "kind": "Cache",
+          "name": "redis-cache",
+          "namespace": "default",
+          "version": "v7.0",
+          "image": "redis:7.0",
+          "digest": null,
+          "status": "Healthy",
+          "metrics": {},
+          "spatial": {
+            "x": 4.0,
+            "y": 0.5,
+            "z": 0.0,
+            "asset_type": "Cache_Redis"
+          },
+          "raw_labels": {}
+        },
+        {
+          "id": "workload/default/postgres-primary",
+          "layer": "workload",
+          "kind": "Database",
+          "name": "postgres-primary",
+          "namespace": "default",
+          "version": "v15.2",
+          "image": "postgres:15.2",
+          "digest": null,
+          "status": "Healthy",
+          "metrics": {},
+          "spatial": {
+            "x": -2.0,
+            "y": 0.5,
+            "z": 0.0,
+            "asset_type": "Database_Postgres"
+          },
+          "raw_labels": {}
+        },
+        {
+          "id": "workload/default/postgres-primary-canary",
+          "layer": "workload",
+          "kind": "Database",
+          "name": "postgres-primary-canary",
+          "namespace": "default",
+          "version": "v16.1",
+          "image": "postgres:16.1",
+          "digest": null,
+          "status": "Pending",
+          "metrics": {},
+          "spatial": {
+            "x": 2.0,
+            "y": 0.5,
+            "z": 0.0,
+            "asset_type": "Database_Postgres"
+          },
+          "raw_labels": {}
+        }
+      ],
+      "edges": [],
+      "events": [
+        {
+          "timestamp": "2026-10-02T14:00:15Z",
+          "event_type": "pod_scheduled",
+          "summary": "Canary pod postgres-primary-canary scheduled on worker-2",
+          "affected_node_ids": [
+            "workload/default/postgres-primary-canary"
+          ],
+          "metadata": {}
+        }
+      ],
+      "delta_summary": null
+    },
+    {
+      "timestamp": "2026-10-02T14:00:30Z",
+      "snapshot_index": 2,
+      "time_offset_seconds": 30.0,
+      "graph": {
+        "$schema": "https://cluster-vis.jagosan.com/schemas/cluster-graph-v1.json",
+        "metadata": {
+          "cluster_name": "cluster-alpha",
+          "kubernetes_version": "v1.36.4",
+          "distribution": "kind",
+          "timestamp": "2026-10-02T14:00:30Z",
+          "node_count": 2,
+          "pod_count": 3
+        },
+        "nodes": [
+          {
+            "id": "control-plane/default/kube-apiserver",
+            "layer": "control-plane",
+            "kind": "APIServer",
+            "name": "kube-apiserver",
+            "namespace": "default",
+            "version": "v1.28.0",
+            "image": "k8s.gcr.io/kube-apiserver:v1.28.0",
+            "digest": null,
+            "status": "Healthy",
+            "metrics": {},
+            "spatial": {
+              "x": 0.0,
+              "y": 2.5,
+              "z": -2.0,
+              "asset_type": "Cuboid_APIServer"
+            },
+            "raw_labels": {}
+          },
+          {
+            "id": "control-plane/default/etcd-0",
+            "layer": "control-plane",
+            "kind": "etcd",
+            "name": "etcd-0",
+            "namespace": "default",
+            "version": "v3.5.9",
+            "image": "quay.io/coreos/etcd:v3.5.9",
+            "digest": null,
+            "status": "Healthy",
+            "metrics": {},
+            "spatial": {
+              "x": 0.0,
+              "y": 1.5,
+              "z": -3.0,
+              "asset_type": "Cuboid_etcd"
+            },
+            "raw_labels": {}
+          },
+          {
+            "id": "node/default/worker-1",
+            "layer": "node",
+            "kind": "WorkerNode",
+            "name": "worker-1",
+            "namespace": "default",
+            "version": "v1.28.0",
+            "image": "k8s.gcr.io/kubelet:v1.28.0",
+            "digest": null,
+            "status": "Healthy",
+            "metrics": {},
+            "spatial": {
+              "x": -3.0,
+              "y": 0.5,
+              "z": 0.0,
+              "asset_type": "LayerTray_WorkerDeck"
+            },
+            "raw_labels": {}
+          },
+          {
+            "id": "node/default/worker-2",
+            "layer": "node",
+            "kind": "WorkerNode",
+            "name": "worker-2",
+            "namespace": "default",
+            "version": "v1.28.0",
+            "image": "k8s.gcr.io/kubelet:v1.28.0",
+            "digest": null,
+            "status": "Healthy",
+            "metrics": {},
+            "spatial": {
+              "x": 3.0,
+              "y": 0.5,
+              "z": 0.0,
+              "asset_type": "LayerTray_WorkerDeck"
+            },
+            "raw_labels": {}
+          },
+          {
+            "id": "workload/default/redis-cache",
+            "layer": "workload",
+            "kind": "Cache",
+            "name": "redis-cache",
+            "namespace": "default",
+            "version": "v7.0",
+            "image": "redis:7.0",
+            "digest": null,
+            "status": "Healthy",
+            "metrics": {},
+            "spatial": {
+              "x": 4.0,
+              "y": 0.5,
+              "z": 0.0,
+              "asset_type": "Cache_Redis"
+            },
+            "raw_labels": {}
+          },
+          {
+            "id": "workload/default/postgres-primary",
+            "layer": "workload",
+            "kind": "Database",
+            "name": "postgres-primary",
+            "namespace": "default",
+            "version": "v15.2",
+            "image": "postgres:15.2",
+            "digest": null,
+            "status": "Terminating",
+            "metrics": {},
+            "spatial": {
+              "x": -2.0,
+              "y": 0.5,
+              "z": 0.0,
+              "asset_type": "Database_Postgres"
+            },
+            "raw_labels": {}
+          },
+          {
+            "id": "workload/default/postgres-primary-canary",
+            "layer": "workload",
+            "kind": "Database",
+            "name": "postgres-primary-canary",
+            "namespace": "default",
+            "version": "v16.1",
+            "image": "postgres:16.1",
+            "digest": null,
+            "status": "Healthy",
+            "metrics": {},
+            "spatial": {
+              "x": 2.0,
+              "y": 0.5,
+              "z": 0.0,
+              "asset_type": "Database_Postgres"
+            },
+            "raw_labels": {}
+          }
+        ],
+        "edges": [],
+        "diff_summary": null
+      },
+      "nodes": [
+        {
+          "id": "control-plane/default/kube-apiserver",
+          "layer": "control-plane",
+          "kind": "APIServer",
+          "name": "kube-apiserver",
+          "namespace": "default",
+          "version": "v1.28.0",
+          "image": "k8s.gcr.io/kube-apiserver:v1.28.0",
+          "digest": null,
+          "status": "Healthy",
+          "metrics": {},
+          "spatial": {
+            "x": 0.0,
+            "y": 2.5,
+            "z": -2.0,
+            "asset_type": "Cuboid_APIServer"
+          },
+          "raw_labels": {}
+        },
+        {
+          "id": "control-plane/default/etcd-0",
+          "layer": "control-plane",
+          "kind": "etcd",
+          "name": "etcd-0",
+          "namespace": "default",
+          "version": "v3.5.9",
+          "image": "quay.io/coreos/etcd:v3.5.9",
+          "digest": null,
+          "status": "Healthy",
+          "metrics": {},
+          "spatial": {
+            "x": 0.0,
+            "y": 1.5,
+            "z": -3.0,
+            "asset_type": "Cuboid_etcd"
+          },
+          "raw_labels": {}
+        },
+        {
+          "id": "node/default/worker-1",
+          "layer": "node",
+          "kind": "WorkerNode",
+          "name": "worker-1",
+          "namespace": "default",
+          "version": "v1.28.0",
+          "image": "k8s.gcr.io/kubelet:v1.28.0",
+          "digest": null,
+          "status": "Healthy",
+          "metrics": {},
+          "spatial": {
+            "x": -3.0,
+            "y": 0.5,
+            "z": 0.0,
+            "asset_type": "LayerTray_WorkerDeck"
+          },
+          "raw_labels": {}
+        },
+        {
+          "id": "node/default/worker-2",
+          "layer": "node",
+          "kind": "WorkerNode",
+          "name": "worker-2",
+          "namespace": "default",
+          "version": "v1.28.0",
+          "image": "k8s.gcr.io/kubelet:v1.28.0",
+          "digest": null,
+          "status": "Healthy",
+          "metrics": {},
+          "spatial": {
+            "x": 3.0,
+            "y": 0.5,
+            "z": 0.0,
+            "asset_type": "LayerTray_WorkerDeck"
+          },
+          "raw_labels": {}
+        },
+        {
+          "id": "workload/default/redis-cache",
+          "layer": "workload",
+          "kind": "Cache",
+          "name": "redis-cache",
+          "namespace": "default",
+          "version": "v7.0",
+          "image": "redis:7.0",
+          "digest": null,
+          "status": "Healthy",
+          "metrics": {},
+          "spatial": {
+            "x": 4.0,
+            "y": 0.5,
+            "z": 0.0,
+            "asset_type": "Cache_Redis"
+          },
+          "raw_labels": {}
+        },
+        {
+          "id": "workload/default/postgres-primary",
+          "layer": "workload",
+          "kind": "Database",
+          "name": "postgres-primary",
+          "namespace": "default",
+          "version": "v15.2",
+          "image": "postgres:15.2",
+          "digest": null,
+          "status": "Terminating",
+          "metrics": {},
+          "spatial": {
+            "x": -2.0,
+            "y": 0.5,
+            "z": 0.0,
+            "asset_type": "Database_Postgres"
+          },
+          "raw_labels": {}
+        },
+        {
+          "id": "workload/default/postgres-primary-canary",
+          "layer": "workload",
+          "kind": "Database",
+          "name": "postgres-primary-canary",
+          "namespace": "default",
+          "version": "v16.1",
+          "image": "postgres:16.1",
+          "digest": null,
+          "status": "Healthy",
+          "metrics": {},
+          "spatial": {
+            "x": 2.0,
+            "y": 0.5,
+            "z": 0.0,
+            "asset_type": "Database_Postgres"
+          },
+          "raw_labels": {}
+        }
+      ],
+      "edges": [],
+      "events": [
+        {
+          "timestamp": "2026-10-02T14:00:30Z",
+          "event_type": "image_updated",
+          "summary": "Canary validated; shifting traffic to postgres:16.1",
+          "affected_node_ids": [
+            "workload/default/postgres-primary-canary"
+          ],
+          "metadata": {}
+        }
+      ],
+      "delta_summary": null
+    },
+    {
+      "timestamp": "2026-10-02T14:00:45Z",
+      "snapshot_index": 3,
+      "time_offset_seconds": 45.0,
+      "graph": {
+        "$schema": "https://cluster-vis.jagosan.com/schemas/cluster-graph-v1.json",
+        "metadata": {
+          "cluster_name": "cluster-alpha",
+          "kubernetes_version": "v1.36.4",
+          "distribution": "kind",
+          "timestamp": "2026-10-02T14:00:45Z",
+          "node_count": 2,
+          "pod_count": 2
+        },
+        "nodes": [
+          {
+            "id": "control-plane/default/kube-apiserver",
+            "layer": "control-plane",
+            "kind": "APIServer",
+            "name": "kube-apiserver",
+            "namespace": "default",
+            "version": "v1.28.0",
+            "image": "k8s.gcr.io/kube-apiserver:v1.28.0",
+            "digest": null,
+            "status": "Healthy",
+            "metrics": {},
+            "spatial": {
+              "x": 0.0,
+              "y": 2.5,
+              "z": -2.0,
+              "asset_type": "Cuboid_APIServer"
+            },
+            "raw_labels": {}
+          },
+          {
+            "id": "control-plane/default/etcd-0",
+            "layer": "control-plane",
+            "kind": "etcd",
+            "name": "etcd-0",
+            "namespace": "default",
+            "version": "v3.5.9",
+            "image": "quay.io/coreos/etcd:v3.5.9",
+            "digest": null,
+            "status": "Healthy",
+            "metrics": {},
+            "spatial": {
+              "x": 0.0,
+              "y": 1.5,
+              "z": -3.0,
+              "asset_type": "Cuboid_etcd"
+            },
+            "raw_labels": {}
+          },
+          {
+            "id": "node/default/worker-1",
+            "layer": "node",
+            "kind": "WorkerNode",
+            "name": "worker-1",
+            "namespace": "default",
+            "version": "v1.28.0",
+            "image": "k8s.gcr.io/kubelet:v1.28.0",
+            "digest": null,
+            "status": "Healthy",
+            "metrics": {},
+            "spatial": {
+              "x": -3.0,
+              "y": 0.5,
+              "z": 0.0,
+              "asset_type": "LayerTray_WorkerDeck"
+            },
+            "raw_labels": {}
+          },
+          {
+            "id": "node/default/worker-2",
+            "layer": "node",
+            "kind": "WorkerNode",
+            "name": "worker-2",
+            "namespace": "default",
+            "version": "v1.28.0",
+            "image": "k8s.gcr.io/kubelet:v1.28.0",
+            "digest": null,
+            "status": "Healthy",
+            "metrics": {},
+            "spatial": {
+              "x": 3.0,
+              "y": 0.5,
+              "z": 0.0,
+              "asset_type": "LayerTray_WorkerDeck"
+            },
+            "raw_labels": {}
+          },
+          {
+            "id": "workload/default/redis-cache",
+            "layer": "workload",
+            "kind": "Cache",
+            "name": "redis-cache",
+            "namespace": "default",
+            "version": "v7.0",
+            "image": "redis:7.0",
+            "digest": null,
+            "status": "Healthy",
+            "metrics": {},
+            "spatial": {
+              "x": 4.0,
+              "y": 0.5,
+              "z": 0.0,
+              "asset_type": "Cache_Redis"
+            },
+            "raw_labels": {}
+          },
+          {
+            "id": "workload/default/postgres-primary",
+            "layer": "workload",
+            "kind": "Database",
+            "name": "postgres-primary",
+            "namespace": "default",
+            "version": "v16.1",
+            "image": "postgres:16.1",
+            "digest": null,
+            "status": "Healthy",
+            "metrics": {},
+            "spatial": {
+              "x": -2.0,
+              "y": 0.5,
+              "z": 0.0,
+              "asset_type": "Database_Postgres"
+            },
+            "raw_labels": {}
+          }
+        ],
+        "edges": [],
+        "diff_summary": null
+      },
+      "nodes": [
+        {
+          "id": "control-plane/default/kube-apiserver",
+          "layer": "control-plane",
+          "kind": "APIServer",
+          "name": "kube-apiserver",
+          "namespace": "default",
+          "version": "v1.28.0",
+          "image": "k8s.gcr.io/kube-apiserver:v1.28.0",
+          "digest": null,
+          "status": "Healthy",
+          "metrics": {},
+          "spatial": {
+            "x": 0.0,
+            "y": 2.5,
+            "z": -2.0,
+            "asset_type": "Cuboid_APIServer"
+          },
+          "raw_labels": {}
+        },
+        {
+          "id": "control-plane/default/etcd-0",
+          "layer": "control-plane",
+          "kind": "etcd",
+          "name": "etcd-0",
+          "namespace": "default",
+          "version": "v3.5.9",
+          "image": "quay.io/coreos/etcd:v3.5.9",
+          "digest": null,
+          "status": "Healthy",
+          "metrics": {},
+          "spatial": {
+            "x": 0.0,
+            "y": 1.5,
+            "z": -3.0,
+            "asset_type": "Cuboid_etcd"
+          },
+          "raw_labels": {}
+        },
+        {
+          "id": "node/default/worker-1",
+          "layer": "node",
+          "kind": "WorkerNode",
+          "name": "worker-1",
+          "namespace": "default",
+          "version": "v1.28.0",
+          "image": "k8s.gcr.io/kubelet:v1.28.0",
+          "digest": null,
+          "status": "Healthy",
+          "metrics": {},
+          "spatial": {
+            "x": -3.0,
+            "y": 0.5,
+            "z": 0.0,
+            "asset_type": "LayerTray_WorkerDeck"
+          },
+          "raw_labels": {}
+        },
+        {
+          "id": "node/default/worker-2",
+          "layer": "node",
+          "kind": "WorkerNode",
+          "name": "worker-2",
+          "namespace": "default",
+          "version": "v1.28.0",
+          "image": "k8s.gcr.io/kubelet:v1.28.0",
+          "digest": null,
+          "status": "Healthy",
+          "metrics": {},
+          "spatial": {
+            "x": 3.0,
+            "y": 0.5,
+            "z": 0.0,
+            "asset_type": "LayerTray_WorkerDeck"
+          },
+          "raw_labels": {}
+        },
+        {
+          "id": "workload/default/redis-cache",
+          "layer": "workload",
+          "kind": "Cache",
+          "name": "redis-cache",
+          "namespace": "default",
+          "version": "v7.0",
+          "image": "redis:7.0",
+          "digest": null,
+          "status": "Healthy",
+          "metrics": {},
+          "spatial": {
+            "x": 4.0,
+            "y": 0.5,
+            "z": 0.0,
+            "asset_type": "Cache_Redis"
+          },
+          "raw_labels": {}
+        },
+        {
+          "id": "workload/default/postgres-primary",
+          "layer": "workload",
+          "kind": "Database",
+          "name": "postgres-primary",
+          "namespace": "default",
+          "version": "v16.1",
+          "image": "postgres:16.1",
+          "digest": null,
+          "status": "Healthy",
+          "metrics": {},
+          "spatial": {
+            "x": -2.0,
+            "y": 0.5,
+            "z": 0.0,
+            "asset_type": "Database_Postgres"
+          },
+          "raw_labels": {}
+        }
+      ],
+      "edges": [],
+      "events": [
+        {
+          "timestamp": "2026-10-02T14:00:45Z",
+          "event_type": "pod_evicted",
+          "summary": "Old postgres-primary pod evicted from worker-1",
+          "affected_node_ids": [
+            "workload/default/postgres-primary"
+          ],
+          "metadata": {}
+        }
+      ],
+      "delta_summary": null
+    },
+    {
+      "timestamp": "2026-10-02T14:00:60Z",
+      "snapshot_index": 4,
+      "time_offset_seconds": 60.0,
+      "graph": {
+        "$schema": "https://cluster-vis.jagosan.com/schemas/cluster-graph-v1.json",
+        "metadata": {
+          "cluster_name": "cluster-alpha",
+          "kubernetes_version": "v1.36.4",
+          "distribution": "kind",
+          "timestamp": "2026-10-02T14:00:60Z",
+          "node_count": 2,
+          "pod_count": 3
+        },
+        "nodes": [
+          {
+            "id": "control-plane/default/kube-apiserver",
+            "layer": "control-plane",
+            "kind": "APIServer",
+            "name": "kube-apiserver",
+            "namespace": "default",
+            "version": "v1.28.0",
+            "image": "k8s.gcr.io/kube-apiserver:v1.28.0",
+            "digest": null,
+            "status": "Healthy",
+            "metrics": {},
+            "spatial": {
+              "x": 0.0,
+              "y": 2.5,
+              "z": -2.0,
+              "asset_type": "Cuboid_APIServer"
+            },
+            "raw_labels": {}
+          },
+          {
+            "id": "control-plane/default/etcd-0",
+            "layer": "control-plane",
+            "kind": "etcd",
+            "name": "etcd-0",
+            "namespace": "default",
+            "version": "v3.5.9",
+            "image": "quay.io/coreos/etcd:v3.5.9",
+            "digest": null,
+            "status": "Healthy",
+            "metrics": {},
+            "spatial": {
+              "x": 0.0,
+              "y": 1.5,
+              "z": -3.0,
+              "asset_type": "Cuboid_etcd"
+            },
+            "raw_labels": {}
+          },
+          {
+            "id": "node/default/worker-1",
+            "layer": "node",
+            "kind": "WorkerNode",
+            "name": "worker-1",
+            "namespace": "default",
+            "version": "v1.28.0",
+            "image": "k8s.gcr.io/kubelet:v1.28.0",
+            "digest": null,
+            "status": "Healthy",
+            "metrics": {},
+            "spatial": {
+              "x": -3.0,
+              "y": 0.5,
+              "z": 0.0,
+              "asset_type": "LayerTray_WorkerDeck"
+            },
+            "raw_labels": {}
+          },
+          {
+            "id": "node/default/worker-2",
+            "layer": "node",
+            "kind": "WorkerNode",
+            "name": "worker-2",
+            "namespace": "default",
+            "version": "v1.28.0",
+            "image": "k8s.gcr.io/kubelet:v1.28.0",
+            "digest": null,
+            "status": "Healthy",
+            "metrics": {},
+            "spatial": {
+              "x": 3.0,
+              "y": 0.5,
+              "z": 0.0,
+              "asset_type": "LayerTray_WorkerDeck"
+            },
+            "raw_labels": {}
+          },
+          {
+            "id": "workload/default/redis-cache",
+            "layer": "workload",
+            "kind": "Cache",
+            "name": "redis-cache",
+            "namespace": "default",
+            "version": "v7.0",
+            "image": "redis:7.0",
+            "digest": null,
+            "status": "Healthy",
+            "metrics": {},
+            "spatial": {
+              "x": 4.0,
+              "y": 0.5,
+              "z": 0.0,
+              "asset_type": "Cache_Redis"
+            },
+            "raw_labels": {}
+          },
+          {
+            "id": "workload/default/postgres-primary",
+            "layer": "workload",
+            "kind": "Database",
+            "name": "postgres-primary",
+            "namespace": "default",
+            "version": "v16.1",
+            "image": "postgres:16.1",
+            "digest": null,
+            "status": "Healthy",
+            "metrics": {},
+            "spatial": {
+              "x": -2.0,
+              "y": 0.5,
+              "z": 0.0,
+              "asset_type": "Database_Postgres"
+            },
+            "raw_labels": {}
+          },
+          {
+            "id": "workload/default/frontend-web-scale",
+            "layer": "workload",
+            "kind": "DaemonSet",
+            "name": "frontend-web-scale",
+            "namespace": "default",
+            "version": "v1.25",
+            "image": "nginx:1.25",
+            "digest": null,
+            "status": "Healthy",
+            "metrics": {},
+            "spatial": {
+              "x": 6.0,
+              "y": 0.5,
+              "z": 0.0,
+              "asset_type": "Cuboid_DaemonSet"
+            },
+            "raw_labels": {}
+          }
+        ],
+        "edges": [],
+        "diff_summary": null
+      },
+      "nodes": [
+        {
+          "id": "control-plane/default/kube-apiserver",
+          "layer": "control-plane",
+          "kind": "APIServer",
+          "name": "kube-apiserver",
+          "namespace": "default",
+          "version": "v1.28.0",
+          "image": "k8s.gcr.io/kube-apiserver:v1.28.0",
+          "digest": null,
+          "status": "Healthy",
+          "metrics": {},
+          "spatial": {
+            "x": 0.0,
+            "y": 2.5,
+            "z": -2.0,
+            "asset_type": "Cuboid_APIServer"
+          },
+          "raw_labels": {}
+        },
+        {
+          "id": "control-plane/default/etcd-0",
+          "layer": "control-plane",
+          "kind": "etcd",
+          "name": "etcd-0",
+          "namespace": "default",
+          "version": "v3.5.9",
+          "image": "quay.io/coreos/etcd:v3.5.9",
+          "digest": null,
+          "status": "Healthy",
+          "metrics": {},
+          "spatial": {
+            "x": 0.0,
+            "y": 1.5,
+            "z": -3.0,
+            "asset_type": "Cuboid_etcd"
+          },
+          "raw_labels": {}
+        },
+        {
+          "id": "node/default/worker-1",
+          "layer": "node",
+          "kind": "WorkerNode",
+          "name": "worker-1",
+          "namespace": "default",
+          "version": "v1.28.0",
+          "image": "k8s.gcr.io/kubelet:v1.28.0",
+          "digest": null,
+          "status": "Healthy",
+          "metrics": {},
+          "spatial": {
+            "x": -3.0,
+            "y": 0.5,
+            "z": 0.0,
+            "asset_type": "LayerTray_WorkerDeck"
+          },
+          "raw_labels": {}
+        },
+        {
+          "id": "node/default/worker-2",
+          "layer": "node",
+          "kind": "WorkerNode",
+          "name": "worker-2",
+          "namespace": "default",
+          "version": "v1.28.0",
+          "image": "k8s.gcr.io/kubelet:v1.28.0",
+          "digest": null,
+          "status": "Healthy",
+          "metrics": {},
+          "spatial": {
+            "x": 3.0,
+            "y": 0.5,
+            "z": 0.0,
+            "asset_type": "LayerTray_WorkerDeck"
+          },
+          "raw_labels": {}
+        },
+        {
+          "id": "workload/default/redis-cache",
+          "layer": "workload",
+          "kind": "Cache",
+          "name": "redis-cache",
+          "namespace": "default",
+          "version": "v7.0",
+          "image": "redis:7.0",
+          "digest": null,
+          "status": "Healthy",
+          "metrics": {},
+          "spatial": {
+            "x": 4.0,
+            "y": 0.5,
+            "z": 0.0,
+            "asset_type": "Cache_Redis"
+          },
+          "raw_labels": {}
+        },
+        {
+          "id": "workload/default/postgres-primary",
+          "layer": "workload",
+          "kind": "Database",
+          "name": "postgres-primary",
+          "namespace": "default",
+          "version": "v16.1",
+          "image": "postgres:16.1",
+          "digest": null,
+          "status": "Healthy",
+          "metrics": {},
+          "spatial": {
+            "x": -2.0,
+            "y": 0.5,
+            "z": 0.0,
+            "asset_type": "Database_Postgres"
+          },
+          "raw_labels": {}
+        },
+        {
+          "id": "workload/default/frontend-web-scale",
+          "layer": "workload",
+          "kind": "DaemonSet",
+          "name": "frontend-web-scale",
+          "namespace": "default",
+          "version": "v1.25",
+          "image": "nginx:1.25",
+          "digest": null,
+          "status": "Healthy",
+          "metrics": {},
+          "spatial": {
+            "x": 6.0,
+            "y": 0.5,
+            "z": 0.0,
+            "asset_type": "Cuboid_DaemonSet"
+          },
+          "raw_labels": {}
+        }
+      ],
+      "edges": [],
+      "events": [
+        {
+          "timestamp": "2026-10-02T14:01:00Z",
+          "event_type": "node_scaled",
+          "summary": "Horizontal autoscaler deployed replica frontend-web-scale",
+          "affected_node_ids": [
+            "workload/default/frontend-web-scale"
+          ],
+          "metadata": {}
+        }
+      ],
+      "delta_summary": null
+    }
+  ],
+  "metadata": {}
+}

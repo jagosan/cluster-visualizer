@@ -167,6 +167,10 @@ export class ClusterViewport {
     });
   }
 
+  public loadGraph(data: ClusterGraphData): void {
+    this.setClusterData(data);
+  }
+
   public setClusterData(data: ClusterGraphData, diffMap?: Map<string, { status: any; diffDetails: string[] }>) {
     this.clusterData = data;
     // Clear existing nodes, conduits, trays, and flank labels
