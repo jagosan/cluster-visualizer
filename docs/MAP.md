@@ -9,6 +9,8 @@
 - `docs/architecture/02-layered-rectangular-architecture.md`: Blueprint and design specifications for layer trays and component cuboids.
 - `specs/03-horizontal-node-peers-and-diff-engine.md`: Master specification for horizontal node peers, 3D semantic git-diff engine, and universal cluster exporter.
 - `docs/architecture/03-horizontal-node-peers-and-diff-engine.md`: Blueprint for single worker deck layout, volumetric diffing, and export CLI.
+- `specs/04-in-cluster-streaming-operator.md`: Optional in-cluster CRD (`clustervis.io/v1alpha1`) & real-time SSE topology streaming operator.
+- `specs/05-time-travel-topology-scrubber.md`: Time-travel cluster topology playback, delta recording, and HUD scrubber controls.
 - `docs/MAP.md`: This symbol and directory reference map.
 
 ## 3D Asset Pipeline (Blender `bpy`)
