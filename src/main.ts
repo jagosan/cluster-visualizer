@@ -2,6 +2,7 @@ import { ClusterViewport } from './scene/cluster_viewport.js';
 import type { ClusterGraphData } from './scene/cluster_viewport.js';
 import { CameraSyncController } from './scene/camera_sync.js';
 import { DiffInspectorDrawer } from './ui/diff_inspector.js';
+import { LiveStreamManager } from './scene/live_stream.js';
 
 interface DiffReportData {
   source_cluster: string;
@@ -161,14 +162,75 @@ async function bootstrap() {
     });
   }
 
-  // 8. Expose globals for debugging and testing
+  // 8. In-Cluster Streaming Operator Client (SPEC-04)
+  const streamStatusDot = document.getElementById('stream-status-dot');
+  const btnLiveStream = document.getElementById('btn-live-stream');
+
+  const liveStream = new LiveStreamManager({
+    onStatusChange: (status) => {
+      if (!streamStatusDot || !btnLiveStream) return;
+      streamStatusDot.className = 'stream-dot';
+      btnLiveStream.classList.remove('active');
+
+      if (status === 'connected') {
+        streamStatusDot.classList.add('connected');
+        btnLiveStream.classList.add('active');
+        btnLiveStream.title = 'Live Stream Connected (Click to disconnect)';
+      } else if (status === 'reconnecting') {
+        streamStatusDot.classList.add('reconnecting');
+        btnLiveStream.title = 'Live Stream Reconnecting...';
+      } else {
+        btnLiveStream.title = 'Connect to in-cluster streaming operator';
+      }
+    },
+    onInitialSnapshot: (snapshot) => {
+      if (snapshot && snapshot.nodes) {
+        viewportA.setClusterData(snapshot);
+      }
+    },
+    onNodeAdded: (node) => {
+      viewportA.addNode(node);
+    },
+    onNodeRemoved: (nodeId) => {
+      viewportA.removeNode(nodeId);
+    },
+    onNodeModified: (nodeId, diffDetails, status) => {
+      viewportA.modifyNode(nodeId, diffDetails, status);
+    },
+  });
+
+  if (btnLiveStream) {
+    btnLiveStream.addEventListener('click', () => {
+      if (liveStream.getStatus() === 'connected') {
+        const confirmDisconnect = confirm('Live Stream is active. Disconnect and return to static offline mode?');
+        if (confirmDisconnect) {
+          liveStream.disconnect();
+        }
+      } else {
+        const defaultUrl = 'http://localhost:8080/api/v1/topology/stream';
+        const targetUrl = prompt('Enter Operator Topology Stream SSE URL:', defaultUrl);
+        if (targetUrl) {
+          liveStream.connect(targetUrl.trim());
+        }
+      }
+    });
+  }
+
+  // Auto-connect if ?stream= URL parameter is provided
+  const streamParam = new URLSearchParams(window.location.search).get('stream');
+  if (streamParam) {
+    liveStream.connect(streamParam);
+  }
+
+  // 9. Expose globals for debugging and testing
   (window as any).__viewportA = viewportA;
   (window as any).__viewportB = viewportB;
   (window as any).__inspector = inspector;
   (window as any).__dataA = dataA;
   (window as any).__dataB = dataB;
+  (window as any).__liveStream = liveStream;
 
-  // 9. Animation Loop
+  // 10. Animation Loop
   let lastTime = performance.now();
   function animate(now: number) {
     requestAnimationFrame(animate);

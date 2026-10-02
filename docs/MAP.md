@@ -30,10 +30,17 @@
 - `src/ingestion/differ.py`: Side-by-side graph diff classifier comparing two clusters.
 - `src/ingestion/layout.py`: Spatial layout generator for horizontal worker deck ($Y = 0.5$) and control plane tiers.
 
+## In-Cluster Operator & Streaming Server (Python)
+- `deploy/crd/clustervis.io_clustertopologysnapshots.yaml`: CRD manifest for `ClusterTopologySnapshot` (`clustervis.io/v1alpha1`).
+- `deploy/operator/operator.yaml`: Kubernetes Deployment, ServiceAccount, ClusterRole, and ClusterRoleBinding for in-cluster operator.
+- `src/operator/controller.py`: In-cluster Kubernetes watch informer loop reconciling pods, nodes, and CRDs.
+- `src/operator/server.py`: Lightweight HTTP & SSE streaming server (`/api/v1/topology/stream`, `/snapshot`, `/healthz`).
+
 ## Frontend WebGL Client (Vite + TypeScript + Three.js)
 - `index.html`: Entry HTML with dual viewport split-screen canvas and HUD overlay.
 - `src/main.ts`: Application bootstrap, event listeners, and viewport layout controller.
 - `src/scene/cluster_viewport.ts`: `ClusterViewport` Three.js scene manager, camera, lighting, and raycaster.
+- `src/scene/live_stream.ts`: `LiveStreamManager` SSE client handling reconnection, heartbeat, and real-time topology mutation events.
 - `src/scene/layer_trays.ts`: `LayerTrayManager` procedural semi-transparent floor trays and structural tower cage.
 - `src/scene/flank_labels.ts`: `FlankLabelManager` typographic billboard sprites floating on tower flanks.
 - `src/scene/conduits.ts`: 3D procedural conduit pipe mesh generator and route splines.

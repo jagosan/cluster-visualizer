@@ -295,6 +295,24 @@
       .badge-missing, .pill-missing { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
       .badge-added, .pill-added { background: rgba(16, 185, 129, 0.2); color: #10b981; }
       .badge-identical, .pill-identical { background: rgba(56, 189, 248, 0.2); color: #38bdf8; }
+
+      /* Stream Status Indicator */
+      .stream-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #64748b;
+        display: inline-block;
+        transition: all 0.2s ease;
+      }
+      .stream-dot.connected {
+        background: #10b981;
+        box-shadow: 0 0 8px #10b981;
+      }
+      .stream-dot.reconnecting {
+        background: #f59e0b;
+        box-shadow: 0 0 8px #f59e0b;
+      }
     </style>
   </head>
   <body>
@@ -310,6 +328,9 @@
         </div>
 
         <div class="controls-group">
+          <button class="btn" id="btn-live-stream" title="Connect to in-cluster streaming operator">
+            <span class="stream-dot" id="stream-status-dot"></span> 📡 LIVE STREAM
+          </button>
           <button class="btn active" id="btn-sync-cam">🔗 Link Cameras</button>
           <button class="btn active" id="btn-toggle-flows">🌊 Animate Flows</button>
           <button class="btn" id="btn-reset-cam">🔄 Reset View</button>

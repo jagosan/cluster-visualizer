@@ -83,6 +83,10 @@ export class ClusterViewport {
   private pulsingMaterials: THREE.Material[] = [];
   private clock = new THREE.Clock();
 
+  // Dynamic mutation animation maps
+  private animatingEntrances: Map<string, { mesh: THREE.Object3D; startTime: number; duration: number }> = new Map();
+  private animatingDecays: Map<string, { mesh: THREE.Object3D; startTime: number; duration: number }> = new Map();
+
   constructor(container: HTMLElement, label: string) {
     this.container = container;
     this.scene = new THREE.Scene();
@@ -281,6 +285,90 @@ export class ClusterViewport {
 
       this.flowSystem.addCurveParticle(rec.curve, colorHex, speed, 0.12);
     }
+  }
+
+  public addNode(node: ClusterNodeData): void {
+    let assetKey = node.spatial?.asset_type || 'Cuboid_Pod';
+    if (
+      assetKey === 'Database_Postgres' ||
+      assetKey === 'Cache_Redis' ||
+      assetKey === 'Module_PodCapsule' ||
+      assetKey === 'Pod_Cylinder'
+    ) {
+      assetKey = 'Cuboid_Pod';
+    }
+
+    const proto = this.assetPrototypes.get(assetKey) || this.createFallbackMesh(node);
+    const instance = proto.clone(true);
+    const sx = node.spatial?.x ?? 0;
+    const sy = node.spatial?.y ?? 0.75;
+    const sz = node.spatial?.z ?? 0;
+    instance.position.set(sx, sy, sz);
+    instance.scale.set(0.1, 0.1, 0.1);
+    instance.userData = { nodeData: node };
+
+    this.applyDiffVisuals(instance, 'added');
+
+    this.scene.add(instance);
+    this.nodeMeshes.set(node.id, instance);
+
+    this.animatingEntrances.set(node.id, {
+      mesh: instance,
+      startTime: this.clock.getElapsedTime(),
+      duration: 0.6,
+    });
+
+    if (this.clusterData?.nodes) {
+      this.clusterData.nodes.push(node);
+    }
+  }
+
+  public removeNode(nodeId: string): void {
+    const mesh = this.nodeMeshes.get(nodeId);
+    if (!mesh) return;
+
+    mesh.traverse((child) => {
+      if ((child as THREE.Mesh).isMesh) {
+        const meshChild = child as THREE.Mesh;
+        const materials = Array.isArray(meshChild.material) ? meshChild.material : [meshChild.material];
+        materials.forEach((mat) => {
+          mat.transparent = true;
+          mat.opacity = 0.45;
+          mat.depthWrite = false;
+          if ((mat as THREE.MeshStandardMaterial).isMeshStandardMaterial) {
+            const std = mat as THREE.MeshStandardMaterial;
+            std.color.setHex(0xef4444);
+            std.wireframe = true;
+          }
+        });
+      }
+    });
+
+    this.animatingDecays.set(nodeId, {
+      mesh,
+      startTime: this.clock.getElapsedTime(),
+      duration: 3.0,
+    });
+
+    if (this.clusterData?.nodes) {
+      const idx = this.clusterData.nodes.findIndex((n) => n.id === nodeId);
+      if (idx !== -1) {
+        this.clusterData.nodes.splice(idx, 1);
+      }
+    }
+  }
+
+  public modifyNode(nodeId: string, diffDetails?: string[], status?: string): void {
+    const mesh = this.nodeMeshes.get(nodeId);
+    if (!mesh) return;
+
+    const node = mesh.userData.nodeData as ClusterNodeData;
+    if (!node) return;
+
+    node.diffStatus = (status as any) || 'version_skew';
+    node.diffDetails = diffDetails;
+
+    this.applyDiffVisuals(mesh, node.diffStatus);
   }
 
   private applyDiffVisuals(mesh: THREE.Object3D, status?: string) {
@@ -572,6 +660,32 @@ export class ClusterViewport {
 
     for (const mat of this.pulsingMaterials) {
       mat.opacity = pulse;
+    }
+
+    // Process Entrances
+    for (const [nodeId, entry] of this.animatingEntrances.entries()) {
+      const elapsed = time - entry.startTime;
+      const progress = Math.min(1.0, elapsed / entry.duration);
+      const scale = THREE.MathUtils.lerp(0.1, 1.0, progress);
+      entry.mesh.scale.set(scale, scale, scale);
+
+      if (progress >= 1.0) {
+        this.animatingEntrances.delete(nodeId);
+      }
+    }
+
+    // Process Decays
+    for (const [nodeId, entry] of this.animatingDecays.entries()) {
+      const elapsed = time - entry.startTime;
+      const progress = Math.min(1.0, elapsed / entry.duration);
+      const scale = THREE.MathUtils.lerp(1.0, 0.0, progress);
+      entry.mesh.scale.set(scale, scale, scale);
+
+      if (progress >= 1.0) {
+        this.scene.remove(entry.mesh);
+        this.nodeMeshes.delete(nodeId);
+        this.animatingDecays.delete(nodeId);
+      }
     }
 
     this.diffCard.updatePosition(this.camera, this.renderer);
