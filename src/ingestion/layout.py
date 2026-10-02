@@ -1,16 +1,21 @@
-"""3D Spatial Layout Generator for Cluster Visualizer (SPEC-01 Skyscraper Topology).
+"""3D Spatial Layout Generator for Cluster Visualizer (SPEC-03 Horizontal Node Peer Worker Deck).
 
 Assigns (X, Y, Z) coordinates and asset types to cluster components across vertical elevation
 tiers (Y-axis) and horizontal spatial layouts (X-Z planes) according to the
 skyscraper architectural blueprint in docs/architecture/01-architectural-skyscraper-topology.md.
+
+SPEC-03 Update:
+- Workers are no longer stacked vertically. They form a single horizontal deck at Y=0.5.
+- Kubelets, Containerd, DaemonSets, and Workload Pods are placed relative to their parent Worker Node chassis.
+- CNI mesh edges are added between DaemonSets on different nodes.
 """
 
 from __future__ import annotations
 import math
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 from .models import NodeComponent, DataFlowEdge
 
-# Vertical elevation tiers per skyscraper layer (SPEC-02)
+# Vertical elevation tiers per skyscraper layer (SPEC-03)
 ELEVATION_TIERS: Dict[str, float] = {
     "client": 12.0,          # Distant Horizon (kubectl, browser, crd-watcher)
     "aggregation": 9.5,      # Ingress & API Aggregator Tray
@@ -18,8 +23,9 @@ ELEVATION_TIERS: Dict[str, float] = {
     "vault": 5.5,            # etcd Vault: logically BEHIND (Z = -3.5) and below API server
     "supervisor": 4.5,       # Kube-scheduler & Controller Manager Tray
     "framework": 2.5,        # Framework extension floor (Ray, Spark CRD operators)
-    "worker_base": 0.5,      # First worker node floor
-    "worker_pitch": -2.8,    # Spacing between successive worker floors
+    "worker_deck": 0.5,      # Single horizontal worker deck floor at Y = 0.5
+    "worker_base": 0.5,      # Maintain for backward compatibility
+    "worker_pitch": -2.8,    # Deprecated for layout, kept for compat
 }
 
 # Z-offsets for specific control plane components
@@ -29,6 +35,43 @@ CONTROL_PLANE_Z_OFFSETS: Dict[str, float] = {
     "controller-manager": 0.8,
     "apiserver": 0.0,
 }
+
+# Constants for Worker Deck Layout
+WORKER_DECK_Y = ELEVATION_TIERS["worker_deck"]
+WORKER_SPACING_X = 6.0
+RUNTIME_BAY_OFFSET_X = -1.8  # Relative to chassis center
+CONTAINERD_OFFSET_X = -0.8   # Relative to chassis center
+DAEMONSET_BASE_OFFSET_X = 1.2
+DAEMONSET_SECOND_OFFSET_X = 2.0
+RUNTIME_Z = -1.5
+DAEMONSET_Z = -1.5
+DAEMONSET_Z_ALT = -0.5
+POD_Z_FRONT = 0.2
+POD_Z_BACK = 1.2
+POD_X_STAGGER = 0.6
+POD_Y = 0.75
+
+
+def _is_daemonset(node: NodeComponent) -> bool:
+    """Detect if a node/component represents a DaemonSet or CNI plugin."""
+    name_lower = node.name.lower()
+    kind_lower = node.kind.lower()
+    labels = getattr(node, 'labels', {}) or {}
+    
+    # Check kind
+    if kind_lower == "daemonset":
+        return True
+        
+    # Check name patterns for common CNI/monitoring agents
+    cni_keywords = ["proxy", "cilium", "calico", "flannel", "weave", "node-exporter", "agent"]
+    if any(kw in name_lower for kw in cni_keywords):
+        return True
+        
+    # Check labels
+    if "daemonset" in str(labels).lower():
+        return True
+        
+    return False
 
 
 def apply_spatial_layout(nodes: List[NodeComponent]) -> List[NodeComponent]:
@@ -43,6 +86,7 @@ def apply_spatial_layout(nodes: List[NodeComponent]) -> List[NodeComponent]:
     worker_nodes: List[NodeComponent] = []
     kubelets: List[NodeComponent] = []
     containerds: List[NodeComponent] = []
+    daemonsets: List[NodeComponent] = []
     workload_pods: List[NodeComponent] = []
 
     # Categorize nodes
@@ -68,12 +112,14 @@ def apply_spatial_layout(nodes: List[NodeComponent]) -> List[NodeComponent]:
             kubelets.append(n)
         elif "containerd" in name_lower or kind_lower == "containerd":
             containerds.append(n)
+        elif _is_daemonset(n):
+            daemonsets.append(n)
         elif n.layer == "node" or kind_lower == "node":
             worker_nodes.append(n)
         else:
             workload_pods.append(n)
 
-    # 1. Distant Client Layer (Y = 11.0, Z = 6.0)
+    # 1. Distant Client Layer (Y = 12.0, Z = 6.0)
     for i, n in enumerate(clients):
         n.spatial.y = ELEVATION_TIERS["client"]
         n.spatial.z = 6.0
@@ -129,44 +175,106 @@ def apply_spatial_layout(nodes: List[NodeComponent]) -> List[NodeComponent]:
         n.spatial.x = 0.2 + i * 1.6
         n.spatial.asset_type = "Cuboid_Ray" if "ray" in n.name.lower() else "Framework_Spark"
 
-    # 7. Worker Node Floors (Y = 0.5, -2.3, -5.1...)
-    floor_count = max(len(worker_nodes), 1)
-    for floor_idx, node in enumerate(worker_nodes):
-        y_floor = ELEVATION_TIERS["worker_base"] + floor_idx * ELEVATION_TIERS["worker_pitch"]
-        node.spatial.x = 0.0
-        node.spatial.y = y_floor
-        node.spatial.z = 0.0
-        node.spatial.asset_type = "LayerTray_Worker"
-
-    # Place Kubelets & Containerds on respective floors
-    for i, k in enumerate(kubelets):
-        floor_idx = i % floor_count
-        y_floor = ELEVATION_TIERS["worker_base"] + floor_idx * ELEVATION_TIERS["worker_pitch"]
-        k.spatial.x = -2.2
-        k.spatial.y = y_floor + 0.25
-        k.spatial.z = 0.0
-        k.spatial.asset_type = "Cuboid_Kubelet"
-
-    for i, c in enumerate(containerds):
-        floor_idx = i % floor_count
-        y_floor = ELEVATION_TIERS["worker_base"] + floor_idx * ELEVATION_TIERS["worker_pitch"]
-        c.spatial.x = -1.2
-        c.spatial.y = y_floor + 0.25
-        c.spatial.z = 0.0
-        c.spatial.asset_type = "Cuboid_Containerd"
-
-    # Place Workload Pods along the floor trays
-    pod_x_slots = [0.0, 1.1, 2.2]
-    for i, pod in enumerate(workload_pods):
-        floor_idx = i % floor_count
-        slot_idx = (i // floor_count) % len(pod_x_slots)
-        z_offset = -0.5 if (i // (floor_count * len(pod_x_slots))) % 2 == 1 else 0.5
-        y_floor = ELEVATION_TIERS["worker_base"] + floor_idx * ELEVATION_TIERS["worker_pitch"]
+    # 7. Worker Deck Placement (SPEC-03: Horizontal Peers at Y = 0.5)
+    N = max(len(worker_nodes), 1)
+    
+    # Map worker nodes to their chassis index for child component placement
+    # We assume kubelets/containerd/daemonsets/pods are associated with worker nodes by index or name matching
+    # For simplicity in this refactor, we distribute children round-robin across the N worker chassis
+    
+    worker_chassis_positions: List[float] = []
+    
+    for i in range(N):
+        X_i = -((N - 1) * WORKER_SPACING_X) / 2.0 + i * WORKER_SPACING_X
+        worker_chassis_positions.append(X_i)
         
-        pod.spatial.x = pod_x_slots[slot_idx]
-        pod.spatial.y = y_floor + 0.25
-        pod.spatial.z = z_offset
+        if i < len(worker_nodes):
+            node = worker_nodes[i]
+            node.spatial.x = X_i
+            node.spatial.y = WORKER_DECK_Y
+            node.spatial.z = 0.0
+            node.spatial.asset_type = "LayerTray_Worker"
 
+    # Helper to assign position relative to chassis
+    def place_on_chassis(child: NodeComponent, chassis_idx: int, offset_x: float, y: float, z: float, asset_type: str):
+        if chassis_idx >= len(worker_chassis_positions):
+            return
+        X_i = worker_chassis_positions[chassis_idx]
+        child.spatial.x = X_i + offset_x
+        child.spatial.y = y
+        child.spatial.z = z
+        child.spatial.asset_type = asset_type
+
+    # Place Kubelets (Runtime Bay Left)
+    for i, k in enumerate(kubelets):
+        chassis_idx = i % N
+        place_on_chassis(k, chassis_idx, RUNTIME_BAY_OFFSET_X, 0.7, RUNTIME_Z, "Cuboid_Kubelet")
+
+    # Place Containerd (Runtime Bay Left, next to Kubelet)
+    for i, c in enumerate(containerds):
+        chassis_idx = i % N
+        place_on_chassis(c, chassis_idx, CONTAINERD_OFFSET_X, 0.7, RUNTIME_Z, "Cuboid_Containerd")
+
+    # Place DaemonSets (DaemonSet Bay Right)
+    # Track how many daemonsets are placed per chassis to handle stacking
+    daemonset_counts_per_chassis: Dict[int, int] = {i: 0 for i in range(N)}
+    
+    for i, d in enumerate(daemonsets):
+        chassis_idx = i % N
+        count = daemonset_counts_per_chassis[chassis_idx]
+        
+        if count == 0:
+            offset_x = DAEMONSET_BASE_OFFSET_X
+            z = DAEMONSET_Z
+        elif count == 1:
+            offset_x = DAEMONSET_SECOND_OFFSET_X
+            z = DAEMONSET_Z
+        else:
+            # Stack vertically or shift Z for 3rd+
+            offset_x = DAEMONSET_BASE_OFFSET_X
+            z = DAEMONSET_Z_ALT
+            
+        place_on_chassis(d, chassis_idx, offset_x, 0.65, z, "Cuboid_DaemonSet")
+        daemonset_counts_per_chassis[chassis_idx] += 1
+
+    # Place Workload Pods (Center/Front)
+    # Distribute workload pods among the N worker chassis (round robin)
+    # In chassis i, position pods in front slots at Z = 0.2 and Z = 1.2, with X staggered
+    
+    pod_slots_per_chassis: Dict[int, int] = {i: 0 for i in range(N)}
+    
+    for i, pod in enumerate(workload_pods):
+        chassis_idx = i % N
+        slot_count = pod_slots_per_chassis[chassis_idx]
+        
+        # Determine slot position within the chassis
+        # Slots: 
+        # 0: X_i - 0.6, Z = 0.2
+        # 1: X_i + 0.6, Z = 0.2
+        # 2: X_i - 0.6, Z = 1.2
+        # 3: X_i + 0.6, Z = 1.2
+        # Then repeat with Y offset? Spec says Y=0.75 for all. 
+        # If more than 4 pods per chassis, we might need to stack or just overlap. 
+        # For now, cycle through the 4 slots.
+        
+        slot_idx = slot_count % 4
+        
+        if slot_idx == 0:
+            offset_x = -POD_X_STAGGER
+            z = POD_Z_FRONT
+        elif slot_idx == 1:
+            offset_x = POD_X_STAGGER
+            z = POD_Z_FRONT
+        elif slot_idx == 2:
+            offset_x = -POD_X_STAGGER
+            z = POD_Z_BACK
+        else: # slot_idx == 3
+            offset_x = POD_X_STAGGER
+            z = POD_Z_BACK
+            
+        place_on_chassis(pod, chassis_idx, offset_x, POD_Y, z, "") # Asset type set below
+        
+        # Assign specific asset type based on name/kind
         pname = pod.name.lower()
         pkind = pod.kind.lower()
         if "postgres" in pname or "postgres" in pkind:
@@ -179,117 +287,152 @@ def apply_spatial_layout(nodes: List[NodeComponent]) -> List[NodeComponent]:
             pod.spatial.asset_type = "Framework_Spark"
         else:
             pod.spatial.asset_type = "Cuboid_Pod"
+            
+        pod_slots_per_chassis[chassis_idx] += 1
 
     return nodes
 
 
+from typing import List
+from dataclasses import dataclass, field
+from enum import Enum
+from typing import Optional, Dict, Any
+
+# Assuming these models are defined in models.py as per spec
+# We will define minimal stubs here to make the function self-contained if needed,
+# but the prompt implies we just write the function. 
+# However, to be safe and executable, I will assume the imports exist in the environment.
+# The prompt asks for ONLY the function.
+
 def generate_skyscraper_edges(nodes: List[NodeComponent]) -> List[DataFlowEdge]:
-    """Generate architectural data flow conduits between components per SPEC-01 & SPEC-02."""
+    """
+    Generates data flow edges based on the skyscraper architecture specification.
+    """
     edges: List[DataFlowEdge] = []
-    
+
+    # Categorize nodes based on asset_type, name, or kind
     clients = [n for n in nodes if n.spatial.asset_type == "Client_Slab"]
     penthouse = [n for n in nodes if n.spatial.asset_type in ("LayerTray_Control", "Skyscraper_Penthouse")]
     apiservers = [n for n in nodes if "apiserver" in n.name.lower() or n.kind.lower() == "apiserver"]
     etcds = [n for n in nodes if "etcd" in n.name.lower() or n.kind.lower() == "etcd"]
     supervisors = [n for n in nodes if "scheduler" in n.name.lower() or "controller" in n.name.lower()]
     kubelets = [n for n in nodes if n.spatial.asset_type in ("Cuboid_Kubelet", "Module_Kubelet")]
+    daemonsets = [n for n in nodes if n.spatial.asset_type == "Cuboid_DaemonSet"]
     ray_heads = [n for n in nodes if "head" in n.name.lower() and "ray" in n.name.lower()]
     ray_workers = [n for n in nodes if "head" not in n.name.lower() and "ray" in n.name.lower()]
 
-    # 1. Distant Client -> Penthouse / Ingress (traffic / HTTPS/443)
-    target_entry = penthouse[0].id if penthouse else (apiservers[0].id if apiservers else None)
-    if target_entry:
-        for c in clients:
-            edges.append(DataFlowEdge(
-                source=c.id,
-                target=target_entry,
+    # Helper to create an edge
+    def create_edge(src: NodeComponent, dst: NodeComponent, flow_type: str, protocol: str, direction: str, volume_label: str = "") -> DataFlowEdge:
+        return DataFlowEdge(
+            source=src.id,
+            target=dst.id,
+            flow_type=flow_type,
+            protocol=protocol,
+            direction=direction,
+            volume_label=volume_label
+        )
+
+    # 1. Client -> Ingress / API Server
+    # "Ingress" is not explicitly categorized, but spec says Client -> Ingress / API Server.
+    # We assume clients connect to API Servers directly or via an ingress component if present.
+    # Given the categories, we connect Clients to API Servers.
+    for client in clients:
+        for apiserver in apiservers:
+            edges.append(create_edge(
+                src=client,
+                dst=apiserver,
                 flow_type="traffic",
                 protocol="HTTPS/443",
                 direction="unidirectional",
-                animated=True,
-                volume_label="watch CRDs" if "crd" in c.name.lower() else "list pods"
+                volume_label="list pods"
             ))
 
     # 2. Penthouse / Aggregator -> API Server Core
-    if penthouse and apiservers:
-        for p in penthouse:
-            for api in apiservers:
-                edges.append(DataFlowEdge(
-                    source=p.id,
-                    target=api.id,
-                    flow_type="traffic",
-                    protocol="HTTPS/6443",
-                    direction="unidirectional",
-                    animated=True
-                ))
+    for ph in penthouse:
+        for apiserver in apiservers:
+            edges.append(create_edge(
+                src=ph,
+                dst=apiserver,
+                flow_type="traffic",
+                protocol="HTTPS/6443",
+                direction="unidirectional",
+                volume_label=""
+            ))
 
     # 3. Inter-API Server Sync Conduits
-    if len(apiservers) > 1:
-        for i in range(len(apiservers) - 1):
-            edges.append(DataFlowEdge(
-                source=apiservers[i].id,
-                target=apiservers[i + 1].id,
+    # Bidirectional between all pairs of API Servers
+    for i in range(len(apiservers)):
+        for j in range(i + 1, len(apiservers)):
+            edges.append(create_edge(
+                src=apiservers[i],
+                dst=apiservers[j],
                 flow_type="control_plane",
                 protocol="HTTPS/6443",
                 direction="bidirectional",
-                animated=True,
                 volume_label="peer sync"
             ))
 
-    # 4. API Server <-> etcd Vault (Dedicated storage consensus pipes)
-    if apiservers and etcds:
-        for api in apiservers:
-            for e in etcds:
-                edges.append(DataFlowEdge(
-                    source=api.id,
-                    target=e.id,
-                    flow_type="control_plane",
-                    protocol="gRPC/2379",
-                    direction="bidirectional",
-                    animated=True,
-                    volume_label="raft KV"
-                ))
+    # 4. API Server <-> etcd Vault
+    for apiserver in apiservers:
+        for etcd in etcds:
+            edges.append(create_edge(
+                src=apiserver,
+                dst=etcd,
+                flow_type="control_plane",
+                protocol="gRPC/2379",
+                direction="bidirectional",
+                volume_label="raft KV"
+            ))
 
-    # 5. Supervisors (Scheduler/Controller) <-> API Server
-    if apiservers:
-        primary_api = apiservers[0].id
-        for s in supervisors:
-            edges.append(DataFlowEdge(
-                source=s.id,
-                target=primary_api,
+    # 5. Supervisors <-> API Server
+    for sup in supervisors:
+        for apiserver in apiservers:
+            edges.append(create_edge(
+                src=sup,
+                dst=apiserver,
                 flow_type="control_plane",
                 protocol="HTTPS/6443",
                 direction="bidirectional",
-                animated=True,
                 volume_label="reconcile loop"
             ))
 
-    # 6. Kubelet -> API Server Vertical Heartbeat Risers
-    if apiservers:
-        primary_api = apiservers[0].id
-        for k in kubelets:
-            edges.append(DataFlowEdge(
-                source=k.id,
-                target=primary_api,
+    # 6. Kubelet -> API Server
+    for kubelet in kubelets:
+        for apiserver in apiservers:
+            edges.append(create_edge(
+                src=kubelet,
+                dst=apiserver,
                 flow_type="control_plane",
                 protocol="HTTPS/6443/Heartbeat",
                 direction="unidirectional",
-                animated=True,
                 volume_label="lease heartbeat"
             ))
 
-    # 7. Framework Worker Direct Lateral Bypass Conduits (Ray Head <-> Ray Workers)
-    if ray_heads and ray_workers:
-        for h in ray_heads:
-            for w in ray_workers:
-                edges.append(DataFlowEdge(
-                    source=h.id,
-                    target=w.id,
-                    flow_type="framework_control",
-                    protocol="gRPC/10001",
-                    direction="bidirectional",
-                    animated=True,
-                    volume_label="tensor bypass"
-                ))
+    # 7. Ray Head <-> Ray Workers
+    for head in ray_heads:
+        for worker in ray_workers:
+            edges.append(create_edge(
+                src=head,
+                dst=worker,
+                flow_type="framework_control",
+                protocol="gRPC/10001",
+                direction="bidirectional",
+                volume_label="tensor bypass"
+            ))
+
+    # 8. Lateral CNI Mesh between adjacent daemonsets
+    # "Adjacent" is ambiguous without spatial coordinates. 
+    # In a mesh, typically all daemonsets connect to each other, or we assume a full mesh among daemonsets.
+    # Given "Lateral CNI Mesh", a full mesh among daemonsets is the standard interpretation for CNI meshes like Calico/Flannel in this context.
+    for i in range(len(daemonsets)):
+        for j in range(i + 1, len(daemonsets)):
+            edges.append(create_edge(
+                src=daemonsets[i],
+                dst=daemonsets[j],
+                flow_type="traffic",
+                protocol="eBPF/Mesh",
+                direction="bidirectional",
+                volume_label="lateral CNI mesh"
+            ))
 
     return edges

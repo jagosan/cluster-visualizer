@@ -6,6 +6,7 @@ import { ConduitManager } from './conduits.js';
 import type { ConduitEdge, ConduitType } from './conduits.js';
 import { LayerTrayManager } from './layer_trays.js';
 import { FlankLabelManager } from './flank_labels.js';
+import { DiffCardManager } from './diff_card.js';
 
 export interface ClusterNodeData {
   id: string;
@@ -63,6 +64,7 @@ export class ClusterViewport {
   public conduitManager: ConduitManager;
   public layerTrayManager: LayerTrayManager;
   public flankLabelManager: FlankLabelManager;
+  public diffCard: DiffCardManager;
   private assetPrototypes: Map<string, THREE.Object3D> = new Map();
   private nodeMeshes: Map<string, THREE.Object3D> = new Map();
   private raycaster = new THREE.Raycaster();
@@ -75,8 +77,11 @@ export class ClusterViewport {
   public getSelectedNodeId(): string | null {
     return this.selectedNodeId;
   }
-  private hoveredNodeId: string | null = null;
-  private selectionGlow: THREE.Mesh | null = null;
+  private hoveredObject: THREE.Object3D | null = null;
+  
+  // References for animation of diff visuals
+  private pulsingMaterials: THREE.Material[] = [];
+  private clock = new THREE.Clock();
 
   constructor(container: HTMLElement, label: string) {
     this.container = container;
@@ -113,6 +118,9 @@ export class ClusterViewport {
     this.conduitManager = new ConduitManager(this.scene);
     this.layerTrayManager = new LayerTrayManager(this.scene);
     this.flankLabelManager = new FlankLabelManager(this.scene);
+    
+    // Initialize DiffCardManager
+    this.diffCard = new DiffCardManager(this.container);
 
     // Label overlay
     const titleTag = document.createElement('div');
@@ -164,6 +172,7 @@ export class ClusterViewport {
     this.conduitManager.clear();
     this.layerTrayManager.clear();
     this.flankLabelManager.clear();
+    this.pulsingMaterials = []; // Reset animation refs
 
     // Determine cluster characteristics for tower trays and flank labels
     const workerCount = data.nodes.filter(
@@ -277,48 +286,183 @@ export class ClusterViewport {
   private applyDiffVisuals(mesh: THREE.Object3D, status?: string) {
     if (!status) return;
 
-    let ringColor = 0x3b82f6; // Identical: subtle blue
-    let glowOpacity = 0.2;
+    // Helper to traverse and modify materials
+    const traverseAndModify = (obj: THREE.Object3D, modifier: (mat: THREE.Material) => void) => {
+      obj.traverse((child) => {
+        if ((child as THREE.Mesh).isMesh) {
+          const meshChild = child as THREE.Mesh;
+          if (Array.isArray(meshChild.material)) {
+            meshChild.material.forEach(modifier);
+          } else {
+            modifier(meshChild.material);
+          }
+        }
+      });
+    };
 
-    if (status === 'version_skew') {
-      ringColor = 0xf59e0b; // Amber: version drift
-      glowOpacity = 0.75;
-    } else if (status === 'missing') {
-      ringColor = 0xef4444; // Red: absent in peer
-      glowOpacity = 0.6;
+    if (status === 'identical') {
+      // Slate tone, roughness 0.4, subtle cyan contour brackets
+      traverseAndModify(mesh, (mat) => {
+        if ((mat as THREE.MeshStandardMaterial).isMeshStandardMaterial) {
+          const stdMat = mat as THREE.MeshStandardMaterial;
+          stdMat.color.setHex(0x1e293b);
+          stdMat.roughness = 0.4;
+          stdMat.metalness = 0.1;
+          stdMat.emissive.setHex(0x000000);
+        }
+      });
+
+      // Add subtle cyan contour brackets
+      const bracketGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(1.2, 0.04, 0.9));
+      const bracketMat = new THREE.LineBasicMaterial({
+        color: 0x06b6d4, // Cyan
+        transparent: true,
+        opacity: 0.3,
+      });
+      const bracket = new THREE.LineSegments(bracketGeo, bracketMat);
+      bracket.position.y = -0.15;
+      mesh.add(bracket);
+
     } else if (status === 'added') {
-      ringColor = 0x10b981; // Green: newly added
-      glowOpacity = 0.6;
-    }
+      // Vibrant emerald tint / emission
+      traverseAndModify(mesh, (mat) => {
+        if ((mat as THREE.MeshStandardMaterial).isMeshStandardMaterial) {
+          const stdMat = mat as THREE.MeshStandardMaterial;
+          stdMat.color.setHex(0x10b981);
+          stdMat.emissive.setHex(0x34d399);
+          stdMat.emissiveIntensity = 0.6;
+          stdMat.roughness = 0.3;
+          stdMat.metalness = 0.2;
+        }
+      });
 
-    // Rectangular base bracket outline (strictly no circles)
-    const bracketGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(1.2, 0.04, 0.9));
-    const bracketMat = new THREE.LineBasicMaterial({
-      color: ringColor,
-      transparent: true,
-      opacity: glowOpacity,
-    });
-    const bracket = new THREE.LineSegments(bracketGeo, bracketMat);
-    bracket.position.y = -0.15;
-    mesh.add(bracket);
+      // Holographic corner brackets: 8 corner line brackets with glowing green material
+      const bracketMat = new THREE.LineBasicMaterial({
+        color: 0x34d399,
+        transparent: true,
+        opacity: 0.8,
+      });
+      
+      // Create a group for the brackets to animate them together
+      const bracketGroup = new THREE.Group();
+      bracketGroup.name = 'added_brackets';
+      
+      const size = 1.2;
+      const h = 0.6;
+      const d = 0.9;
+      const cornerLen = 0.2;
+
+      // Define 8 corners and their bracket lines
+      const corners = [
+        { x: -size/2, y: -h/2, z: -d/2, dx: 1, dy: 1, dz: 1 },
+        { x: size/2, y: -h/2, z: -d/2, dx: -1, dy: 1, dz: 1 },
+        { x: -size/2, y: h/2, z: -d/2, dx: 1, dy: -1, dz: 1 },
+        { x: size/2, y: h/2, z: -d/2, dx: -1, dy: -1, dz: 1 },
+        { x: -size/2, y: -h/2, z: d/2, dx: 1, dy: 1, dz: -1 },
+        { x: size/2, y: -h/2, z: d/2, dx: -1, dy: 1, dz: -1 },
+        { x: -size/2, y: h/2, z: d/2, dx: 1, dy: -1, dz: -1 },
+        { x: size/2, y: h/2, z: d/2, dx: -1, dy: -1, dz: -1 },
+      ];
+
+      corners.forEach(c => {
+        // Line along X
+        const geoX = new THREE.BufferGeometry().setFromPoints([
+          new THREE.Vector3(c.x, c.y, c.z),
+          new THREE.Vector3(c.x + c.dx * cornerLen, c.y, c.z)
+        ]);
+        const lineX = new THREE.Line(geoX, bracketMat);
+        bracketGroup.add(lineX);
+
+        // Line along Y
+        const geoY = new THREE.BufferGeometry().setFromPoints([
+          new THREE.Vector3(c.x, c.y, c.z),
+          new THREE.Vector3(c.x, c.y + c.dy * cornerLen, c.z)
+        ]);
+        const lineY = new THREE.Line(geoY, bracketMat);
+        bracketGroup.add(lineY);
+
+        // Line along Z
+        const geoZ = new THREE.BufferGeometry().setFromPoints([
+          new THREE.Vector3(c.x, c.y, c.z),
+          new THREE.Vector3(c.x, c.y, c.z + c.dz * cornerLen)
+        ]);
+        const lineZ = new THREE.Line(geoZ, bracketMat);
+        bracketGroup.add(lineZ);
+      });
+
+      mesh.add(bracketGroup);
+      this.pulsingMaterials.push(bracketMat);
+
+    } else if (status === 'missing') {
+      // Ghost Cuboid: Transparent, low opacity, no depth write
+      traverseAndModify(mesh, (mat) => {
+        mat.transparent = true;
+        mat.opacity = 0.20;
+        mat.depthWrite = false;
+        if ((mat as THREE.MeshStandardMaterial).isMeshStandardMaterial) {
+          const stdMat = mat as THREE.MeshStandardMaterial;
+          stdMat.color.setHex(0x475569);
+          stdMat.emissive.setHex(0x000000);
+        }
+      });
+
+      // Add bright red dashed or wireframe contour cage
+      const cageGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(1.3, 0.7, 1.0));
+      const cageMat = new THREE.LineBasicMaterial({
+        color: 0xef4444,
+        transparent: true,
+        opacity: 0.85,
+      });
+      const cage = new THREE.LineSegments(cageGeo, cageMat);
+      mesh.add(cage);
+
+    } else if (status === 'version_skew') {
+      // Metallic amber housing
+      traverseAndModify(mesh, (mat) => {
+        if ((mat as THREE.MeshStandardMaterial).isMeshStandardMaterial) {
+          const stdMat = mat as THREE.MeshStandardMaterial;
+          stdMat.color.setHex(0xf59e0b);
+          stdMat.emissive.setHex(0xfbbf24);
+          stdMat.emissiveIntensity = 0.5;
+          stdMat.roughness = 0.2;
+          stdMat.metalness = 0.8;
+        }
+      });
+
+      // Hazard stripes on top face: Overlay planar mesh with amber/black caution stripes
+      const stripeGroup = new THREE.Group();
+    const stripeCount = 5;
+    const stripeWidth = 0.15;
+    const stripeHeight = 0.02;
+    const stripeDepth = 0.8;
+    const stripeSpacing = 0.2;
+    const totalWidth = stripeCount * stripeWidth + (stripeCount - 1) * stripeSpacing;
+    const startX = -totalWidth / 2 + stripeWidth / 2;
+
+    for (let i = 0; i < stripeCount; i++) {
+      const stripeGeo = new THREE.BoxGeometry(stripeWidth, stripeHeight, stripeDepth);
+      const stripeMat = new THREE.MeshBasicMaterial({
+        color: 0xffaa00,
+        transparent: true,
+        opacity: 0.8,
+      });
+      const stripe = new THREE.Mesh(stripeGeo, stripeMat);
+      stripe.position.set(startX + i * (stripeWidth + stripeSpacing), 0.51, 0);
+      stripeGroup.add(stripe);
+    }
+    mesh.add(stripeGroup);
+    }
   }
 
   private createFallbackMesh(node: ClusterNodeData): THREE.Object3D {
-    const geo = new THREE.BoxGeometry(0.85, 0.55, 0.45);
-    const mat = new THREE.MeshStandardMaterial({
-      color: 0x334155,
-      roughness: 0.3,
-      metalness: 0.5,
+    const geometry = new THREE.BoxGeometry(0.8, 0.8, 0.8);
+    const material = new THREE.MeshStandardMaterial({
+      color: 0x888888,
+      roughness: 0.7,
+      metalness: 0.3,
     });
-    const mesh = new THREE.Mesh(geo, mat);
-    mesh.name = node.id;
-
-    // Glowing edge contour
-    const edgeGeo = new THREE.EdgesGeometry(geo);
-    const edgeMat = new THREE.LineBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.6 });
-    const edges = new THREE.LineSegments(edgeGeo, edgeMat);
-    mesh.add(edges);
-
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.userData.nodeData = node;
     return mesh;
   }
 
@@ -328,27 +472,32 @@ export class ClusterViewport {
     this.mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
 
     this.raycaster.setFromCamera(this.mouse, this.camera);
-    const meshes = Array.from(this.nodeMeshes.values());
-    const intersects = this.raycaster.intersectObjects(meshes, true);
+    const intersects = this.raycaster.intersectObjects(this.scene.children, true);
 
-    if (intersects.length > 0) {
-      let topObj: THREE.Object3D | null = intersects[0]!.object;
-      while (topObj && !topObj.userData.nodeData && topObj.parent) {
-        topObj = topObj.parent;
-      }
-      if (topObj && topObj.userData.nodeData) {
-        const node = topObj.userData.nodeData as ClusterNodeData;
-        if (this.hoveredNodeId !== node.id) {
-          this.hoveredNodeId = node.id;
-          if (this.onNodeHovered) this.onNodeHovered(node, e.clientX, e.clientY);
+    let hoveredNode: THREE.Object3D | null = null;
+    for (const intersect of intersects) {
+      let obj: THREE.Object3D | null = intersect.object;
+      while (obj) {
+        if (obj.userData.nodeData) {
+          hoveredNode = obj;
+          break;
         }
-        return;
+        obj = obj.parent;
       }
+      if (hoveredNode) break;
     }
 
-    if (this.hoveredNodeId !== null) {
-      this.hoveredNodeId = null;
-      if (this.onNodeHovered) this.onNodeHovered(null, 0, 0);
+    if (hoveredNode !== this.hoveredObject) {
+      if (this.hoveredObject) {
+        this.hoveredObject.scale.set(1, 1, 1);
+      }
+      this.hoveredObject = hoveredNode;
+      if (this.hoveredObject) {
+        this.hoveredObject.scale.set(1.1, 1.1, 1.1);
+        this.renderer.domElement.style.cursor = 'pointer';
+      } else {
+        this.renderer.domElement.style.cursor = 'default';
+      }
     }
   }
 
@@ -358,60 +507,74 @@ export class ClusterViewport {
     this.mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
 
     this.raycaster.setFromCamera(this.mouse, this.camera);
-    const meshes = Array.from(this.nodeMeshes.values());
-    const intersects = this.raycaster.intersectObjects(meshes, true);
+    const intersects = this.raycaster.intersectObjects(this.scene.children, true);
 
-    if (intersects.length > 0) {
-      let topObj: THREE.Object3D | null = intersects[0]!.object;
-      while (topObj && !topObj.userData.nodeData && topObj.parent) {
-        topObj = topObj.parent;
+    let topObj: THREE.Object3D | null = null;
+    for (const intersect of intersects) {
+      let obj: THREE.Object3D | null = intersect.object;
+      while (obj) {
+        if (obj.userData.nodeData) {
+          topObj = obj;
+          break;
+        }
+        obj = obj.parent;
       }
-      if (topObj && topObj.userData.nodeData) {
-        const node = topObj.userData.nodeData as ClusterNodeData;
-        this.selectedNodeId = node.id;
-        this.highlightSelected(topObj);
-        if (this.onNodeSelected) this.onNodeSelected(node);
-        return;
-      }
+      if (topObj) break;
     }
 
-    this.selectedNodeId = null;
-    this.highlightSelected(null);
-    if (this.onNodeSelected) this.onNodeSelected(null);
+    if (topObj) {
+      const node = topObj.userData.nodeData as ClusterNodeData;
+      this.selectedNodeId = node.id;
+      this.highlightSelected(topObj);
+      const worldPos = new THREE.Vector3();
+      topObj.getWorldPosition(worldPos);
+      this.diffCard.show(node, worldPos, this.clusterData?.metadata.cluster_name || 'Cluster');
+      if (this.onNodeSelected) this.onNodeSelected(node);
+    } else {
+      this.diffCard.hide();
+      this.selectedNodeId = null;
+      this.highlightSelected(null);
+    }
   }
 
   private highlightSelected(target: THREE.Object3D | null) {
-    if (this.selectionGlow) {
-      if (this.selectionGlow.parent) this.selectionGlow.parent.remove(this.selectionGlow);
-      this.selectionGlow.geometry.dispose();
-      (this.selectionGlow.material as THREE.Material).dispose();
-      this.selectionGlow = null;
-    }
+    // Reset previous highlights
+    this.scene.traverse((obj) => {
+      if (obj.userData.isHighlighted) {
+        const mesh = obj as THREE.Mesh;
+        if (mesh.material && (mesh.material as THREE.MeshStandardMaterial).emissive) {
+          (mesh.material as THREE.MeshStandardMaterial).emissive.setHex(0x000000);
+        }
+        obj.userData.isHighlighted = false;
+      }
+    });
 
     if (target) {
-      const geo = new THREE.TorusGeometry(1.05, 0.08, 16, 48);
-      const mat = new THREE.MeshBasicMaterial({
-        color: 0x38bdf8,
-        wireframe: true,
-        transparent: true,
-        opacity: 0.9,
-      });
-      this.selectionGlow = new THREE.Mesh(geo, mat);
-      this.selectionGlow.rotation.x = Math.PI / 2;
-      target.add(this.selectionGlow);
+      const mesh = target as THREE.Mesh;
+      if (mesh.material && (mesh.material as THREE.MeshStandardMaterial).emissive) {
+        (mesh.material as THREE.MeshStandardMaterial).emissive.setHex(0x004400);
+      }
+      target.userData.isHighlighted = true;
     }
   }
 
   public onResize() {
-    const w = this.container.clientWidth;
-    const h = this.container.clientHeight;
-    if (w === 0 || h === 0) return;
-    this.camera.aspect = w / h;
+    const width = this.container.clientWidth;
+    const height = this.container.clientHeight;
+    this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
-    this.renderer.setSize(w, h);
+    this.renderer.setSize(width, height);
   }
 
   public render(delta: number, speedMultiplier: number = 1.0) {
+    const time = this.clock.getElapsedTime();
+    const pulse = 0.4 + 0.4 * Math.sin(time * 4.0);
+
+    for (const mat of this.pulsingMaterials) {
+      mat.opacity = pulse;
+    }
+
+    this.diffCard.updatePosition(this.camera, this.renderer);
     this.controls.update();
     this.flowSystem.update(delta, speedMultiplier);
     this.renderer.render(this.scene, this.camera);

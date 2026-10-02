@@ -1,3 +1,4 @@
+from src.ingestion.exporter import export_cluster
 """Automated regression and verification test suite for Cluster Visualizer."""
 
 import os
@@ -154,6 +155,93 @@ class TestClusterIngestionAndDiff(unittest.TestCase):
         self.assertEqual(report.nodes[0].status, "version_skew")
         self.assertIn("Version skew: '18.6' vs '17.11'", report.nodes[0].diff_details[0])
 
+    def test_spec03_horizontal_worker_deck_layout(self):
+        nodes = [
+            NodeComponent(id="nd-1", layer="node", kind="Node", name="worker-1"),
+            NodeComponent(id="nd-2", layer="node", kind="Node", name="worker-2"),
+            NodeComponent(id="kb-1", layer="node", kind="Kubelet", name="kubelet-1"),
+            NodeComponent(id="kb-2", layer="node", kind="Kubelet", name="kubelet-2"),
+            NodeComponent(id="ct-1", layer="node", kind="Containerd", name="containerd-1"),
+            NodeComponent(id="ct-2", layer="node", kind="Containerd", name="containerd-2"),
+            NodeComponent(id="ds-1", layer="control-plane", kind="DaemonSet", name="kube-proxy-1"),
+            NodeComponent(id="ds-2", layer="control-plane", kind="DaemonSet", name="cilium-1"),
+            NodeComponent(id="wl-1", layer="workload", kind="Pod", name="postgres-0"),
+            NodeComponent(id="wl-2", layer="workload", kind="Pod", name="redis-0"),
+        ]
+        laid_out = apply_spatial_layout(nodes)
+        by_id = {n.id: n for n in laid_out}
 
-if __name__ == "__main__":
+        # Assert both worker nodes have y == ELEVATION_TIERS["worker_deck"] (0.5)
+        assert by_id["nd-1"].spatial.y == ELEVATION_TIERS["worker_deck"]
+        assert by_id["nd-2"].spatial.y == ELEVATION_TIERS["worker_deck"]
+
+        # Assert worker nodes are separated along X
+        assert by_id["nd-1"].spatial.x == -3.0
+        assert by_id["nd-2"].spatial.x == 3.0
+
+        # Assert daemonsets have asset_type == "Cuboid_DaemonSet"
+        assert by_id["ds-1"].spatial.asset_type == "Cuboid_DaemonSet"
+        assert by_id["ds-2"].spatial.asset_type == "Cuboid_DaemonSet"
+
+        # Assert kubelets have asset_type == "Cuboid_Kubelet" and y == 0.7, z == -1.5
+        assert by_id["kb-1"].spatial.asset_type == "Cuboid_Kubelet"
+        assert by_id["kb-1"].spatial.y == 0.7
+        assert by_id["kb-1"].spatial.z == -1.5
+        assert by_id["kb-2"].spatial.asset_type == "Cuboid_Kubelet"
+        assert by_id["kb-2"].spatial.y == 0.7
+        assert by_id["kb-2"].spatial.z == -1.5
+
+        # Assert containerds have asset_type == "Cuboid_Containerd" and y == 0.7, z == -1.5
+        assert by_id["ct-1"].spatial.asset_type == "Cuboid_Containerd"
+        assert by_id["ct-1"].spatial.y == 0.7
+        assert by_id["ct-1"].spatial.z == -1.5
+        assert by_id["ct-2"].spatial.asset_type == "Cuboid_Containerd"
+        assert by_id["ct-2"].spatial.y == 0.7
+        assert by_id["ct-2"].spatial.z == -1.5
+
+        # Assert pods have y == 0.75 and z in (0.2, 1.2)
+        assert by_id["wl-1"].spatial.y == 0.75
+        assert 0.2 <= by_id["wl-1"].spatial.z <= 1.2
+        assert by_id["wl-2"].spatial.y == 0.75
+        assert 0.2 <= by_id["wl-2"].spatial.z <= 1.2
+
+    def test_spec03_lateral_cni_mesh_edges(self):
+        ds1 = NodeComponent(
+            id="ds-1",
+            layer="control-plane",
+            kind="DaemonSet",
+            name="kube-proxy-1",
+            spatial=Spatial(asset_type="Cuboid_DaemonSet"),
+        )
+        ds2 = NodeComponent(
+            id="ds-2",
+            layer="control-plane",
+            kind="DaemonSet",
+            name="cilium-1",
+            spatial=Spatial(asset_type="Cuboid_DaemonSet"),
+        )
+        edges = generate_skyscraper_edges([ds1, ds2])
+
+        found = False
+        for edge in edges:
+            if (
+                edge.protocol == "eBPF/Mesh"
+                and edge.flow_type == "traffic"
+                and edge.direction == "bidirectional"
+                and {edge.source, edge.target} == {"ds-1", "ds-2"}
+            ):
+                found = True
+                break
+        assert found, "Expected at least one eBPF/Mesh bidirectional traffic edge between ds-1 and ds-2"
+
+    def test_spec03_universal_cluster_exporter_mock(self):
+        graph = export_cluster(mock=True)
+        assert isinstance(graph, ClusterGraph)
+        assert len(graph.nodes) >= 10
+        assert len(graph.edges) >= 5
+        assert any(n.spatial.asset_type == "Cuboid_DaemonSet" for n in graph.nodes)
+        assert any(n.spatial.asset_type == "Client_Slab" for n in graph.nodes)
+
+
+if __name__ == '__main__':
     unittest.main()

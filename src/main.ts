@@ -60,6 +60,27 @@ async function bootstrap() {
       status: match.status,
       diffDetails: match.diff_details,
     });
+    if (match.status === 'added') {
+      diffMapB.set(match.node_id, {
+        status: match.status,
+        diffDetails: match.diff_details,
+      });
+    }
+  }
+
+  // Also map version skews and identical nodes to cluster B nodes
+  for (const nodeB of dataB.nodes) {
+    if (diffMapB.has(nodeB.id)) continue;
+    const matchA = dataA.nodes.find((nA) => {
+      if (nA.id === nodeB.id) return true;
+      if (nA.name === nodeB.name && nA.namespace === nodeB.namespace) return true;
+      const baseA = nA.name.split('-')[0];
+      const baseB = nodeB.name.split('-')[0];
+      return nA.kind === nodeB.kind && baseA === baseB && nA.namespace === nodeB.namespace;
+    });
+    if (matchA && diffMapA.has(matchA.id)) {
+      diffMapB.set(nodeB.id, diffMapA.get(matchA.id)!);
+    }
   }
 
   // Populate viewports

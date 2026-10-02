@@ -111,17 +111,97 @@ export class LayerTrayManager {
       createTray(7.2, 4.6, 0.30, 0x9333ea, 0xc084fc, 2.5);
     }
 
-    // 7. Worker Node Floor Trays (Y=0.5, -2.3, -5.1...)
-    const actualWorkerCount = Math.max(workerCount, 1);
-    for (let i = 0; i < actualWorkerCount; i++) {
-      const y = 0.5 + i * -2.8;
-      createTray(8.0, 5.0, 0.32, 0x047857, 0x34d399, y);
+    // 7. Worker Node Floor Trays (Tier 0 at Y = 0.5)
+    // SPEC-03: Replace loop of vertical worker trays with a SINGLE wide Worker Deck tray
+    const actualWorkers = Math.max(workerCount, 1);
+    const deckWidth = 10.0 + (actualWorkers - 1) * 6.0;
+    const deckDepth = 6.5;
+    const deckHeight = 0.35;
+    
+    // Create the main wide deck
+    createTray(deckWidth, deckDepth, deckHeight, 0x047857, 0x34d399, 0.5, 0.0);
+
+    // Create individual sub-tray beveled chassis plates/outlines on top of the wide deck
+    const chassisWidth = 5.2;
+    const chassisDepth = 4.8;
+    const chassisHeight = 0.08;
+    const chassisY = 0.5 + deckHeight / 2 + chassisHeight / 2;
+    const chassisBaseColor = 0x064e3b;
+    const chassisRimColor = 0x10b981;
+
+    for (let i = 0; i < actualWorkers; i++) {
+      const x_i = -((actualWorkers - 1) * 6.0) / 2.0 + i * 6.0;
+      
+      const chassisGroup = new THREE.Group();
+      chassisGroup.position.set(x_i, chassisY, 0.0);
+
+      // Chassis Base Slab
+      const chassisBaseGeo = new THREE.BoxGeometry(chassisWidth, chassisHeight, chassisDepth);
+      const chassisBaseMat = new THREE.MeshStandardMaterial({
+        color: chassisBaseColor,
+        roughness: 0.3,
+        metalness: 0.4,
+        transparent: true,
+        opacity: 0.6,
+      });
+      const chassisBase = new THREE.Mesh(chassisBaseGeo, chassisBaseMat);
+      chassisGroup.add(chassisBase);
+
+      // Chassis Rim/Rim Lip
+      const cRimThickness = 0.05;
+      const cRimHeight = chassisHeight * 0.6;
+      const cRimMat = new THREE.MeshStandardMaterial({
+        color: chassisRimColor,
+        roughness: 0.2,
+        metalness: 0.6,
+        transparent: true,
+        opacity: 0.8,
+      });
+
+      // Front & Back Rims for Chassis
+      const cFbGeo = new THREE.BoxGeometry(chassisWidth, cRimHeight, cRimThickness);
+      const cFrontRim = new THREE.Mesh(cFbGeo, cRimMat);
+      cFrontRim.position.set(0, chassisHeight / 2 + cRimHeight / 2, chassisDepth / 2 - cRimThickness / 2);
+      chassisGroup.add(cFrontRim);
+
+      const cBackRim = new THREE.Mesh(cFbGeo, cRimMat);
+      cBackRim.position.set(0, chassisHeight / 2 + cRimHeight / 2, -chassisDepth / 2 + cRimThickness / 2);
+      chassisGroup.add(cBackRim);
+
+      // Left & Right Rims for Chassis
+      const cLrGeo = new THREE.BoxGeometry(cRimThickness, cRimHeight, chassisDepth - cRimThickness * 2);
+      const cLeftRim = new THREE.Mesh(cLrGeo, cRimMat);
+      cLeftRim.position.set(-chassisWidth / 2 + cRimThickness / 2, chassisHeight / 2 + cRimHeight / 2, 0);
+      chassisGroup.add(cLeftRim);
+
+      const cRightRim = new THREE.Mesh(cLrGeo, cRimMat);
+      cRightRim.position.set(chassisWidth / 2 - cRimThickness / 2, chassisHeight / 2 + cRimHeight / 2, 0);
+      chassisGroup.add(cRightRim);
+
+      // Chassis Edges
+      const cEdgesGeo = new THREE.EdgesGeometry(chassisBaseGeo);
+      const cEdgeMat = new THREE.LineBasicMaterial({
+        color: chassisRimColor,
+        transparent: true,
+        opacity: 0.9,
+      });
+      const cEdgeLines = new THREE.LineSegments(cEdgesGeo, cEdgeMat);
+      chassisGroup.add(cEdgeLines);
+
+      this.scene.add(chassisGroup);
+      this.trays.push(chassisGroup);
     }
 
     // ── TowerCage: Structural Corner Columns and Nx Bracket Frame ──
-    const cageWidth = 8.6;
-    const cageDepth = 5.6;
-    const bottomY = 0.5 + (actualWorkerCount - 1) * -2.8 - 0.6;
+    // SPEC-03: Adjust outer structural tower cage to accommodate wide worker deck
+    // The cage width must be at least as wide as the worker deck plus some margin
+    const cageWidth = Math.max(8.6, deckWidth + 1.0);
+    const cageDepth = Math.max(5.6, deckDepth + 1.0);
+    
+    // The bottom of the cage should be below the worker deck
+    // Worker deck is at Y=0.5, height 0.35. Bottom of deck is 0.5 - 0.35/2 = 0.325
+    // Let's set bottomY slightly below that
+    const bottomY = 0.5 - deckHeight / 2 - 0.6;
     const topY = 12.6;
     const cageHeight = topY - bottomY;
     const centerY = bottomY + cageHeight / 2;
@@ -192,11 +272,17 @@ export class LayerTrayManager {
     addBrackets(cageHeight / 2);  // Penthouse top
     addBrackets(-cageHeight / 2); // Foundation bottom
 
-    // Subtle bracket lines for each worker floor
-    for (let i = 0; i < actualWorkerCount; i++) {
-      const wy = 0.5 + i * -2.8 - centerY;
+    // Subtle bracket lines for key floors
+    // We add brackets for the main structural floors above the worker deck
+    const keyFloorsY = [2.5, 4.5, 5.5, 7.0, 9.5, 12.0];
+    keyFloorsY.forEach((fy) => {
+      const wy = fy - centerY;
       addBrackets(wy);
-    }
+    });
+
+    // Add a bracket specifically at the worker deck level for visual anchoring
+    const workerDeckBracketY = 0.5 - centerY;
+    addBrackets(workerDeckBracketY);
 
     this.scene.add(cageGroup);
     this.cage = cageGroup;
