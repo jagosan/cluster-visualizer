@@ -4,7 +4,7 @@
     "cluster_name": "kind-cluster-beta",
     "kubernetes_version": "v1.35.8",
     "distribution": "kind",
-    "timestamp": "2026-10-01T20:07:55.047156+00:00",
+    "timestamp": "2026-10-02T00:09:23.754464+00:00",
     "node_count": 1,
     "pod_count": 20
   },
@@ -56,9 +56,9 @@
         "component": "coredns"
       },
       "spatial": {
-        "x": 0.0,
+        "x": -0.6,
         "y": 0.75,
-        "z": 0.5,
+        "z": 0.2,
         "asset_type": "Cuboid_Pod"
       },
       "raw_labels": {
@@ -80,9 +80,9 @@
         "component": "coredns"
       },
       "spatial": {
-        "x": 1.1,
+        "x": 0.6,
         "y": 0.75,
-        "z": 0.5,
+        "z": 0.2,
         "asset_type": "Cuboid_Pod"
       },
       "raw_labels": {
@@ -128,9 +128,9 @@
         "component": "kindnet"
       },
       "spatial": {
-        "x": 2.2,
+        "x": -0.6,
         "y": 0.75,
-        "z": 0.5,
+        "z": 1.2,
         "asset_type": "Cuboid_Pod"
       },
       "raw_labels": {
@@ -181,9 +181,9 @@
         ]
       },
       "spatial": {
-        "x": 0.0,
+        "x": 0.6,
         "y": 0.75,
-        "z": -0.5,
+        "z": 1.2,
         "asset_type": "Cuboid_Pod"
       },
       "raw_labels": {
@@ -233,9 +233,9 @@
         ]
       },
       "spatial": {
-        "x": 1.1,
+        "x": -0.6,
         "y": 0.75,
-        "z": -0.5,
+        "z": 0.2,
         "asset_type": "Database_Postgres"
       },
       "raw_labels": {
@@ -366,9 +366,9 @@
         ]
       },
       "spatial": {
-        "x": 2.2,
+        "x": 0.6,
         "y": 0.75,
-        "z": -0.5,
+        "z": 0.2,
         "asset_type": "Cache_Redis"
       },
       "raw_labels": {
@@ -392,9 +392,9 @@
         ]
       },
       "spatial": {
-        "x": 0.0,
+        "x": -0.6,
         "y": 0.75,
-        "z": 0.5,
+        "z": 1.2,
         "asset_type": "Cache_Redis"
       },
       "raw_labels": {
@@ -538,9 +538,9 @@
         "node": "cluster-beta-control-plane"
       },
       "spatial": {
-        "x": -2.2,
-        "y": 0.75,
-        "z": 0.0,
+        "x": -1.8,
+        "y": 0.7,
+        "z": -1.5,
         "asset_type": "Cuboid_Kubelet"
       },
       "raw_labels": {}
@@ -560,9 +560,9 @@
         "node": "cluster-beta-control-plane"
       },
       "spatial": {
-        "x": -1.2,
-        "y": 0.75,
-        "z": 0.0,
+        "x": -0.8,
+        "y": 0.7,
+        "z": -1.5,
         "asset_type": "Cuboid_Containerd"
       },
       "raw_labels": {}
@@ -666,7 +666,7 @@
       "protocol": "HTTPS/443",
       "direction": "unidirectional",
       "animated": true,
-      "volume_label": "watch CRDs"
+      "volume_label": "list pods"
     },
     {
       "source": "control-plane/kube-system/kube-apiserver-cluster-beta-control-plane",

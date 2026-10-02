@@ -739,6 +739,89 @@ def build_cuboid_ray():
     join_to(box, [ch1, ch2])
     return box
 
+def build_cuboid_daemonset():
+    """
+    Builds a low-profile sleek chamfered chassis representing a DaemonSet pod.
+    Includes PBR metallic body and emissive cyan/teal status indicators.
+    """
+    # 1. Create Materials
+    mat_chassis = pbr(
+        "Mat_DaemonSet_Chassis",
+        base_color=(0.14, 0.16, 0.18, 1.0),
+        metallic=0.7,
+        roughness=0.3
+    )
+    
+    mat_led = pbr(
+        "Mat_DaemonSet_LED",
+        base_color=(0.10, 0.85, 0.80, 1.0),
+        metallic=0.0,
+        roughness=0.2,
+        emission_color=(0.10, 0.85, 0.80, 1.0),
+        emission_strength=4.0
+    )
+
+    # 2. Create Main Chassis
+    # Size: (0.70, 0.45, 0.30)
+    chassis = primitive_box(
+        "Cuboid_DaemonSet_Body",
+        mat_chassis,
+        size=(0.70, 0.45, 0.30),
+        loc=(0, 0, 0)
+    )
+    
+    # Apply chamfer/bevel to chassis for sleek look
+    # We use bmesh to bevel edges slightly
+    import bmesh
+    bm = bmesh.new()
+    bm.from_mesh(chassis.data)
+    bmesh.ops.bevel(
+        bm,
+        geom=bm.edges[:],
+        offset=0.02,
+        segments=2,
+        profile=0.5,
+        affect='EDGES'
+    )
+    bm.to_mesh(chassis.data)
+    bm.free()
+
+    # 3. Create LED Bar (Front Face Indicator)
+    # Positioned on the front face (Y negative or positive depending on orientation, let's say Y- is front)
+    # Chassis Y half-size is 0.225. Place LED slightly in front.
+    led_bar = primitive_box(
+        "Cuboid_DaemonSet_LED_Bar",
+        mat_led,
+        size=(0.50, 0.02, 0.04),
+        loc=(0, -0.235, 0.05) # Slightly above center, protruding from front
+    )
+    
+    # 4. Create Dual Ring Ports (Representing Network/eBPF)
+    # Using small cylinders or boxes as simplified ports on the side or back
+    # Let's put two small emissive squares on the back face (Y positive)
+    port1 = primitive_box(
+        "Cuboid_DaemonSet_Port_1",
+        mat_led,
+        size=(0.06, 0.02, 0.06),
+        loc=(-0.15, 0.235, -0.05)
+    )
+    
+    port2 = primitive_box(
+        "Cuboid_DaemonSet_Port_2",
+        mat_led,
+        size=(0.06, 0.02, 0.06),
+        loc=(0.15, 0.235, -0.05)
+    )
+
+    # 5. Join all parts into the root object
+    join_to(chassis, [led_bar, port1, port2])
+    
+    # Rename the final joined object to the required name
+    chassis.name = "Cuboid_DaemonSet"
+    
+    return chassis
+
+
 def reset_scene():
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete(use_global=False)
@@ -785,6 +868,7 @@ def main():
         build_cuboid_containerd,
         build_cuboid_pod,
         build_cuboid_ray,
+        build_cuboid_daemonset,
     ]
 
     # Lay assets out in a row along +X with even pitch for kit browsing.
@@ -805,7 +889,8 @@ def main():
         "Conduit_VerticalShaft", "Conduit_Elbow", "Client_Slab",
         "LayerTray_Control", "LayerTray_Worker", "LayerTray_Vault",
         "Cuboid_APIServer", "Cuboid_etcd", "Cuboid_Supervisor",
-        "Cuboid_Kubelet", "Cuboid_Containerd", "Cuboid_Pod", "Cuboid_Ray"
+        "Cuboid_Kubelet", "Cuboid_Containerd", "Cuboid_Pod", "Cuboid_Ray",
+        "Cuboid_DaemonSet"
     ]
     present = {o.name for o in bpy.context.scene.objects}
     missing = [n for n in required if n not in present]

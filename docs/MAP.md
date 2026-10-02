@@ -3,7 +3,7 @@
 ## Specifications & Architecture
 - `specs/00-system-architecture.md`: Master specification, data contracts, and acceptance criteria.
 - `docs/architecture/00-system-architecture.md`: Architecture blueprint, spatial layout, data flows, and hosting portability.
-- `specs/01-architectural-skyscraper-topology.md`: Skyscraper topology, layered building levels, client horizion, and procedural conduits.
+- `specs/01-architectural-skyscraper-topology.md`: Skyscraper topology, layered building levels, client horizon, and procedural conduits.
 - `docs/architecture/01-architectural-skyscraper-topology.md`: Skyscraper architectural blueprint, spatial elevation matrix, and conduit ADRs.
 - `specs/02-layered-rectangular-architecture.md`: Master specification for Transformer/DeepSeek-style 3D layered rectangular architecture.
 - `docs/architecture/02-layered-rectangular-architecture.md`: Blueprint and design specifications for layer trays and component cuboids.
@@ -14,21 +14,19 @@
 ## 3D Asset Pipeline (Blender `bpy`)
 - `blender/build_cluster_assets.py`: Headless Blender script generating procedural models with PBR materials.
 - `public/assets/cluster-kit.glb`: Exported binary glTF asset library containing:
-  - `NodeTray`: Base physical / VM node platform.
-  - `ControlPlane_Cube`: API server / etcd high-density core.
-  - `Pod_Cylinder`: Standard container pod capsule.
-  - `Framework_Ray`: Hexagonal Ray head / worker node.
-  - `Framework_Spark`: Gear-shaped Spark driver / executor.
-  - `Database_Postgres`: Tiered database drum with replication indicator.
-  - `Cache_Redis`: Segmented memory cylinder.
-  - `Conduit_Link`: Flow pipeline connector.
+  - `LayerTray_WorkerDeck`: Wide horizontal base tray for N worker node peers.
+  - `Cuboid_DaemonSet`: Infrastructure daemonset module (kube-proxy, cilium, node-exporter).
+  - `Cuboid_APIServer` / `Cuboid_etcd` / `Cuboid_Supervisor`: Control plane cuboids.
+  - `Framework_Ray` / `Framework_Spark`: Distributed framework operator and worker meshes.
+  - `Database_Postgres` / `Cache_Redis`: Data layer workload meshes.
 
 ## Ingestion & Graph Engine (Python)
 - `src/ingestion/models.py`: Pydantic models for `ClusterGraph`, `NodeComponent`, `DataFlowEdge`, `DiffReport`.
-- `src/ingestion/extractor.py`: Kubernetes manifest / API extractor extracting exact images, tags, and sha256 digests.
+- `src/ingestion/extractor.py`: Static Kubernetes manifest topology extractor.
+- `src/ingestion/exporter.py`: Universal dynamic cluster exporter CLI (`cluster-vis dump`) querying live kubeconfigs.
 - `src/ingestion/frameworks.py`: Specialized detectors for Ray, Spark, PostgreSQL, and Redis CRDs and workloads.
 - `src/ingestion/differ.py`: Side-by-side graph diff classifier comparing two clusters.
-- `src/ingestion/layout.py`: Spatial layout generator assigning $(X, Y, Z)$ coordinates based on architectural tiers.
+- `src/ingestion/layout.py`: Spatial layout generator for horizontal worker deck ($Y = 0.5$) and control plane tiers.
 
 ## Frontend WebGL Client (Vite + TypeScript + Three.js)
 - `index.html`: Entry HTML with dual viewport split-screen canvas and HUD overlay.
@@ -39,5 +37,6 @@
 - `src/scene/conduits.ts`: 3D procedural conduit pipe mesh generator and route splines.
 - `src/scene/camera_sync.ts`: Synchronous dual-orbit camera controller.
 - `src/scene/flow_particles.ts`: GPU / instanced particle system animating traffic and replication streams.
+- `src/scene/diff_card.ts`: 3D floating billboarding HTML diff card anchored to drifted components.
 - `src/ui/diff_inspector.ts`: Side-by-side comparison drawer, version mismatch highlights, and metric bars.
 - `src/ui/cluster_selector.ts`: Dropdown / file loader for switching active clusters.
