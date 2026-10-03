@@ -22,9 +22,9 @@ graph TD
         GridController["Grid Viewport Controller (grid_controller.ts)"]
         WebGLClient --> GridController
         
-        V1["Viewport 1: Stage-Alpha (v1.31)"]
-        V2["Viewport 2: Prod-Beta (v1.32)"]
-        V3["Viewport 3: Edge-Gamma (v1.33)"]
+        V1["Viewport 1: Stage-Regular (v1.36)"]
+        V2["Viewport 2: Prod-Regular (v1.36)"]
+        V3["Viewport 3: Edge-Rapid (v1.37)"]
         GridController --> V1
         GridController --> V2
         GridController --> V3
@@ -38,14 +38,14 @@ graph TD
         DockerDaemon["Docker Daemon (runc)"]
         CLI -->|SSH / Docker API Remote| DockerDaemon
         
-        subgraph "Cluster 1: stage-alpha (K3d v1.31)"
+        subgraph "Cluster 1: stage-regular (K3d v1.36)"
             CP1["Control Plane (k3s-server) :64431"]
             W1["Worker Node 1 (k3s-agent)"]
             W2["Worker Node 2 (k3s-agent)"]
             Op1["Streaming Operator Pod :8081"]
         end
         
-        subgraph "Cluster 2: prod-beta (K3d v1.32)"
+        subgraph "Cluster 2: edge-rapid (K3d v1.37)"
             CP2["Control Plane (k3s-server) :64432"]
             W3["Worker Node 1 (k3s-agent)"]
             W4["Worker Node 2 (k3s-agent)"]
@@ -79,9 +79,9 @@ Every ephemeral cluster assigns predictable host port forwards on Chunkito:
 
 | Cluster Identifier | Kubernetes Version | Kube-API Host Port | Operator SSE Port | Operator Snapshot Endpoint |
 | :--- | :--- | :--- | :--- | :--- |
-| `stage-alpha` | `v1.31.5-k3s1` | `64431` | `8081` | `http://100.71.183.123:8081/api/v1/topology/snapshot` |
-| `prod-beta` | `v1.32.1-k3s1` | `64432` | `8082` | `http://100.71.183.123:8082/api/v1/topology/snapshot` |
-| `edge-gamma` | `v1.33.0-rc1-k3s1` | `64433` | `8083` | `http://100.71.183.123:8083/api/v1/topology/snapshot` |
+| `stage-regular` | `v1.36.4-k3s1` | `64431` | `8081` | `http://100.71.183.123:8081/api/v1/topology/snapshot` |
+| `prod-regular` | `v1.36.4-k3s1` | `64432` | `8082` | `http://100.71.183.123:8082/api/v1/topology/snapshot` |
+| `edge-rapid` | `v1.37.0-k3s1` | `64433` | `8083` | `http://100.71.183.123:8083/api/v1/topology/snapshot` |
 
 ---
 
@@ -122,7 +122,7 @@ The frontend visualizer will support three distinct viewport layouts:
 
 1. **Split-Screen Dual Viewport (Default):**
    - 2 side-by-side synchronized viewports.
-   - Ideal for comparing `Cluster A` vs `Cluster B` (e.g. stage vs prod or v1.31 vs v1.32).
+   - Ideal for comparing `Cluster A` vs `Cluster B` (e.g. stage vs prod or Regular v1.36 vs Rapid v1.37).
    - Diff engine overlays wireframe highlights and version skew flags.
 
 2. **Quad Grid (2x2 Fleet Matrix):**

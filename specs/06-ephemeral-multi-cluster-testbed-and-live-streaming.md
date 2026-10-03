@@ -18,7 +18,7 @@ SPEC-06 defines the **Ephemeral Multi-Cluster Testbed & Live Streaming Topology 
 3. **Live Streaming In-Cluster Operator Integration:** Automated injection of the SPEC-04 `clustervis.io` operator into each ephemeral cluster, streaming live cluster mutation events over SSE directly into the Three.js viewport across Tailscale.
 4. **Dual Exploration Modalities:**
    - **Temporal Exploration (Single Cluster Over Time):** Live streaming visualization of rolling deployments, canary split routing, node cordoning/draining, and chaos failure injection with real-time smooth 3D transitions.
-   - **Fleet Matrix Exploration (Multiple Clusters Across Versions):** Simultaneous multi-cluster side-by-side or quad-grid visual comparison across Kubernetes minor versions (e.g. `v1.31`, `v1.32`, `v1.33`) to inspect API deprecations, resource allocation differences, and configuration drifts.
+   - **Fleet Matrix Exploration (Multiple Clusters Across Versions):** Simultaneous multi-cluster side-by-side or quad-grid visual comparison across Kubernetes minor versions (e.g. `v1.36` Regular vs. `v1.37` Rapid / Edge) to inspect API deprecations, resource allocation differences, and configuration drifts.
 
 ---
 
@@ -55,9 +55,9 @@ version: "clustervis.io/v1alpha1"
 fleet_name: "homelab-canary-matrix"
 host: "chunkito" # Target execution host (via SSH or local)
 clusters:
-  - name: "stage-alpha"
+  - name: "stage-regular"
     driver: "k3d"
-    kubernetes_version: "v1.31.5-k3s1"
+    kubernetes_version: "v1.36.4-k3s1"
     servers: 1
     agents: 2
     api_port: 64431
@@ -68,9 +68,9 @@ clusters:
       - "testbeds/workloads/base-monitoring.yaml"
       - "testbeds/workloads/postgres-ha.yaml"
 
-  - name: "prod-beta"
+  - name: "prod-regular"
     driver: "k3d"
-    kubernetes_version: "v1.32.1-k3s1"
+    kubernetes_version: "v1.36.4-k3s1"
     servers: 1
     agents: 3
     api_port: 64432
@@ -82,11 +82,11 @@ clusters:
       - "testbeds/workloads/ray-cluster.yaml"
       - "testbeds/workloads/microservices-app.yaml"
 
-  - name: "edge-gamma"
+  - name: "edge-rapid"
     driver: "k3d"
-    kubernetes_version: "v1.33.0-rc1-k3s1"
+    kubernetes_version: "v1.37.0-k3s1"
     servers: 1
-    agents: 1
+    agents: 2
     api_port: 64433
     operator:
       enabled: true
@@ -148,7 +148,7 @@ To iterate on comparing multiple clusters:
 1. **Viewport Grid Controller (`src/scene/grid_controller.ts`):** Supports switching between:
    - `Single`: 1 large viewport with deep HUD metrics & live event stream.
    - `Dual Split`: 2 side-by-side synchronized viewports with active volumetric diff highlighting.
-   - `Quad Grid (2x2)`: 4 simultaneous miniature viewports rendering 4 clusters at distinct versions (e.g. v1.30, v1.31, v1.32, v1.33).
+   - `Quad Grid (2x2)`: 4 simultaneous miniature viewports rendering 4 clusters across release channels (e.g. Regular v1.36, Rapid v1.37, Alpha/Dev branches).
 2. **Synchronized Fleet Navigation:** Camera rotations and zoom orbit simultaneously across all active viewports so spatial orientation remains consistent.
 3. **Version Skew Matrix HUD:** A floating header bar displaying:
    - Target K8s version per cluster.
