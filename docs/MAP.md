@@ -17,6 +17,8 @@
 - `docs/architecture/06-ephemeral-multi-cluster-testbed-and-live-streaming.md`: Architectural blueprint for testbed orchestration, Tailscale streaming gateway, and multi-viewport layouts.
 - `specs/07-portable-helm-packaging-and-latency-topology.md`: Master specification for in-cluster Helm packaging, latency-as-distance force field layout, and federated browser security.
 - `docs/architecture/07-portable-helm-packaging-and-latency-topology.md`: Architectural blueprint for Helm topology, synthetic TCP probe daemonset, TokenReview auth, and dual-mode spatial lerping.
+- `specs/08-subterranean-dependencies-and-compute-classes.md`: Master specification for subterranean foundation tiers (B1-B3), Karpenter machine shapes, GCP KCC & kro managed cloud vaults, and plunge latency conduits.
+- `specs/09-pod-autoscaling-morphing-and-kueue-staging.md`: Master specification for proportional pod capsule sizing, VPA in-place morphing, HPA lateral replication, and the external Kueue gang-scheduling staging yard.
 - `docs/MAP.md`: This symbol and directory reference map.
 
 ## 3D Asset Pipeline (Blender `bpy`)
