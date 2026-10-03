@@ -4,7 +4,7 @@
     "cluster_name": "kind-cluster-beta",
     "kubernetes_version": "v1.35.8",
     "distribution": "kind",
-    "timestamp": "2026-10-02T00:09:23.754464+00:00",
+    "timestamp": "2026-10-03T02:10:12.254764+00:00",
     "node_count": 1,
     "pod_count": 20
   },
@@ -21,9 +21,9 @@
       "status": "Healthy",
       "metrics": {
         "cpu_capacity": "16",
-        "memory_capacity": "15580536Ki",
+        "memory_capacity": "15580528Ki",
         "cpu_allocatable": "16",
-        "memory_allocatable": "15580536Ki",
+        "memory_allocatable": "15580528Ki",
         "os_image": "Debian GNU/Linux 13 (trixie)",
         "unschedulable": false
       },
@@ -192,15 +192,15 @@
       }
     },
     {
-      "id": "pod/workloads/kuberay-operator-f65c67487-2hv6d",
+      "id": "pod/workloads/kuberay-operator-5545cbf94f-lbhqk",
       "layer": "framework",
       "kind": "RayWorker",
-      "name": "kuberay-operator-f65c67487-2hv6d",
+      "name": "kuberay-operator-5545cbf94f-lbhqk",
       "namespace": "workloads",
-      "version": "1.3.0",
-      "image": "kuberay/operator:1.3.0",
-      "digest": null,
-      "status": "Degraded",
+      "version": "v1.1.1",
+      "image": "quay.io/kuberay/operator:v1.1.1",
+      "digest": "sha256:2ec71219b405dd18a5990a4af2e6a5ffedd8f3099973b2ce6a421732f366f936",
+      "status": "Healthy",
       "metrics": {
         "containers": [
           "operator"
@@ -214,7 +214,7 @@
       },
       "raw_labels": {
         "app.kubernetes.io/name": "kuberay-operator",
-        "pod-template-hash": "f65c67487"
+        "pod-template-hash": "5545cbf94f"
       }
     },
     {
@@ -247,15 +247,15 @@
       }
     },
     {
-      "id": "pod/workloads/ray-head-6884b584b7-fhmrz",
+      "id": "pod/workloads/ray-head-567c8796c5-wx8pg",
       "layer": "framework",
       "kind": "RayHead",
-      "name": "ray-head-6884b584b7-fhmrz",
+      "name": "ray-head-567c8796c5-wx8pg",
       "namespace": "workloads",
       "version": "2.58.0",
       "image": "docker.io/rayproject/ray:2.58.0",
       "digest": "sha256:61fee5839b2c5e640059a132be3312019c61badbb2396b513d8536b6db82ac4d",
-      "status": "Degraded",
+      "status": "Healthy",
       "metrics": {
         "containers": [
           "ray-head"
@@ -268,20 +268,20 @@
         "asset_type": "Cuboid_Ray"
       },
       "raw_labels": {
-        "pod-template-hash": "6884b584b7",
+        "pod-template-hash": "567c8796c5",
         "ray.io/node-type": "head"
       }
     },
     {
-      "id": "pod/workloads/ray-worker-8f88bd9f6-mqgmm",
+      "id": "pod/workloads/ray-worker-664ffb77bd-7cgq8",
       "layer": "framework",
       "kind": "RayWorker",
-      "name": "ray-worker-8f88bd9f6-mqgmm",
+      "name": "ray-worker-664ffb77bd-7cgq8",
       "namespace": "workloads",
       "version": "2.58.0",
       "image": "docker.io/rayproject/ray:2.58.0",
       "digest": "sha256:61fee5839b2c5e640059a132be3312019c61badbb2396b513d8536b6db82ac4d",
-      "status": "Degraded",
+      "status": "Healthy",
       "metrics": {
         "containers": [
           "ray-worker"
@@ -294,20 +294,20 @@
         "asset_type": "Cuboid_Ray"
       },
       "raw_labels": {
-        "pod-template-hash": "8f88bd9f6",
+        "pod-template-hash": "664ffb77bd",
         "ray.io/node-type": "worker"
       }
     },
     {
-      "id": "pod/workloads/ray-worker-8f88bd9f6-rk8sp",
+      "id": "pod/workloads/ray-worker-664ffb77bd-gcj22",
       "layer": "framework",
       "kind": "RayWorker",
-      "name": "ray-worker-8f88bd9f6-rk8sp",
+      "name": "ray-worker-664ffb77bd-gcj22",
       "namespace": "workloads",
       "version": "2.58.0",
       "image": "docker.io/rayproject/ray:2.58.0",
       "digest": "sha256:61fee5839b2c5e640059a132be3312019c61badbb2396b513d8536b6db82ac4d",
-      "status": "Degraded",
+      "status": "Healthy",
       "metrics": {
         "containers": [
           "ray-worker"
@@ -320,20 +320,20 @@
         "asset_type": "Cuboid_Ray"
       },
       "raw_labels": {
-        "pod-template-hash": "8f88bd9f6",
+        "pod-template-hash": "664ffb77bd",
         "ray.io/node-type": "worker"
       }
     },
     {
-      "id": "pod/workloads/ray-worker-8f88bd9f6-ttpxf",
+      "id": "pod/workloads/ray-worker-664ffb77bd-nlhlj",
       "layer": "framework",
       "kind": "RayWorker",
-      "name": "ray-worker-8f88bd9f6-ttpxf",
+      "name": "ray-worker-664ffb77bd-nlhlj",
       "namespace": "workloads",
       "version": "2.58.0",
       "image": "docker.io/rayproject/ray:2.58.0",
       "digest": "sha256:61fee5839b2c5e640059a132be3312019c61badbb2396b513d8536b6db82ac4d",
-      "status": "Degraded",
+      "status": "Healthy",
       "metrics": {
         "containers": [
           "ray-worker"
@@ -346,7 +346,7 @@
         "asset_type": "Cuboid_Ray"
       },
       "raw_labels": {
-        "pod-template-hash": "8f88bd9f6",
+        "pod-template-hash": "664ffb77bd",
         "ray.io/node-type": "worker"
       }
     },
@@ -403,15 +403,15 @@
       }
     },
     {
-      "id": "pod/workloads/spark-driver-7d94c89996-78xx4",
+      "id": "pod/workloads/spark-driver-54bf4c95cb-cwd5s",
       "layer": "framework",
       "kind": "SparkDriver",
-      "name": "spark-driver-7d94c89996-78xx4",
+      "name": "spark-driver-54bf4c95cb-cwd5s",
       "namespace": "workloads",
       "version": "4.2.0",
       "image": "docker.io/apache/spark:4.2.0",
       "digest": "sha256:fc64959c04bd87b0ac686be9aaa9008b69cdb1afc695400528279c8b01f43d89",
-      "status": "Degraded",
+      "status": "Healthy",
       "metrics": {
         "containers": [
           "spark-driver"
@@ -424,20 +424,20 @@
         "asset_type": "Framework_Spark"
       },
       "raw_labels": {
-        "pod-template-hash": "7d94c89996",
+        "pod-template-hash": "54bf4c95cb",
         "spark-role": "driver"
       }
     },
     {
-      "id": "pod/workloads/spark-executor-5c5ff8f74b-lzkk8",
+      "id": "pod/workloads/spark-executor-6c958b54b-lcdzt",
       "layer": "framework",
       "kind": "SparkExecutor",
-      "name": "spark-executor-5c5ff8f74b-lzkk8",
+      "name": "spark-executor-6c958b54b-lcdzt",
       "namespace": "workloads",
       "version": "4.2.0",
       "image": "docker.io/apache/spark:4.2.0",
       "digest": "sha256:fc64959c04bd87b0ac686be9aaa9008b69cdb1afc695400528279c8b01f43d89",
-      "status": "Degraded",
+      "status": "Healthy",
       "metrics": {
         "containers": [
           "spark-executor"
@@ -450,20 +450,20 @@
         "asset_type": "Framework_Spark"
       },
       "raw_labels": {
-        "pod-template-hash": "5c5ff8f74b",
+        "pod-template-hash": "6c958b54b",
         "spark-role": "executor"
       }
     },
     {
-      "id": "pod/workloads/spark-executor-5c5ff8f74b-smjdw",
+      "id": "pod/workloads/spark-executor-6c958b54b-slm4t",
       "layer": "framework",
       "kind": "SparkExecutor",
-      "name": "spark-executor-5c5ff8f74b-smjdw",
+      "name": "spark-executor-6c958b54b-slm4t",
       "namespace": "workloads",
       "version": "4.2.0",
       "image": "docker.io/apache/spark:4.2.0",
       "digest": "sha256:fc64959c04bd87b0ac686be9aaa9008b69cdb1afc695400528279c8b01f43d89",
-      "status": "Degraded",
+      "status": "Healthy",
       "metrics": {
         "containers": [
           "spark-executor"
@@ -476,7 +476,7 @@
         "asset_type": "Framework_Spark"
       },
       "raw_labels": {
-        "pod-template-hash": "5c5ff8f74b",
+        "pod-template-hash": "6c958b54b",
         "spark-role": "executor"
       }
     },
@@ -597,8 +597,8 @@
       "volume_label": null
     },
     {
-      "source": "pod/workloads/ray-head-6884b584b7-fhmrz",
-      "target": "pod/workloads/kuberay-operator-f65c67487-2hv6d",
+      "source": "pod/workloads/ray-head-567c8796c5-wx8pg",
+      "target": "pod/workloads/kuberay-operator-5545cbf94f-lbhqk",
       "flow_type": "framework_control",
       "protocol": "gRPC/10001",
       "direction": "bidirectional",
@@ -606,8 +606,8 @@
       "volume_label": "Raylet Task Stream"
     },
     {
-      "source": "pod/workloads/ray-head-6884b584b7-fhmrz",
-      "target": "pod/workloads/ray-worker-8f88bd9f6-mqgmm",
+      "source": "pod/workloads/ray-head-567c8796c5-wx8pg",
+      "target": "pod/workloads/ray-worker-664ffb77bd-7cgq8",
       "flow_type": "framework_control",
       "protocol": "gRPC/10001",
       "direction": "bidirectional",
@@ -615,8 +615,8 @@
       "volume_label": "Raylet Task Stream"
     },
     {
-      "source": "pod/workloads/ray-head-6884b584b7-fhmrz",
-      "target": "pod/workloads/ray-worker-8f88bd9f6-rk8sp",
+      "source": "pod/workloads/ray-head-567c8796c5-wx8pg",
+      "target": "pod/workloads/ray-worker-664ffb77bd-gcj22",
       "flow_type": "framework_control",
       "protocol": "gRPC/10001",
       "direction": "bidirectional",
@@ -624,8 +624,8 @@
       "volume_label": "Raylet Task Stream"
     },
     {
-      "source": "pod/workloads/ray-head-6884b584b7-fhmrz",
-      "target": "pod/workloads/ray-worker-8f88bd9f6-ttpxf",
+      "source": "pod/workloads/ray-head-567c8796c5-wx8pg",
+      "target": "pod/workloads/ray-worker-664ffb77bd-nlhlj",
       "flow_type": "framework_control",
       "protocol": "gRPC/10001",
       "direction": "bidirectional",
@@ -633,8 +633,8 @@
       "volume_label": "Raylet Task Stream"
     },
     {
-      "source": "pod/workloads/spark-driver-7d94c89996-78xx4",
-      "target": "pod/workloads/spark-executor-5c5ff8f74b-lzkk8",
+      "source": "pod/workloads/spark-driver-54bf4c95cb-cwd5s",
+      "target": "pod/workloads/spark-executor-6c958b54b-lcdzt",
       "flow_type": "framework_control",
       "protocol": "Spark/7077",
       "direction": "bidirectional",
@@ -642,8 +642,8 @@
       "volume_label": "Shuffle / Task Scheduling"
     },
     {
-      "source": "pod/workloads/spark-driver-7d94c89996-78xx4",
-      "target": "pod/workloads/spark-executor-5c5ff8f74b-smjdw",
+      "source": "pod/workloads/spark-driver-54bf4c95cb-cwd5s",
+      "target": "pod/workloads/spark-executor-6c958b54b-slm4t",
       "flow_type": "framework_control",
       "protocol": "Spark/7077",
       "direction": "bidirectional",
@@ -687,8 +687,8 @@
       "volume_label": "lease heartbeat"
     },
     {
-      "source": "pod/workloads/ray-head-6884b584b7-fhmrz",
-      "target": "pod/workloads/kuberay-operator-f65c67487-2hv6d",
+      "source": "pod/workloads/ray-head-567c8796c5-wx8pg",
+      "target": "pod/workloads/kuberay-operator-5545cbf94f-lbhqk",
       "flow_type": "framework_control",
       "protocol": "gRPC/10001",
       "direction": "bidirectional",
@@ -696,8 +696,8 @@
       "volume_label": "tensor bypass"
     },
     {
-      "source": "pod/workloads/ray-head-6884b584b7-fhmrz",
-      "target": "pod/workloads/ray-worker-8f88bd9f6-mqgmm",
+      "source": "pod/workloads/ray-head-567c8796c5-wx8pg",
+      "target": "pod/workloads/ray-worker-664ffb77bd-7cgq8",
       "flow_type": "framework_control",
       "protocol": "gRPC/10001",
       "direction": "bidirectional",
@@ -705,8 +705,8 @@
       "volume_label": "tensor bypass"
     },
     {
-      "source": "pod/workloads/ray-head-6884b584b7-fhmrz",
-      "target": "pod/workloads/ray-worker-8f88bd9f6-rk8sp",
+      "source": "pod/workloads/ray-head-567c8796c5-wx8pg",
+      "target": "pod/workloads/ray-worker-664ffb77bd-gcj22",
       "flow_type": "framework_control",
       "protocol": "gRPC/10001",
       "direction": "bidirectional",
@@ -714,8 +714,8 @@
       "volume_label": "tensor bypass"
     },
     {
-      "source": "pod/workloads/ray-head-6884b584b7-fhmrz",
-      "target": "pod/workloads/ray-worker-8f88bd9f6-ttpxf",
+      "source": "pod/workloads/ray-head-567c8796c5-wx8pg",
+      "target": "pod/workloads/ray-worker-664ffb77bd-nlhlj",
       "flow_type": "framework_control",
       "protocol": "gRPC/10001",
       "direction": "bidirectional",

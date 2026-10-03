@@ -147,6 +147,10 @@ async function bootstrap() {
     });
   }
 
+  const btnGridSingle = document.getElementById('btn-grid-single');
+  const btnGridDual = document.getElementById('btn-grid-dual');
+  const btnGridQuad = document.getElementById('btn-grid-quad');
+
   const gridController = new GridController(
     {
       wrapperElement: viewportsWrapper,
@@ -159,10 +163,6 @@ async function bootstrap() {
     },
     slots
   );
-
-  const btnGridSingle = document.getElementById('btn-grid-single');
-  const btnGridDual = document.getElementById('btn-grid-dual');
-  const btnGridQuad = document.getElementById('btn-grid-quad');
 
   btnGridSingle?.addEventListener('click', () => gridController.setMode('single'));
   btnGridDual?.addEventListener('click', () => gridController.setMode('dual'));
