@@ -437,6 +437,11 @@
         </div>
 
         <div class="controls-group">
+          <div class="grid-mode-group" style="display: flex; gap: 4px; background: rgba(0,0,0,0.3); padding: 2px; border-radius: 6px; border: 1px solid #374151;">
+            <button class="btn" id="btn-grid-single" title="Single Viewport Focus (Key 1)">⚲ 1</button>
+            <button class="btn active" id="btn-grid-dual" title="Dual Viewport Split (Key 2)">⚏ 2</button>
+            <button class="btn" id="btn-grid-quad" title="Quad Grid 2x2 Fleet Matrix (Key 4)">⊞ 4</button>
+          </div>
           <button class="btn" id="btn-live-stream" title="Connect to in-cluster streaming operator">
             <span class="stream-dot" id="stream-status-dot"></span> 📡 LIVE STREAM
           </button>
@@ -447,10 +452,14 @@
         </div>
       </header>
 
+      <div id="version-skew-matrix" style="position: absolute; top: 62px; left: 20px; z-index: 90; display: flex; gap: 8px; pointer-events: none;"></div>
+
       <main id="viewports-wrapper">
         <div class="viewport-pane" id="viewport-a"></div>
         <div class="viewport-divider"></div>
         <div class="viewport-pane" id="viewport-b"></div>
+        <div class="viewport-pane" id="viewport-c" style="display: none;"></div>
+        <div class="viewport-pane" id="viewport-d" style="display: none;"></div>
       </main>
     </div>
 

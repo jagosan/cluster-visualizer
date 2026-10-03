@@ -1,0 +1,42 @@
+apiVersion: ray.io/v1
+kind: RayCluster
+metadata:
+  name: ray-cluster-k3s
+  namespace: ray-system
+  labels:
+    ray.io/node-type: head
+spec:
+  rayVersion: "2.35.0"
+  headGroupSpec:
+    rayStartParams:
+      dashboard-host: "0.0.0.0"
+    template:
+      spec:
+        containers:
+          - name: ray-head
+            image: rayproject/ray:2.35.0-py310
+            ports:
+              - containerPort: 6379
+              - containerPort: 8265
+              - containerPort: 10001
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ray-worker-nodes
+  namespace: ray-system
+  labels:
+    ray.io/node-type: worker
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      ray.io/node-type: worker
+  template:
+    metadata:
+      labels:
+        ray.io/node-type: worker
+    spec:
+      containers:
+        - name: ray-worker
+          image: rayproject/ray:2.35.0-py310

@@ -37,9 +37,20 @@
 - `src/operator/controller.py`: In-cluster Kubernetes watch informer loop reconciling pods, nodes, and CRDs.
 - `src/operator/server.py`: Lightweight HTTP & SSE streaming server (`/api/v1/topology/stream`, `/snapshot`, `/healthz`).
 
+## Ephemeral Testbed & Chaos Injector (Python)
+- `src/testbed/models.py`: Pydantic models for `FleetSpec`, `ClusterSpec`, `ClusterStatus`, `FleetStatusReport`, `ChaosScenario`.
+- `src/testbed/drivers/base.py`: Abstract `ClusterDriver` base class for lifecycle, status, and manifest application.
+- `src/testbed/drivers/k3d.py`: Concrete `K3dDriver` for rapid k3s-in-Docker provisioning on Chunkito with mock fallback.
+- `src/testbed/manager.py`: `TestbedManager` coordinating fleet provisioning, kubeconfig merging, and operator deployment.
+- `src/testbed/chaos.py`: `ChaosInjector` supporting rollout restart, node drain/cordon, pod kill, and canary weight shifts.
+- `src/testbed/cli.py`: Unified CLI entrypoint (`cluster-vis testbed up/down/status/deploy-operator/inject`).
+- `testbeds/fleet-spec.yaml`: Declarative multi-cluster matrix configuration across Kubernetes minor versions.
+- `testbeds/workloads/`: Sample declarative workload manifests (Prometheus, Postgres HA, Ray cluster, microservices, canary service).
+
 ## Frontend WebGL Client (Vite + TypeScript + Three.js)
 - `index.html`: Entry HTML with dual viewport split-screen canvas, HUD overlay, and timeline scrubber container `#timeline-scrubber-dock`.
 - `src/main.ts`: Application bootstrap, event listeners, and viewport layout controller.
+- `src/scene/grid_controller.ts`: `GridController` managing Single, Dual Split, and Quad Grid (2x2) layouts with synchronized orbit cameras and version skew matrix HUD.
 - `src/scene/cluster_viewport.ts`: `ClusterViewport` Three.js scene manager, dynamic mutation animations, camera, and raycaster.
 - `src/scene/timeline_player.ts`: `TimelinePlayer` engine handling keyframe playback, seek interpolation, and delta transitions.
 - `src/ui/timeline_scrubber.ts`: `TimelineScrubber` bottom-docked HUD with scrub bar, event pins, play/pause, and speed multipliers.
