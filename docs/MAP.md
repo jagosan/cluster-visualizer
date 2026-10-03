@@ -15,6 +15,8 @@
 - `docs/architecture/05-time-travel-topology-scrubber.md`: Blueprint for chronological keyframes, spatial tweening, and timeline scrubber HUD.
 - `specs/06-ephemeral-multi-cluster-testbed-and-live-streaming.md`: Master specification for ephemeral multi-cluster testbeds on Chunkito, K3d driver, and live streaming fleet matrix.
 - `docs/architecture/06-ephemeral-multi-cluster-testbed-and-live-streaming.md`: Architectural blueprint for testbed orchestration, Tailscale streaming gateway, and multi-viewport layouts.
+- `specs/07-portable-helm-packaging-and-latency-topology.md`: Master specification for in-cluster Helm packaging, latency-as-distance force field layout, and federated browser security.
+- `docs/architecture/07-portable-helm-packaging-and-latency-topology.md`: Architectural blueprint for Helm topology, synthetic TCP probe daemonset, TokenReview auth, and dual-mode spatial lerping.
 - `docs/MAP.md`: This symbol and directory reference map.
 
 ## 3D Asset Pipeline (Blender `bpy`)
