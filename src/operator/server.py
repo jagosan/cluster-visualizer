@@ -8,6 +8,7 @@ Zero third-party dependencies.
 import argparse
 import json
 import logging
+import os
 import queue
 import signal
 import sys
@@ -30,14 +31,24 @@ except ImportError:
     try:
         from src.operator.controller import TopologyController
     except ImportError:
-        # Fallback if running as a script directly without package context
-        # This block is kept for robustness, but ideally the import above works.
-        # If neither works, we might need to define a minimal stub or raise.
-        # However, the prompt implies the real one exists in .controller.
-        # Let's assume the relative import works in the package context.
-        # If this file is run directly, relative imports fail.
-        # The prompt asks to import from .controller.
         raise ImportError("Could not import TopologyController from .controller or src.operator.controller")
+
+try:
+    from .auth import Authenticator
+except ImportError:
+    try:
+        from src.operator.auth import Authenticator
+    except ImportError:
+        Authenticator = None
+
+try:
+    from .graph_engine import SecretScrubber, LatencyEdgeAggregator
+except ImportError:
+    try:
+        from src.operator.graph_engine import SecretScrubber, LatencyEdgeAggregator
+    except ImportError:
+        SecretScrubber = None
+        LatencyEdgeAggregator = None
 
 
 class ClusterVisualizerHandler(BaseHTTPRequestHandler):
@@ -46,6 +57,10 @@ class ClusterVisualizerHandler(BaseHTTPRequestHandler):
     # Class-level references set by create_server
     controller: Optional[TopologyController] = None
     start_time: float = 0.0
+    authenticator: Optional[Any] = None
+    edge_aggregator: Optional[Any] = None
+    scrub_secrets: bool = True
+    cors_allowed_origins: List[str] = ["*"]
 
     def log_message(self, format: str, *args: Any) -> None:
         """Override to use our logger."""
@@ -53,9 +68,19 @@ class ClusterVisualizerHandler(BaseHTTPRequestHandler):
 
     def _set_cors_headers(self) -> None:
         """Set CORS headers for all responses."""
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Methods", "GET, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        origin = self.headers.get("Origin")
+        
+        if "*" in self.cors_allowed_origins:
+            self.send_header("Access-Control-Allow-Origin", "*")
+        elif origin and origin in self.cors_allowed_origins:
+            self.send_header("Access-Control-Allow-Origin", origin)
+            self.send_header("Vary", "Origin")
+        else:
+            # If origin is not allowed, we don't set the header, effectively blocking CORS
+            pass
+
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Forwarded-User, X-Forwarded-Email")
 
     def _send_json_response(self, status_code: int, data: Dict[str, Any]) -> None:
         """Send a JSON response."""
@@ -64,6 +89,36 @@ class ClusterVisualizerHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", "application/json")
         self.end_headers()
         self.wfile.write(json.dumps(data).encode("utf-8"))
+
+    def _check_auth(self) -> bool:
+        """Check authentication for protected endpoints."""
+        if self.authenticator is None:
+            return True
+        
+        auth_header = self.headers.get("Authorization")
+        if not auth_header:
+            return False
+        
+        # Assuming Authenticator has a method like authenticate(token) or similar
+        # Based on typical patterns, we'll try to extract Bearer token
+        if auth_header.startswith("Bearer "):
+            token = auth_header[7:]
+            try:
+                # Assuming Authenticator has an 'authenticate' method that returns bool or raises
+                # If the interface is different, this might need adjustment.
+                # Common pattern: auth.authenticate(token) -> bool
+                if hasattr(self.authenticator, 'authenticate'):
+                    return self.authenticator.authenticate(token)
+                elif hasattr(self.authenticator, 'verify'):
+                    return self.authenticator.verify(token)
+                else:
+                    logger.warning("Authenticator found but no authenticate/verify method")
+                    return False
+            except Exception as e:
+                logger.error(f"Authentication error: {e}")
+                return False
+        
+        return False
 
     def do_OPTIONS(self) -> None:
         """Handle OPTIONS requests for CORS preflight."""
@@ -77,10 +132,29 @@ class ClusterVisualizerHandler(BaseHTTPRequestHandler):
 
         if path == "/api/v1/healthz":
             self._handle_healthz()
-        elif path == "/api/v1/topology/snapshot":
-            self._handle_topology_snapshot()
-        elif path == "/api/v1/topology/stream":
-            self._handle_topology_stream()
+        elif path in ["/api/v1/topology", "/api/v1/topology/snapshot", "/api/v1/topology/stream"]:
+            if not self._check_auth():
+                self.send_response(401)
+                self._set_cors_headers()
+                self.send_header("WWW-Authenticate", 'Bearer realm="clustervis"')
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": "Unauthorized", "detail": "Invalid or missing token"}).encode("utf-8"))
+                return
+            
+            if path == "/api/v1/topology/stream":
+                self._handle_topology_stream()
+            else:
+                self._handle_topology_snapshot()
+        else:
+            self._send_json_response(404, {"error": "Not Found", "path": path})
+
+    def do_POST(self) -> None:
+        """Route POST requests."""
+        path = self.path.split("?")[0]
+
+        if path == "/api/v1/telemetry/latency":
+            self._handle_telemetry_latency()
         else:
             self._send_json_response(404, {"error": "Not Found", "path": path})
 
@@ -96,6 +170,17 @@ class ClusterVisualizerHandler(BaseHTTPRequestHandler):
             return
         try:
             snapshot = self.controller.get_snapshot()
+            
+            if self.scrub_secrets and SecretScrubber is not None:
+                try:
+                    snapshot = SecretScrubber.scrub_graph(snapshot)
+                except Exception as e:
+                    logger.error(f"Error scrubbing secrets: {e}")
+                    # Decide whether to fail or return unscrubbed. 
+                    # Security best practice: fail closed if scrubbing fails.
+                    self._send_json_response(500, {"error": "Internal Server Error", "detail": "Secret scrubbing failed"})
+                    return
+
             self._send_json_response(200, snapshot)
         except Exception as e:
             logger.error(f"Error getting snapshot: {e}")
@@ -123,6 +208,18 @@ class ClusterVisualizerHandler(BaseHTTPRequestHandler):
         try:
             # Send initial snapshot
             initial_snapshot = self.controller.get_snapshot()
+            
+            if self.scrub_secrets and SecretScrubber is not None:
+                try:
+                    initial_snapshot = SecretScrubber.scrub_graph(initial_snapshot)
+                except Exception as e:
+                    logger.error(f"Error scrubbing secrets in stream init: {e}")
+                    # Send error event and close
+                    error_event = f"event: error\ndata: {json.dumps({'error': 'Scrubbing failed'})}\n\n"
+                    self.wfile.write(error_event.encode("utf-8"))
+                    self.wfile.flush()
+                    return
+
             initial_event = f"event: initial_snapshot\ndata: {json.dumps(initial_snapshot)}\n\n"
             self.wfile.write(initial_event.encode("utf-8"))
             self.wfile.flush()
@@ -134,6 +231,18 @@ class ClusterVisualizerHandler(BaseHTTPRequestHandler):
                 try:
                     # Wait for event with timeout
                     event_name, payload = client_queue.get(timeout=1.0)
+
+                    # Scrub payload if needed
+                    if self.scrub_secrets and SecretScrubber is not None:
+                        try:
+                            # Assuming payload is a dict that can be scrubbed
+                            # If payload structure is different, adjust accordingly
+                            if isinstance(payload, dict):
+                                payload = SecretScrubber.scrub_graph(payload)
+                        except Exception as e:
+                            logger.error(f"Error scrubbing secrets in stream event: {e}")
+                            # Skip event or send error? Skipping is safer for stream continuity
+                            continue
 
                     # Send event
                     event_str = f"event: {event_name}\ndata: {json.dumps(payload)}\n\n"
@@ -162,6 +271,29 @@ class ClusterVisualizerHandler(BaseHTTPRequestHandler):
             self.controller.remove_listener(client_queue)
             logger.info("SSE stream closed.")
 
+    def _handle_telemetry_latency(self) -> None:
+        """Handle latency telemetry ingestion."""
+        if self.edge_aggregator is None:
+            self._send_json_response(503, {"error": "Telemetry aggregator not available"})
+            return
+
+        try:
+            content_length = int(self.headers.get('Content-Length', 0))
+            if content_length == 0:
+                self._send_json_response(400, {"error": "Empty request body"})
+                return
+            
+            body = self.rfile.read(content_length)
+            data = json.loads(body.decode('utf-8'))
+            
+            self.edge_aggregator.ingest_probe_report(data)
+            self._send_json_response(200, {"status": "ingested"})
+        except json.JSONDecodeError:
+            self._send_json_response(400, {"error": "Invalid JSON"})
+        except Exception as e:
+            logger.error(f"Error ingesting telemetry: {e}")
+            self._send_json_response(500, {"error": "Internal Server Error"})
+
 
 def create_server(
     host: str = "0.0.0.0",
@@ -183,9 +315,33 @@ def create_server(
         controller = TopologyController()
         controller.start(mock=True)
 
+    # Initialize Authenticator
+    auth_type = os.environ.get("CLUSTERVIS_AUTH_TYPE", "none")
+    authenticator = None
+    if Authenticator is not None:
+        try:
+            authenticator = Authenticator(mode=auth_type)
+        except Exception as e:
+            logger.error(f"Failed to initialize Authenticator: {e}")
+    
+    # Initialize LatencyEdgeAggregator
+    edge_aggregator = None
+    if LatencyEdgeAggregator is not None:
+        try:
+            edge_aggregator = LatencyEdgeAggregator()
+        except Exception as e:
+            logger.error(f"Failed to initialize LatencyEdgeAggregator: {e}")
+
     # Set class-level attributes
     ClusterVisualizerHandler.controller = controller
     ClusterVisualizerHandler.start_time = time.time()
+    ClusterVisualizerHandler.authenticator = authenticator
+    ClusterVisualizerHandler.edge_aggregator = edge_aggregator
+    ClusterVisualizerHandler.scrub_secrets = os.environ.get("CLUSTERVIS_SCRUB_SECRETS", "true").lower() == "true"
+    
+    # Parse CORS origins from env, default to ["*"]
+    cors_origins_env = os.environ.get("CLUSTERVIS_CORS_ORIGINS", "*")
+    ClusterVisualizerHandler.cors_allowed_origins = [o.strip() for o in cors_origins_env.split(",")]
 
     server = ThreadingHTTPServer((host, port), ClusterVisualizerHandler)
     server.daemon_threads = True

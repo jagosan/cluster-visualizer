@@ -38,6 +38,15 @@
 - `deploy/operator/operator.yaml`: Kubernetes Deployment, ServiceAccount, and RBAC manifests.
 - `src/operator/controller.py`: In-cluster Kubernetes watch informer loop reconciling pods, nodes, and CRDs.
 - `src/operator/server.py`: Lightweight HTTP & SSE streaming server (`/api/v1/topology/stream`, `/snapshot`, `/healthz`).
+- `src/operator/auth.py`: TokenReview and SubjectAccessReview bearer token authenticator and RBAC validator.
+- `src/operator/graph_engine.py`: In-memory topological graph, secret scrubbing, and latency edge aggregator.
+
+## Helm Packaging & Synthetic Probe
+- `charts/clustervis/Chart.yaml`: Helm chart metadata for unified in-cluster deployment.
+- `charts/clustervis/values.yaml`: Default configuration values for operator, probe, auth, and ingress.
+- `charts/clustervis/templates/`: Deployment, DaemonSet, Service, RBAC, and optional Ingress manifests.
+- `src/probe/main.py`: Microscopic unprivileged TCP SYN round-robin ping probe daemon.
+- `src/ingestion/latency_layout.py`: Force-directed spring-mass graph layout engine translating latency to spatial distance.
 
 ## Ephemeral Testbed & Chaos Injector (Python)
 - `src/testbed/models.py`: Pydantic models for `FleetSpec`, `ClusterSpec`, `ClusterStatus`, `FleetStatusReport`, `ChaosScenario`.
@@ -65,3 +74,7 @@
 - `src/scene/diff_card.ts`: 3D floating billboarding HTML diff card anchored to drifted components.
 - `src/ui/diff_inspector.ts`: Side-by-side comparison drawer, version mismatch highlights, and metric bars.
 - `src/ui/cluster_selector.ts`: Dropdown / file loader for switching active clusters.
+- `src/scene/layout_transition.ts`: Dual-mode coordinator lerping between Skyscraper and Latency Force coordinates.
+- `src/ui/mode_toggle.ts`: HUD control for switching and tweening layout modes (`Skyscraper ⇄ Latency Field`).
+- `src/ui/cluster_federation.ts`: Multi-cluster session store and client-side aggregator across SSE endpoints.
+- `src/ui/auth_modal.ts`: Bearer token and OIDC authentication modal dialog.

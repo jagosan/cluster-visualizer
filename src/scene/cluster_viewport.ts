@@ -7,6 +7,7 @@ import type { ConduitEdge, ConduitType } from './conduits.js';
 import { LayerTrayManager } from './layer_trays.js';
 import { FlankLabelManager } from './flank_labels.js';
 import { DiffCardManager } from './diff_card.js';
+import { LayoutTransitionController } from './layout_transition.js';
 
 export interface ClusterNodeData {
   id: string;
@@ -86,6 +87,9 @@ export class ClusterViewport {
   // Dynamic mutation animation maps
   private animatingEntrances: Map<string, { mesh: THREE.Object3D; startTime: number; duration: number }> = new Map();
   private animatingDecays: Map<string, { mesh: THREE.Object3D; startTime: number; duration: number }> = new Map();
+
+  // Dual-mode layout controller (Skyscraper <-> Latency Field)
+  public layoutController: LayoutTransitionController = new LayoutTransitionController();
 
   constructor(container: HTMLElement, label: string) {
     this.container = container;
@@ -227,6 +231,16 @@ export class ClusterViewport {
       this.scene.add(instance);
       this.nodeMeshes.set(node.id, instance);
       nodePositions.set(node.id, new THREE.Vector3(node.spatial.x, node.spatial.y, node.spatial.z));
+
+      // Register dual coordinates for layout transitions
+      const arch = { x: node.spatial.x, y: node.spatial.y, z: node.spatial.z };
+      const rawLat = (node as Record<string, any>).latency_spatial;
+      const latency = rawLat ? { x: Number(rawLat.x ?? 0), y: Number(rawLat.y ?? 0), z: Number(rawLat.z ?? 0) } : {
+        x: arch.x * 0.7,
+        y: Math.max(0.5, arch.y * 0.4),
+        z: arch.z * 0.7,
+      };
+      this.layoutController.registerNode(node.id, arch, latency);
     }
 
     // Connect conduits and animated flow pulses
@@ -695,6 +709,26 @@ export class ClusterViewport {
     this.diffCard.updatePosition(this.camera, this.renderer);
     this.controls.update();
     this.flowSystem.update(delta, speedMultiplier);
+
+    // Update layout transitions
+    if (this.layoutController.isAnimating()) {
+      this.layoutController.update(delta);
+      for (const [nodeId, pos] of this.layoutController.getAllCurrentPositions().entries()) {
+        const mesh = this.nodeMeshes.get(nodeId);
+        if (mesh) {
+          mesh.position.set(pos.x, pos.y, pos.z);
+        }
+      }
+    }
+
     this.renderer.render(this.scene, this.camera);
+  }
+
+  public setLayoutAlpha(alpha: number, durationMs: number = 800): void {
+    this.layoutController.setTargetAlpha(alpha, durationMs);
+  }
+
+  public setLayoutMode(mode: 'skyscraper' | 'latency-force'): void {
+    this.layoutController.setTargetAlpha(mode === 'skyscraper' ? 0.0 : 1.0, 800);
   }
 }

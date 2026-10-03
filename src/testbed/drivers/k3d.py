@@ -37,14 +37,15 @@ class K3dDriver(ClusterDriver):
             "k3d", "cluster", "create", spec.name,
             "--servers", str(spec.servers),
             "--agents", str(spec.agents),
-            "--port", f"{spec.api_port}:6443@loadbalancer",
+            "--api-port", f"0.0.0.0:{spec.api_port}",
             "--image", f"rancher/k3s:{spec.kubernetes_version}",
-            "--no-lb=false",
+            "--k3s-arg", f"--tls-san={self.tailscale_ip}@server:*",
+            "--timeout", "120s",
             "--wait",
         ]
 
         if spec.operator.enabled and spec.operator.host_port:
-            cmd.extend(["--port", f"{spec.operator.host_port}:8080@loadbalancer"])
+            cmd.extend(["-p", f"{spec.operator.host_port}:8080@loadbalancer"])
 
         returncode, stdout, stderr = self.execute_command(cmd)
         if returncode != 0:
@@ -165,6 +166,11 @@ users:
         kubeconfig = stdout
         kubeconfig = kubeconfig.replace("0.0.0.0", self.tailscale_ip)
         kubeconfig = kubeconfig.replace("127.0.0.1", self.tailscale_ip)
+        if "insecure-skip-tls-verify" not in kubeconfig:
+            kubeconfig = kubeconfig.replace(
+                f"server: https://{self.tailscale_ip}",
+                f"insecure-skip-tls-verify: true\n    server: https://{self.tailscale_ip}",
+            )
         return kubeconfig
 
     def apply_manifest(self, cluster_name: str, manifest_path_or_yaml: str) -> bool:
@@ -188,6 +194,7 @@ users:
                 cmd = [
                     "kubectl",
                     "--kubeconfig", kubeconfig_path,
+                    "--insecure-skip-tls-verify",
                     "apply",
                     "-f", manifest_path_or_yaml,
                 ]
@@ -199,6 +206,7 @@ users:
                 cmd = [
                     "kubectl",
                     "--kubeconfig", kubeconfig_path,
+                    "--insecure-skip-tls-verify",
                     "apply",
                     "-f", manifest_temp_path,
                 ]
@@ -226,17 +234,25 @@ users:
         else:
             cmd_list = list(cmd)
 
+        if self.host not in ("localhost", "127.0.0.1") and cmd_list and cmd_list[0] in ("k3d", "docker"):
+            import shlex
+            cmd_str = " ".join(shlex.quote(c) for c in cmd_list)
+            remote_cmd = f"export PATH=$PATH:/home/jagosan/.local/bin; {cmd_str}"
+            run_cmd = ["ssh", "-o", "ConnectTimeout=15", "-o", "BatchMode=yes", self.host, remote_cmd]
+        else:
+            run_cmd = cmd_list
+
         try:
             result = subprocess.run(
-                cmd_list,
+                run_cmd,
                 capture_output=True,
                 text=True,
                 timeout=300,
             )
             return (result.returncode, result.stdout, result.stderr)
         except subprocess.TimeoutExpired:
-            logger.error(f"Command timed out: {cmd}")
+            logger.error(f"Command timed out: {run_cmd}")
             return (1, "", "Command timed out")
         except Exception as e:
-            logger.error(f"Error executing command {cmd}: {e}")
+            logger.error(f"Error executing command {run_cmd}: {e}")
             return (1, "", str(e))

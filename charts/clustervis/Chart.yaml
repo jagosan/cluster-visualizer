@@ -1,0 +1,17 @@
+apiVersion: v2
+name: clustervis
+description: Lightweight 3D Kubernetes Architecture & Latency Topology Visualizer
+type: application
+version: 1.0.0
+appVersion: '1.0.0'
+keywords:
+  - kubernetes
+  - visualization
+  - topology
+  - latency
+  - 3d
+home: https://github.com/jagosan/cluster-vis
+sources:
+  - https://github.com/jagosan/cluster-vis
+maintainers:
+  - name: jagosan

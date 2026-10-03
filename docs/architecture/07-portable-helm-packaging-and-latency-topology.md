@@ -156,3 +156,22 @@ sequenceDiagram
 - **Context:** Force-directed layouts intuitively show latency clusters but can collapse into disorganized "hairballs," losing the clear mental model of control-plane tiers and worker decks.
 - **Decision:** Retain the Skyscraper architecture (SPEC-02/03) as the default ground truth. Compute both Skyscraper coordinates and Latency Force coordinates, allowing the user to smoothly interpolate ($\alpha \in [0, 1]$) between them via a HUD slider.
 - **Consequences:** Complete preservation of all existing visualizer milestones and documentation, while introducing the dynamic latency physics model as an additive capability.
+
+---
+
+## 5. 💡 Note to Future Self: Hosting Portability
+
+### Cloud vs. Edge Decoupling
+1. **Zero External Ingress Assumption:**
+   - In production cloud environments (EKS, GKE, AKS), an Ingress controller with external DNS and OAuth2 / OIDC proxy (e.g., Cloudflare Access, AWS ALB, Google Cloud Armor) fronts the visualizer.
+   - In edge, homelab, and air-gapped testbeds (K3d, Kind, bare-metal nodes across Tailscale), the operator functions autonomously without Ingress, relying on NodePort (`:30080`), port-forwarding, or direct Tailscale IP routing.
+2. **Pluggable Identity & Auth Isolation:**
+   - Client authentication relies on standard Kubernetes API primitives (`TokenReview` and `SubjectAccessReview`). This ensures zero vendor lock-in to external IdPs while maintaining enterprise compliance.
+   - When running in ephemeral sandboxes or local dev clusters, disabling authentication (`auth.type: "none"`) requires only a single Helm flag (`--set auth.type=none`).
+3. **Telemetry Portability & Degradation Strategy:**
+   - The probe layer cleanly decouples metric sourcing:
+     - Tier 1 (Self-Contained): `clustervis-probe` unprivileged TCP SYN measurement operates on raw Linux sockets without eBPF privileges.
+     - Tier 2 (Observed Cloud): Cilium Hubble Relay gRPC connector transparently activates when present.
+     - Tier 3 (Metrics Platform): Prometheus PromQL query connector provides historical percentile integration.
+   - If telemetry fails completely, the engine gracefully falls back to synthetic estimated LAN latencies based on node locality topologies, preventing WebGL layout breakdown.
+

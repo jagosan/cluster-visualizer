@@ -1,0 +1,71 @@
+# Default values for clustervis
+image:
+  repository: ghcr.io/jagosan/clustervis-operator
+  tag: "v1.0.0"
+  pullPolicy: IfNotPresent
+
+operator:
+  replicaCount: 1
+  resources:
+    limits:
+      cpu: 250m
+      memory: 128Mi
+    requests:
+      cpu: 20m
+      memory: 48Mi
+  config:
+    exportIntervalSeconds: 5
+    defaultLayoutMode: "skyscraper" # "skyscraper" | "latency-force"
+    scrubSecrets: true
+    scrubConfigMaps: true
+    excludedNamespaces:
+      - kube-system
+      - clustervis-system
+      - cert-manager
+      - local-path-storage
+
+probe:
+  enabled: true
+  repository: ghcr.io/jagosan/clustervis-probe
+  tag: "v1.0.0"
+  probeIntervalSeconds: 3
+  probeTimeoutMs: 500
+  sampleTargetLimit: 20
+  resources:
+    limits:
+      cpu: 50m
+      memory: 32Mi
+    requests:
+      cpu: 5m
+      memory: 12Mi
+
+telemetry:
+  mode: "probe" # "probe" | "cilium" | "prometheus" | "synthetic"
+  prometheus:
+    url: "http://prometheus-k8s.monitoring.svc:9090"
+    latencyQuery: 'histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket[2m])) by (le, source_workload, destination_workload))'
+  cilium:
+    hubbleRelayAddress: "hubble-relay.kube-system.svc:4245"
+
+auth:
+  enabled: true
+  type: "token" # "token" (K8s Bearer Token) | "oauth2-proxy" | "none"
+  tokenValidation:
+    audience: "clustervis"
+    requireClusterAdmin: false
+
+service:
+  type: ClusterIP
+  port: 8080
+  nodePort: 30080
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: clustervis.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
