@@ -17,7 +17,8 @@
 - `docs/architecture/06-ephemeral-multi-cluster-testbed-and-live-streaming.md`: Architectural blueprint for testbed orchestration, Tailscale streaming gateway, and multi-viewport layouts.
 - `specs/07-portable-helm-packaging-and-latency-topology.md`: Master specification for in-cluster Helm packaging, latency-as-distance force field layout, and federated browser security.
 - `docs/architecture/07-portable-helm-packaging-and-latency-topology.md`: Architectural blueprint for Helm topology, synthetic TCP probe daemonset, TokenReview auth, and dual-mode spatial lerping.
-- `specs/08-subterranean-dependencies-and-compute-classes.md`: Master specification for subterranean foundation tiers (B1-B3), Karpenter machine shapes, GCP KCC & kro managed cloud vaults, and plunge latency conduits.
+- specs/08-subterranean-dependencies-and-compute-classes.md: Master specification for subterranean foundation tiers (B1-B3), Karpenter machine shapes, GCP KCC & kro managed cloud vaults, and plunge latency conduits.
+- docs/architecture/08-subterranean-dependencies-and-compute-classes.md: Blueprint for subterranean foundation tiers (B1-B3), Karpenter machine shapes, GCP KCC & kro managed cloud vaults, and plunge latency conduits.
 - `specs/09-pod-autoscaling-morphing-and-kueue-staging.md`: Master specification for proportional pod capsule sizing, VPA in-place morphing, HPA lateral replication, and the external Kueue gang-scheduling staging yard.
 - `docs/MAP.md`: This symbol and directory reference map.
 
@@ -39,6 +40,7 @@
 - `deploy/crd/clustervis.io_clustertopologysnapshots.yaml`: CRD manifest for `ClusterTopologySnapshot`.
 - `deploy/operator/operator.yaml`: Kubernetes Deployment, ServiceAccount, and RBAC manifests.
 - `src/operator/controller.py`: In-cluster Kubernetes watch informer loop reconciling pods, nodes, and CRDs.
+- `src/operator/kcc_mapper.py`: Normalizes KCC/kro CRDs and node machine shapes into subterranean strata resources.
 - `src/operator/server.py`: Lightweight HTTP & SSE streaming server (`/api/v1/topology/stream`, `/snapshot`, `/healthz`).
 - `src/operator/auth.py`: TokenReview and SubjectAccessReview bearer token authenticator and RBAC validator.
 - `src/operator/graph_engine.py`: In-memory topological graph, secret scrubbing, and latency edge aggregator.
@@ -68,7 +70,9 @@
 - `src/scene/timeline_player.ts`: `TimelinePlayer` engine handling keyframe playback, seek interpolation, and delta transitions.
 - `src/ui/timeline_scrubber.ts`: `TimelineScrubber` bottom-docked HUD with scrub bar, event pins, play/pause, and speed multipliers.
 - `src/scene/live_stream.ts`: `LiveStreamManager` SSE client handling reconnection, heartbeat, and real-time topology mutation events.
-- `src/scene/layer_trays.ts`: `LayerTrayManager` procedural semi-transparent floor trays and structural tower cage.
+- `src/scene/layer_trays.ts`: `LayerTrayManager` procedural semi-transparent floor trays, machine shape chassis, and ground datum.
+- `src/scene/subterranean_vaults.ts`: `SubterraneanVaultManager` procedural 3D vaults for CloudSQL, GCS, Pub/Sub, Redis, kro manifolds.
+- `src/scene/plunge_conduits.ts`: `PlungeConduitManager` vertical Bezier conduits with latency spectrum shaders and degradation strobes.
 - `src/scene/flank_labels.ts`: `FlankLabelManager` typographic billboard sprites floating on tower flanks.
 - `src/scene/conduits.ts`: 3D procedural conduit pipe mesh generator and route splines.
 - `src/scene/camera_sync.ts`: Synchronous dual-orbit camera controller.

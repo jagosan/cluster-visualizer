@@ -13,7 +13,7 @@ SPEC-03 Update:
 from __future__ import annotations
 import math
 from typing import Dict, List, Optional, Tuple
-from .models import NodeComponent, DataFlowEdge
+from .models import NodeComponent, DataFlowEdge, MachineShape, RemoteServiceResource, ManagedServiceCategory
 
 # Vertical elevation tiers per skyscraper layer (SPEC-03)
 ELEVATION_TIERS: Dict[str, float] = {
@@ -26,6 +26,13 @@ ELEVATION_TIERS: Dict[str, float] = {
     "worker_deck": 0.5,      # Single horizontal worker deck floor at Y = 0.5
     "worker_base": 0.5,      # Maintain for backward compatibility
     "worker_pitch": -2.8,    # Deprecated for layout, kept for compat
+
+    # Subterranean Strata Tiers (SPEC-08)
+    "surface_datum": 0.0,    # Ground reference plane / cutaway glass (KeyG X-ray toggle)
+    "compute_chassis": -2.5, # Sub-Level B1: Karpenter NodePools / GKE Machine Shapes
+    "kro_manifold": -4.8,    # Sub-Level B2 Upper: kro composition routing hub
+    "cloud_vault": -6.5,     # Sub-Level B2 Lower: KCC / ACK managed service vaults
+    "bedrock_egress": -10.5, # Sub-Level B3: External SaaS, WAN, NAT gateways
 }
 
 # Z-offsets for specific control plane components
@@ -291,6 +298,103 @@ def apply_spatial_layout(nodes: List[NodeComponent]) -> List[NodeComponent]:
         pod_slots_per_chassis[chassis_idx] += 1
 
     return nodes
+
+
+# ---------------------------------------------------------------------------
+# SPEC-08: Subterranean Strata Layout (Machine Shapes & Managed Cloud Vaults)
+# ---------------------------------------------------------------------------
+
+# Horizontal spacing between docked B1 chassis footprints
+COMPUTE_CHASSIS_SPACING_X = 1.6
+# Vault grid arrangement on Sub-Level B2 Lower
+VAULT_GRID_COLS = 3
+VAULT_SPACING_X = 3.0
+VAULT_SPACING_Z = 3.0
+# Bedrock egress row spacing on Sub-Level B3
+BEDROCK_SPACING_X = 3.0
+
+# Canonical world anchor of the kro hydraulic manifold hub (Sub-Level B2 Upper)
+KRO_MANIFOLD_ANCHOR: Tuple[float, float, float] = (0.0, ELEVATION_TIERS["kro_manifold"], 0.0)
+
+
+def _clamp(value: float, lo: float, hi: float) -> float:
+    """Clamp value into the closed interval [lo, hi]."""
+    return max(lo, min(hi, value))
+
+
+def calculate_chassis_dimensions(vcpus: int, memory_gib: float) -> Tuple[float, float, float]:
+    """Proportional chassis sizing per SPEC-08 §2.2.
+
+        Width  (X) = clamp(3.2 + 0.35 * sqrt(vCPU),      3.2, 8.0)
+        Depth  (Z) = clamp(2.4 + 0.30 * sqrt(RAM GiB),   2.4, 7.5)
+        Height (Y) = 0.6
+
+    Returns (width, height, depth) rounded to 2 decimals.
+    """
+    width = _clamp(3.2 + 0.35 * math.sqrt(max(vcpus, 0)), 3.2, 8.0)
+    depth = _clamp(2.4 + 0.30 * math.sqrt(max(memory_gib, 0.0)), 2.4, 7.5)
+    height = 0.6
+    return (round(width, 2), round(height, 2), round(depth, 2))
+
+
+def apply_subterranean_layout(
+    machine_shapes: List[MachineShape],
+    subterranean_resources: List[RemoteServiceResource],
+) -> Dict[str, Tuple[float, float, float]]:
+    """Position SPEC-08 subterranean strata objects below the surface datum.
+
+    - MachineShape chassis (Sub-Level B1, Y = -2.5): footprints are recomputed
+      with calculate_chassis_dimensions and docked left-to-right along X.
+    - Managed service vaults (Sub-Level B2 Lower, Y = -6.5): centered grid on
+      the X-Z plane (VAULT_GRID_COLS per row).
+    - NETWORKING_GATEWAY vaults (Sub-Level B3, Y = -10.5): bedrock egress row.
+
+    Mutates MachineShape chassis dimensions and RemoteServiceResource.spatial,
+    and returns {object_key: (x, y, z)} for every placed object, including the
+    canonical 'kro_manifold_hub' anchor at Y = -4.8.
+    """
+    positions: Dict[str, Tuple[float, float, float]] = {}
+    positions["kro_manifold_hub"] = KRO_MANIFOLD_ANCHOR
+
+    # --- Sub-Level B1: Compute chassis row (Y = -2.5) -----------------------
+    dims: List[Tuple[float, float, float]] = []
+    for m in machine_shapes:
+        w, h, d = calculate_chassis_dimensions(m.vcpus, m.memory_gib)
+        m.chassis_width = w
+        m.chassis_depth = d
+        dims.append((w, h, d))
+
+    total_span = sum(w for w, _, _ in dims) + COMPUTE_CHASSIS_SPACING_X * max(len(dims) - 1, 0)
+    cursor = -total_span / 2.0
+    for m, (w, _, d) in zip(machine_shapes, dims):
+        x = cursor + w / 2.0
+        cursor += w + COMPUTE_CHASSIS_SPACING_X
+        positions[m.node_name] = (round(x, 2), ELEVATION_TIERS["compute_chassis"], 0.0)
+
+    # --- Sub-Level B2/B3: Managed service vaults ----------------------------
+    vaults = [r for r in subterranean_resources
+              if r.category != ManagedServiceCategory.NETWORKING_GATEWAY]
+    bedrock = [r for r in subterranean_resources
+               if r.category == ManagedServiceCategory.NETWORKING_GATEWAY]
+
+    # Vault grid on X-Z plane, centered, VAULT_GRID_COLS per row
+    n_rows = (len(vaults) + VAULT_GRID_COLS - 1) // VAULT_GRID_COLS
+    for i, r in enumerate(vaults):
+        row = i // VAULT_GRID_COLS
+        cols_in_row = min(VAULT_GRID_COLS, len(vaults) - row * VAULT_GRID_COLS)
+        col = i % VAULT_GRID_COLS
+        x = (col - (cols_in_row - 1) / 2.0) * VAULT_SPACING_X
+        z = (row - (n_rows - 1) / 2.0) * VAULT_SPACING_Z
+        r.spatial = {"x": round(x, 2), "y": ELEVATION_TIERS["cloud_vault"], "z": round(z, 2)}
+        positions[r.id] = (r.spatial["x"], r.spatial["y"], r.spatial["z"])
+
+    # Bedrock egress row (Y = -10.5)
+    for i, r in enumerate(bedrock):
+        x = (i - (len(bedrock) - 1) / 2.0) * BEDROCK_SPACING_X
+        r.spatial = {"x": round(x, 2), "y": ELEVATION_TIERS["bedrock_egress"], "z": 0.0}
+        positions[r.id] = (r.spatial["x"], r.spatial["y"], r.spatial["z"])
+
+    return positions
 
 
 from typing import List
