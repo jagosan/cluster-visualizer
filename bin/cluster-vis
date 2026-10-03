@@ -1,0 +1,26 @@
+#!/usr/bin/env python3
+"""Main cluster-vis CLI dispatcher."""
+import os
+import sys
+
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, REPO_ROOT)
+
+def main():
+    if len(sys.argv) > 1 and sys.argv[1] == "testbed":
+        from src.testbed.cli import main as testbed_main
+        sys.exit(testbed_main(sys.argv[2:]))
+    elif len(sys.argv) > 1 and sys.argv[1] == "record":
+        from src.ingestion.recorder import main as record_main
+        sys.argv.pop(1)
+        sys.exit(record_main())
+    elif len(sys.argv) > 1 and sys.argv[1] == "dump":
+        from src.ingestion.exporter import main as dump_main
+        sys.argv.pop(1)
+        sys.exit(dump_main())
+    else:
+        from src.ingestion.cli import main as ingest_main
+        sys.exit(ingest_main())
+
+if __name__ == "__main__":
+    main()

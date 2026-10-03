@@ -1,0 +1,42 @@
+version: "clustervis.io/v1alpha1"
+fleet_name: "homelab-canary-matrix"
+host: "chunkito"
+clusters:
+  - name: "stage-regular"
+    driver: "k3d"
+    kubernetes_version: "v1.36.4-k3s1"
+    servers: 1
+    agents: 2
+    api_port: 64431
+    operator:
+      enabled: true
+      export_interval_seconds: 5
+    workloads:
+      - "testbeds/workloads/base-monitoring.yaml"
+      - "testbeds/workloads/postgres-ha.yaml"
+
+  - name: "prod-regular"
+    driver: "k3d"
+    kubernetes_version: "v1.36.4-k3s1"
+    servers: 1
+    agents: 3
+    api_port: 64432
+    operator:
+      enabled: true
+      export_interval_seconds: 5
+    workloads:
+      - "testbeds/workloads/base-monitoring.yaml"
+      - "testbeds/workloads/ray-cluster.yaml"
+      - "testbeds/workloads/microservices-app.yaml"
+
+  - name: "edge-rapid"
+    driver: "k3d"
+    kubernetes_version: "v1.37.0-k3s1"
+    servers: 1
+    agents: 2
+    api_port: 64433
+    operator:
+      enabled: true
+      export_interval_seconds: 5
+    workloads:
+      - "testbeds/workloads/canary-service.yaml"

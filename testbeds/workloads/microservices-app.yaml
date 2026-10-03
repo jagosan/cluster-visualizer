@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend-gateway
+  namespace: web
+  labels:
+    app: frontend-gateway
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: frontend-gateway
+  template:
+    metadata:
+      labels:
+        app: frontend-gateway
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:1.27.1-alpine
+          ports:
+            - containerPort: 80
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-service
+  namespace: web
+  labels:
+    app: auth-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: auth-service
+  template:
+    metadata:
+      labels:
+        app: auth-service
+    spec:
+      containers:
+        - name: auth
+          image: node:20-alpine

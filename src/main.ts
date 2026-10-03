@@ -1,11 +1,11 @@
 import { ClusterViewport } from './scene/cluster_viewport.js';
 import type { ClusterGraphData } from './scene/cluster_viewport.js';
-import { CameraSyncController } from './scene/camera_sync.js';
 import { DiffInspectorDrawer } from './ui/diff_inspector.js';
 import { LiveStreamManager } from './scene/live_stream.js';
 import { TimelinePlayer } from './scene/timeline_player.js';
 import type { ClusterTimelineData } from './scene/timeline_player.js';
 import { TimelineScrubber } from './ui/timeline_scrubber.js';
+import { GridController, type ViewportSlot, type GridMode } from './scene/grid_controller.js';
 
 interface DiffReportData {
   source_cluster: string;
@@ -32,20 +32,28 @@ interface DiffReportData {
 async function bootstrap() {
   const containerA = document.getElementById('viewport-a');
   const containerB = document.getElementById('viewport-b');
-  if (!containerA || !containerB) {
+  const containerC = document.getElementById('viewport-c');
+  const containerD = document.getElementById('viewport-d');
+  const viewportsWrapper = document.getElementById('viewports-wrapper');
+  if (!containerA || !containerB || !viewportsWrapper) {
     throw new Error('Viewport container panes not found in DOM');
   }
 
-  // 1. Initialize Dual Viewports
+  // 1. Initialize Viewports
   const viewportA = new ClusterViewport(containerA, 'Cluster Alpha (v1.36.4)');
   const viewportB = new ClusterViewport(containerB, 'Cluster Beta (v1.35.8)');
+  const viewportC = containerC ? new ClusterViewport(containerC, 'Cluster Gamma (Edge v1.37.0)') : null;
+  const viewportD = containerD ? new ClusterViewport(containerD, 'Cluster Delta (Canary v1.36.4)') : null;
 
   // 2. Load 3D Asset Kit
   const assetKitUrl = './assets/cluster-kit.glb';
-  await Promise.all([
+  const assetPromises = [
     viewportA.loadAssets(assetKitUrl),
     viewportB.loadAssets(assetKitUrl),
-  ]);
+  ];
+  if (viewportC) assetPromises.push(viewportC.loadAssets(assetKitUrl));
+  if (viewportD) assetPromises.push(viewportD.loadAssets(assetKitUrl));
+  await Promise.all(assetPromises);
 
   // 3. Load Cluster Data & Diff Report
   const [dataA, dataB, diffReport]: [ClusterGraphData, ClusterGraphData, DiffReportData] =
@@ -90,6 +98,75 @@ async function bootstrap() {
   // Populate viewports
   viewportA.setClusterData(dataA, diffMapA);
   viewportB.setClusterData(dataB, diffMapB);
+  if (viewportC) viewportC.setClusterData(dataA);
+  if (viewportD) viewportD.setClusterData(dataB);
+
+  // 4. Viewport Slots & Grid Controller (SPEC-06)
+  const slots: ViewportSlot[] = [
+    {
+      id: 'a',
+      viewport: viewportA,
+      container: containerA,
+      title: 'Cluster Alpha',
+      clusterName: 'stage-regular',
+      k8sVersion: '1.36.4',
+      channel: 'Regular',
+    },
+    {
+      id: 'b',
+      viewport: viewportB,
+      container: containerB,
+      title: 'Cluster Beta',
+      clusterName: 'prod-regular',
+      k8sVersion: '1.36.4',
+      channel: 'Regular',
+    },
+  ];
+
+  if (viewportC && containerC) {
+    slots.push({
+      id: 'c',
+      viewport: viewportC,
+      container: containerC,
+      title: 'Cluster Gamma',
+      clusterName: 'edge-rapid',
+      k8sVersion: '1.37.0',
+      channel: 'Rapid',
+    });
+  }
+
+  if (viewportD && containerD) {
+    slots.push({
+      id: 'd',
+      viewport: viewportD,
+      container: containerD,
+      title: 'Cluster Delta',
+      clusterName: 'canary-eval',
+      k8sVersion: '1.36.4',
+      channel: 'Regular',
+    });
+  }
+
+  const gridController = new GridController(
+    {
+      wrapperElement: viewportsWrapper,
+      hudContainer: document.getElementById('version-skew-matrix'),
+      onModeChange: (mode: GridMode) => {
+        btnGridSingle?.classList.toggle('active', mode === 'single');
+        btnGridDual?.classList.toggle('active', mode === 'dual');
+        btnGridQuad?.classList.toggle('active', mode === 'quad');
+      },
+    },
+    slots
+  );
+
+  const btnGridSingle = document.getElementById('btn-grid-single');
+  const btnGridDual = document.getElementById('btn-grid-dual');
+  const btnGridQuad = document.getElementById('btn-grid-quad');
+
+  btnGridSingle?.addEventListener('click', () => gridController.setMode('single'));
+  btnGridDual?.addEventListener('click', () => gridController.setMode('dual'));
+  btnGridQuad?.addEventListener('click', () => gridController.setMode('quad'));
 
   // 4. Populate Topbar Summary Pills
   const pillsContainer = document.getElementById('summary-pills');
@@ -103,9 +180,6 @@ async function bootstrap() {
     `;
   }
 
-  // 5. Camera Synchronization
-  const cameraSync = new CameraSyncController(viewportA.controls, viewportB.controls);
-
   // 6. Inspection Drawer & Hover Tooltip
   const inspector = new DiffInspectorDrawer();
 
@@ -117,7 +191,6 @@ async function bootstrap() {
       inspector.close();
       return;
     }
-    // Find matching peer node in Cluster B
     const peer = dataB.nodes.find((n) => n.kind === node.kind && n.name === node.name) || null;
     inspector.inspectNode(node, peer);
   };
@@ -127,7 +200,6 @@ async function bootstrap() {
       inspector.close();
       return;
     }
-    // Find matching peer node in Cluster A
     const peer = dataA.nodes.find((n) => n.kind === node.kind && n.name === node.name) || null;
     inspector.inspectNode(node, peer);
   };
@@ -136,8 +208,8 @@ async function bootstrap() {
   const btnSyncCam = document.getElementById('btn-sync-cam');
   if (btnSyncCam) {
     btnSyncCam.addEventListener('click', () => {
-      cameraSync.enabled = !cameraSync.enabled;
-      btnSyncCam.classList.toggle('active', cameraSync.enabled);
+      const active = gridController.toggleCameraSync();
+      btnSyncCam.classList.toggle('active', active);
     });
   }
 
@@ -257,6 +329,9 @@ async function bootstrap() {
   // 10. Expose globals for debugging and testing
   (window as any).__viewportA = viewportA;
   (window as any).__viewportB = viewportB;
+  (window as any).__viewportC = viewportC;
+  (window as any).__viewportD = viewportD;
+  (window as any).__gridController = gridController;
   (window as any).__inspector = inspector;
   (window as any).__dataA = dataA;
   (window as any).__dataB = dataB;
@@ -272,8 +347,7 @@ async function bootstrap() {
     lastTime = now;
 
     timelinePlayer.update(delta);
-    viewportA.render(delta);
-    viewportB.render(delta);
+    gridController.renderAll(delta);
   }
   requestAnimationFrame(animate);
 }
