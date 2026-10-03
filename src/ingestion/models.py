@@ -1,8 +1,30 @@
 """Pydantic data models for Cluster Visualizer (ClusterGraph Schema v1)."""
 
 from __future__ import annotations
+from enum import Enum
 from typing import Any, Dict, List, Literal, Optional
 from pydantic import BaseModel, Field
+
+
+class CloudProvider(str, Enum):
+    """Vendor taxonomy for managed infrastructure (SPEC-08 ADR-01)."""
+
+    GCP = "gcp"
+    AWS = "aws"
+    AZURE = "azure"
+    GENERIC = "generic"
+
+
+class ManagedServiceCategory(str, Enum):
+    """Vendor-agnostic managed-service taxonomy (SPEC-08 ADR-01)."""
+
+    DATABASE_RELATIONAL = "database_relational"   # CloudSQL, Spanner <-> RDS, Aurora
+    DATABASE_NOSQL = "database_nosql"             # Firestore, Bigtable <-> DynamoDB
+    OBJECT_STORAGE = "object_storage"             # GCS <-> S3
+    MESSAGING_EVENTING = "messaging_eventing"     # Pub/Sub <-> SQS, SNS, Kinesis
+    CACHE_IN_MEMORY = "cache_in_memory"           # Memorystore <-> ElastiCache
+    SECURITY_SECRET = "security_secret"           # Secret Manager <-> SecretsManager
+    NETWORKING_GATEWAY = "networking_gateway"     # Cloud NAT, Interconnect <-> NAT GW
 
 
 class Spatial(BaseModel):
@@ -80,6 +102,52 @@ class DiffReport(BaseModel):
     edges: List[EdgeMatch] = Field(default_factory=list)
 
 
+class RemoteServiceResource(BaseModel):
+    """Vendor-agnostic managed cloud service vault (SPEC-08 §3).
+
+    Concrete CRD watchers (KCC / kro / ACK / Crossplane) normalize native
+    external-infra CRDs into this unified representation; the scene layer
+    depends exclusively on ``ManagedServiceCategory``.
+    """
+
+    id: str
+    provider: CloudProvider = CloudProvider.GCP
+    category: ManagedServiceCategory
+    cr_group: str
+    cr_kind: str
+    name: str
+    namespace: str = "default"
+    display_name: str
+    status_phase: str = "Ready"                 # Ready, Reconciling, Degraded, Failed
+    endpoint: Optional[str] = None
+    vpc_network: Optional[str] = None
+    managed_by: str = "kcc"                     # kcc, kro, ack, crossplane
+    kro_parent_id: Optional[str] = None
+    spatial: Optional[Dict[str, float]] = None
+
+
+class MachineShape(BaseModel):
+    """Physical machine / Karpenter compute-class chassis (SPEC-08 §3).
+
+    Placed on Sub-Level B1 (``compute_chassis``); chassis footprint is
+    proportional to vCPU cores x RAM GiB via
+    ``layout.calculate_chassis_dimensions``.
+    """
+
+    node_name: str
+    provider: CloudProvider = CloudProvider.GCP
+    instance_type: str
+    compute_class: Optional[str] = None         # GKE Compute Class / Karpenter NodePool
+    vcpus: int = 4
+    memory_gib: float = 16.0
+    capacity_type: Literal["spot", "on-demand"] = "on-demand"
+    zone: str = "us-central1-a"
+    accelerator_type: Optional[str] = None      # nvidia-l4, tpu-v5e, etc.
+    accelerator_count: int = 0
+    chassis_width: float = 3.9
+    chassis_depth: float = 3.6
+
+
 class ClusterGraph(BaseModel):
     schema_url: str = Field(
         default="https://cluster-vis.jagosan.com/schemas/cluster-graph-v1.json",
@@ -89,6 +157,9 @@ class ClusterGraph(BaseModel):
     nodes: List[NodeComponent] = Field(default_factory=list)
     edges: List[DataFlowEdge] = Field(default_factory=list)
     diff_summary: Optional[DiffSummary] = None
+    # SPEC-08: Subterranean strata (machine shapes + managed cloud vaults)
+    subterranean_resources: List[RemoteServiceResource] = Field(default_factory=list)
+    machine_shapes: List[MachineShape] = Field(default_factory=list)
 
     class Config:
         populate_by_name = True

@@ -5,6 +5,11 @@ import { FlowParticleSystem } from './flow_particles.js';
 import { ConduitManager } from './conduits.js';
 import type { ConduitEdge, ConduitType } from './conduits.js';
 import { LayerTrayManager } from './layer_trays.js';
+import type { MachineShapeData } from './layer_trays.js';
+import { SubterraneanVaultManager } from './subterranean_vaults.js';
+import type { RemoteServiceResourceData, VaultBlastState } from './subterranean_vaults.js';
+import { PlungeConduitManager, estimateVaultLatencyMs, reachabilityFromPhase } from './plunge_conduits.js';
+import type { PlungeConduitSpec } from './plunge_conduits.js';
 import { FlankLabelManager } from './flank_labels.js';
 import { DiffCardManager } from './diff_card.js';
 import { LayoutTransitionController } from './layout_transition.js';
@@ -53,6 +58,10 @@ export interface ClusterGraphData {
     missing_in_target: number;
     added_in_target: number;
   };
+  // SPEC-08 / TASK-CV-903: physical machine chassis shapes (optional on the wire)
+  machine_shapes?: MachineShapeData[];
+  // SPEC-08 / TASK-CV-904: managed cloud service vaults (optional on the wire)
+  subterranean_resources?: RemoteServiceResourceData[];
 }
 
 export class ClusterViewport {
@@ -66,6 +75,20 @@ export class ClusterViewport {
   public layerTrayManager: LayerTrayManager;
   public flankLabelManager: FlankLabelManager;
   public diffCard: DiffCardManager;
+  // TASK-CV-904: Sub-Level B2 managed cloud vaults + vertical plunge conduits.
+  public vaultManager: SubterraneanVaultManager;
+  public plungeConduitManager: PlungeConduitManager;
+  public onVaultSelected?: (state: VaultBlastState | null) => void;
+  // TASK-CV-904: KeyB subterranean camera preset tween state.
+  private subterraneanTween: {
+    elapsed: number;
+    duration: number;
+    fromPos: THREE.Vector3;
+    toPos: THREE.Vector3;
+    fromTarget: THREE.Vector3;
+    toTarget: THREE.Vector3;
+  } | null = null;
+  private subterraneanFocused = false;
   private assetPrototypes: Map<string, THREE.Object3D> = new Map();
   private nodeMeshes: Map<string, THREE.Object3D> = new Map();
   private raycaster = new THREE.Raycaster();
@@ -126,6 +149,8 @@ export class ClusterViewport {
     this.conduitManager = new ConduitManager(this.scene);
     this.layerTrayManager = new LayerTrayManager(this.scene);
     this.flankLabelManager = new FlankLabelManager(this.scene);
+    this.vaultManager = new SubterraneanVaultManager(this.scene);
+    this.plungeConduitManager = new PlungeConduitManager(this.scene);
     
     // Initialize DiffCardManager
     this.diffCard = new DiffCardManager(this.container);
@@ -184,6 +209,7 @@ export class ClusterViewport {
     this.conduitManager.clear();
     this.layerTrayManager.clear();
     this.flankLabelManager.clear();
+    this.vaultManager.clearBlastHighlight();
     this.pulsingMaterials = []; // Reset animation refs
 
     // Determine cluster characteristics for tower trays and flank labels
@@ -194,7 +220,10 @@ export class ClusterViewport {
       (n) => n.name.toLowerCase().includes('ray') || n.kind.toLowerCase().includes('ray')
     );
 
-    // Build layered architectural trays and outer structural cage
+    // Build layered architectural trays and outer structural cage.
+    // TASK-CV-903: feed the snapshot's machine_shapes so chassis footprints,
+    // capacity materials, and accelerator power bays render per machine.
+    this.layerTrayManager.setMachineShapes(data.machine_shapes);
     this.layerTrayManager.buildTowerTrays(workerCount, hasRay);
 
     // Build flank typographic billboard labels
@@ -303,6 +332,117 @@ export class ClusterViewport {
 
       this.flowSystem.addCurveParticle(rec.curve, colorHex, speed, 0.12);
     }
+
+    // TASK-CV-904: Sub-Level B2/B3 managed cloud vaults + vertical plunge
+    // conduits routed from worker-deck pods through the kro manifold.
+    this.buildSubterraneanLayer(data, nodePositions);
+  }
+
+  /**
+   * TASK-CV-904: Spawn the vault strata from `subterranean_resources` and
+   * wire plunge conduits from worker-deck pods (preferring real snapshot
+   * edges into vault ids, falling back to manifold fan-out) down through
+   * the kro manifold hub at Y = -4.8.
+   */
+  private buildSubterraneanLayer(
+    data: ClusterGraphData,
+    nodePositions: Map<string, THREE.Vector3>,
+  ): void {
+    const resources = data.subterranean_resources ?? [];
+    this.vaultManager.setResources(resources);
+    this.subterraneanFocused = false;
+
+    const specs: PlungeConduitSpec[] = [];
+    if (resources.length === 0) {
+      this.plungeConduitManager.generate(specs);
+      return;
+    }
+
+    const resourceById = new Map(resources.map((r) => [r.id, r]));
+
+    // Conduits declared as edges into vault ids carry real telemetry labels.
+    const explicit = new Set<string>();
+    for (const edge of data.edges) {
+      const vault = resourceById.get(edge.target) ?? resourceById.get(edge.source);
+      if (!vault) continue;
+      const podId = resourceById.has(edge.target) ? edge.source : edge.target;
+      const podPos = nodePositions.get(podId);
+      const vaultPos = this.vaultManager.getVaultWorldPosition(vault.id);
+      if (!podPos || !vaultPos) continue;
+      explicit.add(vault.id);
+      specs.push({
+        id: `plunge-${podId}-${vault.id}`,
+        source: podPos.clone(),
+        target: vaultPos,
+        latencyMs: estimateVaultLatencyMs(vault),
+        reachability: reachabilityFromPhase(vault.status_phase),
+        vaultId: vault.id,
+      });
+    }
+
+    // Fan-out: every vault without an explicit edge gets fed from a
+    // round-robin worker-deck pod so the manifold plumbing reads complete.
+    const workerPods = data.nodes.filter(
+      (n) => n.layer === 'node' || n.layer === 'workload' || n.kind.toLowerCase() === 'node',
+    );
+    let podCursor = 0;
+    for (const vault of resources) {
+      if (explicit.has(vault.id)) continue;
+      const vaultPos = this.vaultManager.getVaultWorldPosition(vault.id);
+      if (!vaultPos) continue;
+
+      let sourcePos: THREE.Vector3 | null = null;
+      if (workerPods.length > 0) {
+        const pod = workerPods[podCursor % workerPods.length];
+        podCursor++;
+        sourcePos = pod ? nodePositions.get(pod.id) ?? null : null;
+        if (!sourcePos && pod) {
+          sourcePos = new THREE.Vector3(pod.spatial.x, Math.max(pod.spatial.y, 1.0), pod.spatial.z);
+        }
+      }
+      if (!sourcePos) sourcePos = new THREE.Vector3(vaultPos.x + 2.0, 2.5, vaultPos.z);
+
+      specs.push({
+        id: `plunge-manifold-${vault.id}`,
+        source: sourcePos.clone(),
+        target: vaultPos,
+        latencyMs: estimateVaultLatencyMs(vault),
+        reachability: reachabilityFromPhase(vault.status_phase),
+        vaultId: vault.id,
+      });
+    }
+
+    this.plungeConduitManager.generate(specs);
+  }
+
+  /**
+   * TASK-CV-904 / SPEC-08 §7.2: Subterranean camera preset (KeyB).
+   * Smoothly tweens the orbit orbit to re-center on Y = -5.0 with a slight
+   * upward tilt framing the foundational root system. Toggles back to the
+   * surface preset. Returns true when diving down, false when surfacing.
+   */
+  public toggleSubterraneanView(durationMs = 1200): boolean {
+    this.subterraneanFocused = !this.subterraneanFocused;
+    const toPos = this.subterraneanFocused
+      ? new THREE.Vector3(14.5, -1.2, 18.5)
+      : new THREE.Vector3(16, 7, 20);
+    const toTarget = this.subterraneanFocused
+      ? new THREE.Vector3(0, -5.0, 0)
+      : new THREE.Vector3(0, 3.5, 0);
+
+    this.subterraneanTween = {
+      elapsed: 0,
+      duration: Math.max(0.05, durationMs / 1000),
+      fromPos: this.camera.position.clone(),
+      toPos,
+      fromTarget: this.controls.target.clone(),
+      toTarget,
+    };
+    return this.subterraneanFocused;
+  }
+
+  public isSubterraneanView(): boolean {
+    return this.subterraneanFocused;
   }
 
   public addNode(node: ClusterNodeData): void {
@@ -613,6 +753,35 @@ export class ClusterViewport {
     this.mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
 
     this.raycaster.setFromCamera(this.mouse, this.camera);
+
+    // TASK-CV-904: Vault clicks take priority — blast radius spotlighting
+    // highlights the vaults fed through the same kro manifold parent.
+    const vaultId = this.vaultManager.pickVault(this.raycaster);
+    if (vaultId) {
+      const state = this.vaultManager.computeBlastRadius(vaultId);
+      this.vaultManager.applyBlastHighlight(state);
+      const vaultSet = new Set<string>([state.vaultId, ...state.connectedIds]);
+      this.plungeConduitManager.applyBlastHighlight(vaultSet);
+
+      // Darken unrelated upper-deck components.
+      const inBlast = vaultSet;
+      for (const [nodeId, mesh] of this.nodeMeshes.entries()) {
+        const lit = inBlast.has(nodeId);
+        mesh.traverse((child) => {
+          const m = child as THREE.Mesh;
+          if (!m.isMesh) return;
+          const mats = Array.isArray(m.material) ? m.material : [m.material];
+          for (const mat of mats) {
+            mat.transparent = true;
+            mat.opacity = lit ? 1.0 : 0.12;
+          }
+        });
+      }
+      this.selectedNodeId = vaultId;
+      if (this.onVaultSelected) this.onVaultSelected(state);
+      return;
+    }
+
     const intersects = this.raycaster.intersectObjects(this.scene.children, true);
 
     let topObj: THREE.Object3D | null = null;
@@ -640,6 +809,24 @@ export class ClusterViewport {
       this.diffCard.hide();
       this.selectedNodeId = null;
       this.highlightSelected(null);
+      // TASK-CV-904: background click clears the vault blast-radius spotlight.
+      this.vaultManager.clearBlastHighlight();
+      this.plungeConduitManager.applyBlastHighlight(null);
+      this.restoreNodeOpacities();
+    }
+  }
+
+  /** TASK-CV-904: Restore upper-deck node materials after a blast dim. */
+  private restoreNodeOpacities(): void {
+    for (const mesh of this.nodeMeshes.values()) {
+      mesh.traverse((child) => {
+        const m = child as THREE.Mesh;
+        if (!m.isMesh) return;
+        const mats = Array.isArray(m.material) ? m.material : [m.material];
+        for (const mat of mats) {
+          mat.opacity = 1.0;
+        }
+      });
     }
   }
 
@@ -709,6 +896,23 @@ export class ClusterViewport {
     this.diffCard.updatePosition(this.camera, this.renderer);
     this.controls.update();
     this.flowSystem.update(delta, speedMultiplier);
+    this.layerTrayManager.update(delta, time);
+
+    // TASK-CV-904: animate vault rings / raceway particles and plunge flows.
+    this.vaultManager.update(delta, time);
+    this.plungeConduitManager.update(delta, time);
+
+    // TASK-CV-904: KeyB subterranean camera preset orbit tween.
+    if (this.subterraneanTween) {
+      const tw = this.subterraneanTween;
+      tw.elapsed += delta;
+      const t = THREE.MathUtils.clamp(tw.elapsed / tw.duration, 0, 1);
+      const ease = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+      this.camera.position.lerpVectors(tw.fromPos, tw.toPos, ease);
+      this.controls.target.lerpVectors(tw.fromTarget, tw.toTarget, ease);
+      this.controls.update();
+      if (t >= 1) this.subterraneanTween = null;
+    }
 
     // Update layout transitions
     if (this.layoutController.isAnimating()) {
@@ -730,5 +934,13 @@ export class ClusterViewport {
 
   public setLayoutMode(mode: 'skyscraper' | 'latency-force'): void {
     this.layoutController.setTargetAlpha(mode === 'skyscraper' ? 0.0 : 1.0, 800);
+  }
+
+  /**
+   * TASK-CV-903: Toggle the Ground Datum cutaway on this viewport
+   * (solid 1.0 <-> ghost 0.1, smoothly animated). Returns the new target.
+   */
+  public toggleGroundCutaway(): number {
+    return this.layerTrayManager.toggleGroundCutaway();
   }
 }

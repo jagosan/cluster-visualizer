@@ -237,7 +237,33 @@ async function bootstrap() {
     });
   }
 
-  // 8. In-Cluster Streaming Operator Client (SPEC-04)
+  // 8. Ground Datum cutaway hotkey (TASK-CV-903): KeyG / 'g' toggles the
+  // smoked-glass ground plane between solid (1.0) and ghosted (0.1).
+  // TASK-CV-904: KeyB / 'b' toggles the Subterranean camera preset (SPEC-08
+  // §7.2): smooth orbit tween re-anchoring on (0, -5.0, 0) with an upward
+  // perspective framing the foundational root system.
+  const allViewports = [viewportA, viewportB, viewportC, viewportD];
+  window.addEventListener('keydown', (e: KeyboardEvent) => {
+    // Ignore while typing in text inputs / prompts
+    const target = e.target as HTMLElement | null;
+    if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+      return;
+    }
+    if (e.code === 'KeyG' || e.key === 'g' || e.key === 'G') {
+      e.preventDefault();
+      for (const vp of allViewports) {
+        vp?.toggleGroundCutaway();
+      }
+    }
+    if (e.code === 'KeyB' || e.key === 'b' || e.key === 'B') {
+      e.preventDefault();
+      for (const vp of allViewports) {
+        vp?.toggleSubterraneanView();
+      }
+    }
+  });
+
+  // 9. In-Cluster Streaming Operator Client (SPEC-04)
   const streamStatusDot = document.getElementById('stream-status-dot');
   const btnLiveStream = document.getElementById('btn-live-stream');
 
