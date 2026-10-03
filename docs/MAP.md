@@ -13,6 +13,8 @@
 - `docs/architecture/04-in-cluster-streaming-operator.md`: Blueprint for SSE event streaming, dynamic mutations, and secret scrubbing.
 - `specs/05-time-travel-topology-scrubber.md`: Time-travel cluster topology playback, delta recording, and HUD scrubber controls.
 - `docs/architecture/05-time-travel-topology-scrubber.md`: Blueprint for chronological keyframes, spatial tweening, and timeline scrubber HUD.
+- `specs/06-ephemeral-multi-cluster-testbed-and-live-streaming.md`: Master specification for ephemeral multi-cluster testbeds on Chunkito, K3d driver, and live streaming fleet matrix.
+- `docs/architecture/06-ephemeral-multi-cluster-testbed-and-live-streaming.md`: Architectural blueprint for testbed orchestration, Tailscale streaming gateway, and multi-viewport layouts.
 - `docs/MAP.md`: This symbol and directory reference map.
 
 ## 3D Asset Pipeline (Blender `bpy`)
