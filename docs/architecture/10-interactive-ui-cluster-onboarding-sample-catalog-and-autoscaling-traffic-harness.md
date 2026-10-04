@@ -72,7 +72,7 @@
  - Enter Target URL  - Enter Kube API URL        - Upstream K8s v1.36    - Slot A (Left)
  - Enter Bearer Tok  - Enter Read Token          - Online Boutique       - Slot B (Right)
  - Copy Helm Cmd /   - Local proxy port          - Ray & KubeRay Cluster - Slot C / Slot D
-   Automated Deploy  - Zero install              - Autopilot Benchmark          │
+   Automated Deploy  - Zero install              - Compute Class Bench          │
         │                   │                           │                       │
         ▼                   ▼                           └───────────┬───────────┘
    [ Test Health ]     [ Client Fetch ]                             │
@@ -128,10 +128,10 @@
                       │                          │
                       │        ┌─────────────────┴─────────────────┐
                       │        ▼                                   ▼
-                      │  [ GKE Autopilot ]               [ Standard NodePool ]
+                      │  [ GKE Compute Class ]           [ Karpenter / Standard ]
                       │  - Slices Available              - Node Capacity Full
                       │  - τ_sched ≈ 3.5s                - Cold VM Boot Required
-                      │  - Fast Pod Schedule             - τ_node ≈ 95 - 150s
+                      │  - Fast Pod Schedule             - τ_node ≈ 60 - 150s
                       │        │                                   │
                       │        │                                   ▼
                       │        │                         [ Exterior Staging Yard ]
@@ -155,7 +155,7 @@
  │ TOPBAR: [CLUSTERVIS] [Diff Pills]   [1][2][4] [📡 LIVE] [⏱ TIME] [➕ ADD CLUSTER] [⚡ TRAFFIC] │
  ├────────────────────────────────────────────────┬────────────────────────────────────────────────┤
  │ VIEWPORT A (Split Left)                        │ VIEWPORT B (Split Right)                       │
- │ [Cluster Alpha: GKE Autopilot Compute Class]   │ [Cluster Beta: Standard Karpenter NodePool]    │
+ │ [Cluster Alpha: GKE Autopilot Compute Class]   │ [Cluster Beta: Karpenter / Standard NodePool]  │
  │                                                │                                                │
  │                  (Penthouse)                   │                  (Penthouse)                   │
  │                API Server / etcd               │                API Server / etcd               │
