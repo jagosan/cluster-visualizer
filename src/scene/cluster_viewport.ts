@@ -36,6 +36,17 @@ import type {
   KarpenterNodeClaimData,
   KarpenterTractorBeamPayload,
 } from './staging_yard.js';
+// SPEC-09 / TASK-CV-1004: Kueue gang cargo containment pallets — HUD
+// badges, quota-deficit standby, mag-rail transit, gang deployment bursts.
+import { KueuePalletManager } from './kueue_pallet.js';
+import type {
+  KueueAdmissionAdmittedPayload,
+  KueueGangDeployedPayload,
+  KueueQuotaDeficitPayload,
+  KueueQuotaReservedPayload,
+  KueueWorkloadData,
+  KueueWorkloadUpdatedPayload,
+} from './kueue_pallet.js';
 
 export interface ClusterNodeData {
   id: string;
@@ -167,6 +178,8 @@ export interface ClusterGraphData {
   subterranean_resources?: RemoteServiceResourceData[];
   // SPEC-09 / TASK-CV-1003: Karpenter NodeClaims provisioning B1 ghost nodes
   karpenter_node_claims?: KarpenterNodeClaimData[];
+  // SPEC-09 / TASK-CV-1004: Kueue Workload CRDs -> cargo containment pallets
+  kueue_workloads?: KueueWorkloadData[];
 }
 
 /**
@@ -215,6 +228,9 @@ export class ClusterViewport {
   // SPEC-09 / TASK-CV-1003: exterior pre-admission staging yard (tarmac,
   // pending-pod hover, Karpenter ghost chassis + amber tractor beams).
   public stagingYard: StagingYardManager;
+  // SPEC-09 / TASK-CV-1004: Kueue gang cargo containment pallets on the
+  // staging-track rail (HUD badges, mag-rail transit, deployment bursts).
+  public kueuePallets: KueuePalletManager;
   // SPEC-09 §7.1: Staging Apron Focus (KeyY) camera tween state.
   private stagingFocused = false;
   private cameraTween: {
@@ -289,6 +305,7 @@ export class ClusterViewport {
     this.plungeConduitManager = new PlungeConduitManager(this.scene);
     this.autoscalingFx = new AutoscalingFxManager(this.scene);
     this.stagingYard = new StagingYardManager(this.scene);
+    this.kueuePallets = new KueuePalletManager(this.scene);
     
     // Initialize DiffCardManager
     this.diffCard = new DiffCardManager(this.container);
@@ -515,6 +532,59 @@ export class ClusterViewport {
     }
 
     this.stagingYard.applyClaims(data.karpenter_node_claims, pendingPositions);
+
+    // TASK-CV-1004: build cargo containment pallets from the snapshot's
+    // Kueue workloads and register their constituent pod meshes so the
+    // deployment burst can grab them.
+    this.kueuePallets.applySnapshot(data.kueue_workloads);
+    for (const node of data.nodes) {
+      const workloadUid = node.pod_geometry?.kueue_workload;
+      if (!workloadUid) continue;
+      const mesh = this.nodeMeshes.get(node.id);
+      if (mesh) this.kueuePallets.registerGangPod(node.id, mesh);
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // TASK-CV-1004 / SPEC-09 §5.2-§5.3, §7.3: Kueue gang pallet pipelines
+  // -------------------------------------------------------------------------
+
+  /**
+   * SSE `kueue_workload_updated`: create/refresh a cargo containment pallet
+   * with its HUD badge (Workload, LocalQueue, X/Y Pods, quota) on the
+   * staging-track rail (SPEC-09 §5.2).
+   */
+  public applyKueueWorkloadUpdated(payload: KueueWorkloadUpdatedPayload): void {
+    this.kueuePallets.applyWorkloadUpdated(payload);
+  }
+
+  /** SSE `kueue_quota_deficit`: cold-blue standby + deficit overlay. */
+  public applyKueueQuotaDeficit(payload: KueueQuotaDeficitPayload): void {
+    this.kueuePallets.applyQuotaDeficit(payload);
+  }
+
+  /** SSE `kueue_quota_reserved`: intake-rail engagement + gantry crane lock. */
+  public applyKueueQuotaReserved(payload: KueueQuotaReservedPayload): void {
+    this.kueuePallets.applyQuotaReserved(payload);
+  }
+
+  /** SSE `kueue_admission_admitted`: vivid green mag-rail transit. */
+  public applyKueueAdmissionAdmitted(payload: KueueAdmissionAdmittedPayload): void {
+    this.kueuePallets.applyAdmissionAdmitted(payload);
+  }
+
+  /** SSE `kueue_gang_deployed`: frame dissolve + simultaneous pod burst. */
+  public applyKueueGangDeployed(payload: KueueGangDeployedPayload): void {
+    this.kueuePallets.applyGangDeployed(payload);
+  }
+
+  /**
+   * SPEC-09 §7.3: Simulated Gang Admission trigger (KeyK / HUD button).
+   * Fires the full reserved -> admitted -> deployed animation chain; in
+   * static offline mode with no live workload it synthesizes a demo gang.
+   */
+  public simulateGangAdmission(): boolean {
+    return this.kueuePallets.simulateGangAdmission();
   }
 
   /**
@@ -907,6 +977,11 @@ export class ClusterViewport {
     if (isPendingPod(node)) {
       this.stagingYard.registerPendingPod(instance);
     }
+    // TASK-CV-1004: pods belonging to a Kueue Workload join its cargo
+    // containment pallet for the gang-deployment burst.
+    if (node.pod_geometry?.kueue_workload) {
+      this.kueuePallets.registerGangPod(node.id, instance);
+    }
 
     this.animatingEntrances.set(node.id, {
       mesh: instance,
@@ -934,6 +1009,8 @@ export class ClusterViewport {
     this.autoscalingFx.removeAura(nodeId);
     // TASK-CV-1003: stop hover bobbing / tractor beams for the removed pod.
     this.stagingYard.removePendingPod(nodeId);
+    // TASK-CV-1004: drop the pod from any Kueue cargo pallet member list.
+    this.kueuePallets.removePod(nodeId);
 
     mesh.traverse((child) => {
       if ((child as THREE.Mesh).isMesh) {
@@ -1396,6 +1473,9 @@ export class ClusterViewport {
     // TASK-CV-1003: pending-pod hover bobbing, Karpenter ghost-chassis
     // shimmer, and amber tractor-beam pulses in the exterior staging yard.
     this.stagingYard.update(delta, time);
+    // TASK-CV-1004: Kueue cargo pallet standby lighting, spinning intake
+    // beacons, gantry lock, mag-rail transit tweens, gang deployment bursts.
+    this.kueuePallets.update(delta, time);
 
     // SPEC-09 §7.1: KeyY staging apron focus camera tween.
     if (this.cameraTween) {

@@ -248,6 +248,22 @@ async function bootstrap() {
       btnRadar.classList.toggle('active', active);
     });
   }
+  // SPEC-09 §7.3 / TASK-CV-1004: Simulated Gang Admission trigger — fires
+  // the reserved -> admitted -> gang-deployed animation chain on the Kueue
+  // cargo pallets (KeyK twin).
+  const btnAdmitGang = document.getElementById('btn-admit-gang');
+  if (btnAdmitGang) {
+    btnAdmitGang.addEventListener('click', () => {
+      let fired = false;
+      for (const vp of allViewports) {
+        if (vp && vp.simulateGangAdmission()) fired = true;
+      }
+      if (fired) {
+        btnAdmitGang.classList.add('active');
+        window.setTimeout(() => btnAdmitGang.classList.remove('active'), 5200);
+      }
+    });
+  }
   if (btnResetCam) {
     btnResetCam.addEventListener('click', () => {
       viewportA.camera.position.set(12, 10, 15);
@@ -304,6 +320,19 @@ async function bootstrap() {
         if (vp) focused = vp.toggleStagingFocus() || focused;
       }
       btnStaging?.classList.toggle('active', focused);
+    }
+    // SPEC-09 §7.3 / TASK-CV-1004: KeyK Simulated Gang Admission — drives
+    // the Kueue cargo pallet through mag-rail transit + gang deployment.
+    if (e.code === 'KeyK' || e.key === 'k' || e.key === 'K') {
+      e.preventDefault();
+      let fired = false;
+      for (const vp of allViewports) {
+        if (vp && vp.simulateGangAdmission()) fired = true;
+      }
+      if (fired) {
+        btnAdmitGang?.classList.add('active');
+        window.setTimeout(() => btnAdmitGang?.classList.remove('active'), 5200);
+      }
     }
   });
 
@@ -367,6 +396,22 @@ async function bootstrap() {
     },
     onKarpenterTractorBeam: (payload) => {
       viewportA.applyKarpenterTractorBeam(payload);
+    },
+    // SPEC-09 / TASK-CV-1004: Kueue gang cargo pallet lifecycle pipeline.
+    onKueueWorkloadUpdated: (payload) => {
+      viewportA.applyKueueWorkloadUpdated(payload);
+    },
+    onKueueQuotaDeficit: (payload) => {
+      viewportA.applyKueueQuotaDeficit(payload);
+    },
+    onKueueQuotaReserved: (payload) => {
+      viewportA.applyKueueQuotaReserved(payload);
+    },
+    onKueueAdmissionAdmitted: (payload) => {
+      viewportA.applyKueueAdmissionAdmitted(payload);
+    },
+    onKueueGangDeployed: (payload) => {
+      viewportA.applyKueueGangDeployed(payload);
     },
   });
 

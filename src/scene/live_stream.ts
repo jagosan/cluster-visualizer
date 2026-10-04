@@ -72,6 +72,90 @@ export interface KarpenterTractorBeamPayload {
   timestamp?: string;
 }
 
+/** SPEC-09 §5.1-§5.3: Kueue Workload wire shape (mirror of models.py). */
+export interface KueueWorkloadWire {
+  workload_uid: string;
+  workload_name: string;
+  namespace?: string;
+  local_queue: string;
+  cluster_queue: string;
+  is_admitted?: boolean;
+  admission_checks?: Array<Record<string, string>>;
+  pod_uids?: string[];
+  total_cpu_requested?: number;
+  total_memory_gib_requested?: number;
+  total_gpu_requested?: number;
+  phase?: 'Inadmissible' | 'Admissible' | 'Admitted' | 'Finished';
+}
+
+/** SPEC-09 §5.2: cargo pallet snapshot payload (HUD badge + bounding volume). */
+export interface KueueWorkloadUpdatedPayload {
+  workload: KueueWorkloadWire;
+  hud?: {
+    workload_name?: string;
+    local_queue?: string;
+    cluster_queue?: string;
+    pod_count?: number;
+    pod_count_label?: string;
+    cpu?: number;
+    memory_gib?: number;
+    gpus?: number;
+    phase?: string;
+    is_admitted?: boolean;
+    quota_deficit?: string | null;
+  };
+  pallet?: {
+    anchor?: number[] | null;
+    width?: number;
+    height?: number;
+    depth?: number;
+    slots?: Record<string, number[]>;
+  };
+  staging_focus_x?: number;
+  timestamp?: string;
+}
+
+/** SPEC-09 §5.3: quota deficit indicator payload (queued / inadmissible). */
+export interface KueueQuotaDeficitPayload {
+  workload_uid: string;
+  workload_name?: string;
+  reason?: string;
+  required?: { cpu?: number; memory_gib?: number; gpus?: number };
+  anchor?: number[] | null;
+  timestamp?: string;
+}
+
+/** SPEC-09 §5.3: quota reserved — intake rail engagement + gantry lock. */
+export interface KueueQuotaReservedPayload {
+  workload_uid: string;
+  workload_name?: string;
+  anchor?: number[] | null;
+  lock_duration_ms?: number;
+  timestamp?: string;
+}
+
+/** SPEC-09 §5.3: admitted — high-speed mag-rail transit endpoints. */
+export interface KueueAdmissionAdmittedPayload {
+  workload_uid: string;
+  workload_name?: string;
+  local_queue?: string;
+  cluster_queue?: string;
+  magrail?: { from?: number[]; to?: number[] };
+  transit_duration_ms?: number;
+  pod_uids?: string[];
+  timestamp?: string;
+}
+
+/** SPEC-09 §5.3: gang deployment burst targets on the worker deck. */
+export interface KueueGangDeployedPayload {
+  workload_uid: string;
+  workload_name?: string;
+  pod_uids?: string[];
+  targets?: number[][];
+  burst_duration_ms?: number;
+  timestamp?: string;
+}
+
 export interface LiveStreamCallbacks {
   onStatusChange?: (status: StreamStatus, url?: string) => void;
   onInitialSnapshot?: (snapshot: any) => void;
@@ -86,6 +170,12 @@ export interface LiveStreamCallbacks {
   // SPEC-09 / TASK-CV-1003 staging yard: Karpenter NodeClaim + tractor beams.
   onKarpenterClaimUpdated?: (payload: KarpenterClaimUpdatedPayload) => void;
   onKarpenterTractorBeam?: (payload: KarpenterTractorBeamPayload) => void;
+  // SPEC-09 / TASK-CV-1004 Kueue gang cargo pallet lifecycle pipelines.
+  onKueueWorkloadUpdated?: (payload: KueueWorkloadUpdatedPayload) => void;
+  onKueueQuotaDeficit?: (payload: KueueQuotaDeficitPayload) => void;
+  onKueueQuotaReserved?: (payload: KueueQuotaReservedPayload) => void;
+  onKueueAdmissionAdmitted?: (payload: KueueAdmissionAdmittedPayload) => void;
+  onKueueGangDeployed?: (payload: KueueGangDeployedPayload) => void;
   onHeartbeat?: (data: { timestamp: number; active_clients: number }) => void;
   onError?: (error: any) => void;
 }
@@ -270,6 +360,76 @@ export class LiveStreamManager {
           const payload = JSON.parse(e.data) as KarpenterTractorBeamPayload;
           if (this.callbacks.onKarpenterTractorBeam) {
             this.callbacks.onKarpenterTractorBeam(payload);
+          }
+        } catch (err) {
+          if (this.callbacks.onError) {
+            this.callbacks.onError(err);
+          }
+        }
+      });
+
+      // SPEC-09 §5.2: Kueue Workload cargo pallet snapshot / HUD refresh
+      this.eventSource.addEventListener('kueue_workload_updated', (e: MessageEvent) => {
+        try {
+          const payload = JSON.parse(e.data) as KueueWorkloadUpdatedPayload;
+          if (this.callbacks.onKueueWorkloadUpdated) {
+            this.callbacks.onKueueWorkloadUpdated(payload);
+          }
+        } catch (err) {
+          if (this.callbacks.onError) {
+            this.callbacks.onError(err);
+          }
+        }
+      });
+
+      // SPEC-09 §5.3: quota deficit indicator (queued / inadmissible)
+      this.eventSource.addEventListener('kueue_quota_deficit', (e: MessageEvent) => {
+        try {
+          const payload = JSON.parse(e.data) as KueueQuotaDeficitPayload;
+          if (this.callbacks.onKueueQuotaDeficit) {
+            this.callbacks.onKueueQuotaDeficit(payload);
+          }
+        } catch (err) {
+          if (this.callbacks.onError) {
+            this.callbacks.onError(err);
+          }
+        }
+      });
+
+      // SPEC-09 §5.3: quota reserved — magnetic intake rail + gantry lock
+      this.eventSource.addEventListener('kueue_quota_reserved', (e: MessageEvent) => {
+        try {
+          const payload = JSON.parse(e.data) as KueueQuotaReservedPayload;
+          if (this.callbacks.onKueueQuotaReserved) {
+            this.callbacks.onKueueQuotaReserved(payload);
+          }
+        } catch (err) {
+          if (this.callbacks.onError) {
+            this.callbacks.onError(err);
+          }
+        }
+      });
+
+      // SPEC-09 §5.3: admitted — high-speed mag-rail transit
+      this.eventSource.addEventListener('kueue_admission_admitted', (e: MessageEvent) => {
+        try {
+          const payload = JSON.parse(e.data) as KueueAdmissionAdmittedPayload;
+          if (this.callbacks.onKueueAdmissionAdmitted) {
+            this.callbacks.onKueueAdmissionAdmitted(payload);
+          }
+        } catch (err) {
+          if (this.callbacks.onError) {
+            this.callbacks.onError(err);
+          }
+        }
+      });
+
+      // SPEC-09 §5.3: gang deployment burst on the worker deck
+      this.eventSource.addEventListener('kueue_gang_deployed', (e: MessageEvent) => {
+        try {
+          const payload = JSON.parse(e.data) as KueueGangDeployedPayload;
+          if (this.callbacks.onKueueGangDeployed) {
+            this.callbacks.onKueueGangDeployed(payload);
           }
         } catch (err) {
           if (this.callbacks.onError) {
