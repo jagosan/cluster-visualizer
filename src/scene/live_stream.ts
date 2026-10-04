@@ -6,6 +6,41 @@
 
 export type StreamStatus = 'connected' | 'reconnecting' | 'disconnected';
 
+/** SPEC-09 §3.2.1: VPA recommendation ghost-hull payload. */
+export interface VpaRecommendationPayload {
+  node_id: string;
+  dimensions?: {
+    current_height: number;
+    current_radius: number;
+    target_height: number;
+    target_radius: number;
+  } | null;
+  target_cpu?: string | null;
+  target_memory?: string | null;
+  timestamp?: string;
+}
+
+/** SPEC-09 §3.2.2: VPA in-place resize commit payload. */
+export interface VpaResizeCommittedPayload {
+  node_id: string;
+  geometry?: { height?: number; radius?: number } | null;
+  duration_ms?: number;
+  timestamp?: string;
+}
+
+/** SPEC-09 §3.3: HPA scale-out dispatch payload. */
+export interface HpaScaleOutPayload {
+  node_id: string;
+  delta: number;
+  current_replicas?: number;
+  desired_replicas?: number;
+  target_metric?: string | null;
+  dispatch_from?: { x: number; y: number; z: number };
+  riser_bottom?: { x: number; y: number; z: number };
+  lateral_path?: { intake?: number[]; slot?: number[] };
+  timestamp?: string;
+}
+
 export interface LiveStreamCallbacks {
   onStatusChange?: (status: StreamStatus, url?: string) => void;
   onInitialSnapshot?: (snapshot: any) => void;
@@ -13,6 +48,10 @@ export interface LiveStreamCallbacks {
   onNodeRemoved?: (nodeId: string) => void;
   onNodeModified?: (nodeId: string, diffDetails?: string[], status?: string) => void;
   onEdgeUpdated?: (edges: any[]) => void;
+  // SPEC-09 / TASK-CV-1002 autoscaling mutation pipelines.
+  onVpaRecommendation?: (payload: VpaRecommendationPayload) => void;
+  onVpaResizeCommitted?: (payload: VpaResizeCommittedPayload) => void;
+  onHpaScaleOut?: (payload: HpaScaleOutPayload) => void;
   onHeartbeat?: (data: { timestamp: number; active_clients: number }) => void;
   onError?: (error: any) => void;
 }
@@ -127,6 +166,48 @@ export class LiveStreamManager {
           const edges = JSON.parse(e.data);
           if (this.callbacks.onEdgeUpdated) {
             this.callbacks.onEdgeUpdated(edges);
+          }
+        } catch (err) {
+          if (this.callbacks.onError) {
+            this.callbacks.onError(err);
+          }
+        }
+      });
+
+      // SPEC-09 §3.2.1: VPA recommendation ghost hull
+      this.eventSource.addEventListener('vpa_recommendation', (e: MessageEvent) => {
+        try {
+          const payload = JSON.parse(e.data) as VpaRecommendationPayload;
+          if (this.callbacks.onVpaRecommendation) {
+            this.callbacks.onVpaRecommendation(payload);
+          }
+        } catch (err) {
+          if (this.callbacks.onError) {
+            this.callbacks.onError(err);
+          }
+        }
+      });
+
+      // SPEC-09 §3.2.2: VPA in-place resize commit
+      this.eventSource.addEventListener('vpa_resize_committed', (e: MessageEvent) => {
+        try {
+          const payload = JSON.parse(e.data) as VpaResizeCommittedPayload;
+          if (this.callbacks.onVpaResizeCommitted) {
+            this.callbacks.onVpaResizeCommitted(payload);
+          }
+        } catch (err) {
+          if (this.callbacks.onError) {
+            this.callbacks.onError(err);
+          }
+        }
+      });
+
+      // SPEC-09 §3.3: HPA scale-out lateral dispatch
+      this.eventSource.addEventListener('hpa_scale_out', (e: MessageEvent) => {
+        try {
+          const payload = JSON.parse(e.data) as HpaScaleOutPayload;
+          if (this.callbacks.onHpaScaleOut) {
+            this.callbacks.onHpaScaleOut(payload);
           }
         } catch (err) {
           if (this.callbacks.onError) {

@@ -205,6 +205,7 @@ async function bootstrap() {
   };
 
   // 7. Wire UI Controls
+  const allViewports = [viewportA, viewportB, viewportC, viewportD];
   const btnSyncCam = document.getElementById('btn-sync-cam');
   if (btnSyncCam) {
     btnSyncCam.addEventListener('click', () => {
@@ -225,6 +226,17 @@ async function bootstrap() {
   }
 
   const btnResetCam = document.getElementById('btn-reset-cam');
+  // TASK-CV-1002: Autoscaling Radar HUD button (mirrors the KeyU hotkey).
+  const btnRadar = document.getElementById('btn-autoscaling-radar');
+  if (btnRadar) {
+    btnRadar.addEventListener('click', () => {
+      let active = false;
+      for (const vp of allViewports) {
+        if (vp) active = vp.toggleAutoscalingRadar() || active;
+      }
+      btnRadar.classList.toggle('active', active);
+    });
+  }
   if (btnResetCam) {
     btnResetCam.addEventListener('click', () => {
       viewportA.camera.position.set(12, 10, 15);
@@ -242,7 +254,6 @@ async function bootstrap() {
   // TASK-CV-904: KeyB / 'b' toggles the Subterranean camera preset (SPEC-08
   // §7.2): smooth orbit tween re-anchoring on (0, -5.0, 0) with an upward
   // perspective framing the foundational root system.
-  const allViewports = [viewportA, viewportB, viewportC, viewportD];
   window.addEventListener('keydown', (e: KeyboardEvent) => {
     // Ignore while typing in text inputs / prompts
     const target = e.target as HTMLElement | null;
@@ -260,6 +271,16 @@ async function bootstrap() {
       for (const vp of allViewports) {
         vp?.toggleSubterraneanView();
       }
+    }
+    // SPEC-09 §7.2 / TASK-CV-1002: KeyU toggles the Autoscaling Radar
+    // Overlay — pulsating golden auras over VPA/HPA-managed pods.
+    if (e.code === 'KeyU' || e.key === 'u' || e.key === 'U') {
+      e.preventDefault();
+      let active = false;
+      for (const vp of allViewports) {
+        if (vp) active = vp.toggleAutoscalingRadar() || active;
+      }
+      btnRadar?.classList.toggle('active', active);
     }
   });
 
@@ -297,6 +318,25 @@ async function bootstrap() {
     },
     onNodeModified: (nodeId, diffDetails, status) => {
       viewportA.modifyNode(nodeId, diffDetails, status);
+    },
+    // SPEC-09 / TASK-CV-1002: VPA morphing & HPA lateral spawning pipelines.
+    onVpaRecommendation: (payload) => {
+      viewportA.applyVpaRecommendation(payload.node_id, payload.dimensions ?? null);
+    },
+    onVpaResizeCommitted: (payload) => {
+      const height = payload.geometry?.height;
+      const radius = payload.geometry?.radius;
+      if (typeof height === 'number' && typeof radius === 'number') {
+        viewportA.applyVpaResize(
+          payload.node_id,
+          height,
+          radius,
+          payload.duration_ms ?? 1200,
+        );
+      }
+    },
+    onHpaScaleOut: (payload) => {
+      viewportA.applyHpaScaleOut(payload);
     },
   });
 

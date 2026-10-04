@@ -14,8 +14,20 @@ import { FlankLabelManager } from './flank_labels.js';
 import { DiffCardManager } from './diff_card.js';
 import { LayoutTransitionController } from './layout_transition.js';
 // SPEC-09 / TASK-CV-1001: procedural proportional pod capsules (ADR-01).
-import { PodCapsuleManager } from './pod_capsules.js';
+import { PodCapsuleManager, resolvePodDimensions } from './pod_capsules.js';
 import type { PodGeometryData } from './pod_capsules.js';
+// SPEC-09 / TASK-CV-1002: VPA ghost hulls, in-place morph tweens, HPA
+// dispatch pulses, lateral conveyor slides, and KeyU radar auras.
+import {
+  AutoscalingFxManager,
+  capsuleDims,
+  parseResourceQuantity,
+} from './autoscaling_fx.js';
+import type {
+  AutoscalingStatusData,
+  HpaScaleOutEvent,
+  MorphDimensions,
+} from './autoscaling_fx.js';
 
 export interface ClusterNodeData {
   id: string;
@@ -38,6 +50,8 @@ export interface ClusterNodeData {
   diffDetails?: string[];
   // SPEC-09: proportional capsule dimensions computed by the ingestion layout.
   pod_geometry?: PodGeometryData | null;
+  // SPEC-09 §3.2/§3.3: VPA/HPA autoscaling metadata (optional on the wire).
+  autoscaling?: AutoscalingStatusData | null;
 }
 
 /**
@@ -54,6 +68,66 @@ export function isPodComponent(node: ClusterNodeData): boolean {
     assetKey === 'Cache_Redis' ||
     (node.layer === 'workload' && node.kind === 'Pod')
   );
+}
+
+/**
+ * SPEC-09 §3.2: resolve ghost-hull target dimensions for a VPA-managed pod.
+ * Compares the recommended target dimensions against the pod's current
+ * proportional geometry; returns null when they already agree (no ghost).
+ */
+function vpaGhostDimensions(
+  node: ClusterNodeData,
+): { height: number; radius: number } | null {
+  const as = node.autoscaling;
+  if (!as?.has_vpa) return null;
+  const current = resolvePodDimensions(node);
+  const tgtCpu = parseResourceQuantity(as.vpa_target_cpu ?? null, 'cpu');
+  const tgtMem = parseResourceQuantity(as.vpa_target_memory ?? null, 'memory');
+  if (tgtCpu === null && tgtMem === null) return null;
+  const target = capsuleDims(
+    tgtCpu ?? dimsToCpu(current.height),
+    tgtMem ?? dimsToMemoryGib(current.radius),
+  );
+  if (
+    Math.abs(target.height - current.height) < 1e-6 &&
+    Math.abs(target.radius - current.radius) < 1e-6
+  ) {
+    return null;
+  }
+  return target;
+}
+
+/** Invert the §3.1 height formula to recover vCPU from a capsule height. */
+function dimsToCpu(height: number): number {
+  return Math.max(0, (Math.max(height, 0.4) - 0.4) / 0.35) ** 2;
+}
+
+/** Invert the §3.1 radius formula to recover GiB from a capsule radius. */
+function dimsToMemoryGib(radius: number): number {
+  return Math.pow(2, Math.max(0, (radius - 0.2) / 0.12));
+}
+
+/** Find the capsule Mesh inside a pod instance (bare Mesh or Group+brackets). */
+function findCapsuleMesh(obj: THREE.Object3D): THREE.Mesh | null {
+  const direct = obj as THREE.Mesh;
+  if (direct.isMesh && obj.userData.podCapsule) return direct;
+  let found: THREE.Mesh | null = null;
+  obj.traverse((child) => {
+    const m = child as THREE.Mesh;
+    if (!found && m.isMesh && child.userData.podCapsule) found = m;
+  });
+  return found;
+}
+
+/** Recover (height, radius) from a capsule geometry's bounding dimensions. */
+function capsuleDimensionsOf(mesh: THREE.Mesh): { height: number; radius: number } {
+  const height = (mesh.userData.podHeight as number | undefined) ?? 0.6;
+  mesh.geometry.computeBoundingBox();
+  const bb = mesh.geometry.boundingBox;
+  if (!bb) return { height, radius: 0.3 };
+  const spanX = bb.max.x - bb.min.x;
+  const spanY = bb.max.y - bb.min.y;
+  return { height: spanY, radius: spanX / 2 };
 }
 
 export interface ClusterGraphData {
@@ -114,6 +188,11 @@ export class ClusterViewport {
   private nodeMeshes: Map<string, THREE.Object3D> = new Map();
   // SPEC-09: shared capsule material cache + emissive pulse driver.
   public podCapsuleManager = new PodCapsuleManager();
+  // SPEC-09 / TASK-CV-1002: VPA ghost hulls, morph tweens, HPA dispatch
+  // pulses / lateral conveyor slides, and the KeyU autoscaling radar.
+  public autoscalingFx: AutoscalingFxManager;
+  // HPA replica capsules spawned by scale-out events (viewport-owned cleanup).
+  private hpaReplicas: THREE.Object3D[] = [];
   private raycaster = new THREE.Raycaster();
   private mouse = new THREE.Vector2(-1000, -1000);
   public onNodeSelected?: (node: ClusterNodeData | null) => void;
@@ -174,6 +253,7 @@ export class ClusterViewport {
     this.flankLabelManager = new FlankLabelManager(this.scene);
     this.vaultManager = new SubterraneanVaultManager(this.scene);
     this.plungeConduitManager = new PlungeConduitManager(this.scene);
+    this.autoscalingFx = new AutoscalingFxManager(this.scene);
     
     // Initialize DiffCardManager
     this.diffCard = new DiffCardManager(this.container);
@@ -358,6 +438,179 @@ export class ClusterViewport {
     // TASK-CV-904: Sub-Level B2/B3 managed cloud vaults + vertical plunge
     // conduits routed from worker-deck pods through the kro manifold.
     this.buildSubterraneanLayer(data, nodePositions);
+
+    // TASK-CV-1002: VPA recommendation ghost hulls + autoscaling radar auras
+    // for every pod carrying `autoscaling` metadata in the snapshot.
+    this.buildAutoscalingLayer(data);
+  }
+
+  // -------------------------------------------------------------------------
+  // TASK-CV-1002 / SPEC-09 §3.2-§3.3, §7.2: autoscaling animation pipelines
+  // -------------------------------------------------------------------------
+
+  /**
+   * Refresh ghost hulls + radar auras from snapshot metadata. Pods whose
+   * VPA recommendation matches their current request get no ghost hull.
+   */
+  private buildAutoscalingLayer(data: ClusterGraphData): void {
+    this.autoscalingFx.clear();
+    this.clearHpaReplicas();
+
+    for (const node of data.nodes) {
+      const as = node.autoscaling;
+      if (!as) continue;
+      const pos = new THREE.Vector3(node.spatial.x, node.spatial.y, node.spatial.z);
+      const managedVpa = as.has_vpa === true;
+      const managedHpa = as.has_hpa === true;
+      if (!managedVpa && !managedHpa) continue;
+
+      if (managedVpa) {
+        const dims = vpaGhostDimensions(node);
+        if (dims) {
+          this.autoscalingFx.setGhost(node.id, pos, dims.height, dims.radius);
+        }
+        this.autoscalingFx.addAura(node.id, pos.clone().setY(pos.y - 0.32), 'vpa');
+      } else if (managedHpa) {
+        this.autoscalingFx.addAura(node.id, pos.clone().setY(pos.y - 0.32), 'hpa');
+      }
+    }
+    this.autoscalingFx.setRadarVisible(this.autoscalingFx.isRadarVisible());
+  }
+
+  /**
+   * SSE `vpa_recommendation`: (re)draw the holographic wireframe ghost hull
+   * projecting the target dimensions around the pod (SPEC-09 §3.2.1).
+   */
+  public applyVpaRecommendation(
+    nodeId: string,
+    dimensions: MorphDimensions | null,
+  ): void {
+    const mesh = this.nodeMeshes.get(nodeId);
+    if (!mesh) return;
+    const node = mesh.userData.nodeData as ClusterNodeData | undefined;
+    if (!node) return;
+    if (!dimensions) {
+      this.autoscalingFx.clearGhost(nodeId);
+      return;
+    }
+    const pos = new THREE.Vector3(node.spatial.x, node.spatial.y, node.spatial.z);
+    this.autoscalingFx.setGhost(
+      nodeId,
+      pos,
+      dimensions.target_height,
+      dimensions.target_radius,
+    );
+    this.autoscalingFx.addAura(nodeId, pos.clone().setY(pos.y - 0.32), 'vpa');
+  }
+
+  /**
+   * SSE `vpa_resize_committed`: run the in-place ~1200ms animated geometry
+   * tween to the new dimensions with energy emission ripples (SPEC-09 §3.2.2).
+   */
+  public applyVpaResize(
+    nodeId: string,
+    height: number,
+    radius: number,
+    durationMs = 1200,
+  ): void {
+    const obj = this.nodeMeshes.get(nodeId);
+    if (!obj) return;
+    const mesh = findCapsuleMesh(obj);
+    if (!mesh) return;
+
+    const from = capsuleDimensionsOf(mesh);
+    const node = obj.userData.nodeData as ClusterNodeData | undefined;
+    if (node?.pod_geometry) {
+      node.pod_geometry.height = height;
+      node.pod_geometry.radius = radius;
+    }
+    this.autoscalingFx.startMorph(
+      mesh,
+      from.height,
+      from.radius,
+      height,
+      radius,
+      durationMs,
+      () => this.autoscalingFx.clearGhost(nodeId),
+    );
+  }
+
+  /**
+   * SSE `hpa_scale_out`: golden dispatch pulse from the Supervisor Floor
+   * down the central riser; when it lands, new replica capsules materialize
+   * at the node deck intake and slide laterally into their slots
+   * (SPEC-09 §3.3).
+   */
+  public applyHpaScaleOut(event: HpaScaleOutEvent): void {
+    const mesh = this.nodeMeshes.get(event.node_id);
+    const node = mesh?.userData.nodeData as ClusterNodeData | undefined;
+    const deckY = node?.spatial.y ?? 0.75;
+
+    const dispatchFrom = event.dispatch_from ?? { x: 0.0, y: 4.5, z: 0.0 };
+    const riserBottom = event.riser_bottom ?? { x: 0.0, y: deckY, z: 0.0 };
+
+    const replicas = Math.max(0, Math.min(8, event.delta ?? 1));
+    this.autoscalingFx.fireDispatchPulse(dispatchFrom, riserBottom, 700, () => {
+      for (let i = 0; i < replicas; i++) {
+        const slotIndex = i % 4;
+        const offsetX = slotIndex % 2 === 0 ? -0.6 + i * 0.15 : 0.6 + i * 0.15;
+        const z = slotIndex < 2 ? 0.2 : 1.2;
+        const chassisX = node?.spatial.x ?? 0.0;
+        const intake =
+          event.lateral_path?.intake && event.lateral_path.intake.length === 3
+            ? new THREE.Vector3(...(event.lateral_path.intake as [number, number, number]))
+            : new THREE.Vector3(chassisX + 2.6, deckY, z);
+        const slot =
+          event.lateral_path?.slot && i === 0 && event.lateral_path.slot.length === 3
+            ? new THREE.Vector3(...(event.lateral_path.slot as [number, number, number]))
+            : new THREE.Vector3(chassisX + offsetX, deckY, z);
+
+        const replicaName = `${node?.name ?? 'pod'}-hpa-${Date.now().toString(36)}-${i}`;
+        const replica: ClusterNodeData = {
+          id: replicaName,
+          layer: node?.layer ?? 'workload',
+          kind: 'Pod',
+          name: replicaName,
+          namespace: node?.namespace ?? 'default',
+          version: node?.version ?? 'v1.0.0',
+          status: 'Healthy',
+          metrics: { ...(node?.metrics ?? {}) },
+          spatial: { x: slot.x, y: slot.y, z: slot.z, asset_type: 'Cuboid_Pod' },
+          pod_geometry: node?.pod_geometry ? { ...node.pod_geometry } : null,
+        };
+        const capsule = this.podCapsuleManager.create(replica, 'added');
+        capsule.userData.nodeData = replica;
+        this.scene.add(capsule);
+        this.nodeMeshes.set(replicaName, capsule);
+        this.hpaReplicas.push(capsule);
+        this.autoscalingFx.slideIntoSlot(capsule, intake, slot, 900 + i * 150);
+      }
+    });
+  }
+
+  /**
+   * SPEC-09 §7.2: Autoscaling Radar Overlay (KeyU) — pulsating golden aura
+   * rings over every VPA/HPA-managed pod. Returns the new visibility.
+   */
+  public toggleAutoscalingRadar(): boolean {
+    const visible = !this.autoscalingFx.isRadarVisible();
+    this.autoscalingFx.setRadarVisible(visible);
+    return visible;
+  }
+
+  public isAutoscalingRadarVisible(): boolean {
+    return this.autoscalingFx.isRadarVisible();
+  }
+
+  /** Remove HPA replica capsules from a previous scale-out burst. */
+  private clearHpaReplicas(): void {
+    for (const replica of this.hpaReplicas) {
+      this.podCapsuleManager.untrack(replica);
+      const id = (replica.userData.nodeData as ClusterNodeData | undefined)?.id;
+      if (id) this.nodeMeshes.delete(id);
+      this.scene.remove(replica);
+    }
+    this.hpaReplicas.length = 0;
   }
 
   /**
@@ -487,6 +740,30 @@ export class ClusterViewport {
     instance.scale.set(0.1, 0.1, 0.1);
     instance.userData = { ...instance.userData, nodeData: node };
 
+    // TASK-CV-1002: newly observed VPA-managed pods get a ghost hull too.
+    if (node.autoscaling?.has_vpa) {
+      const dims = vpaGhostDimensions(node);
+      if (dims) {
+        this.autoscalingFx.setGhost(
+          node.id,
+          new THREE.Vector3(sx, sy, sz),
+          dims.height,
+          dims.radius,
+        );
+      }
+      this.autoscalingFx.addAura(
+        node.id,
+        new THREE.Vector3(sx, sy - 0.32, sz),
+        node.autoscaling.has_hpa ? 'hpa' : 'vpa',
+      );
+    } else if (node.autoscaling?.has_hpa) {
+      this.autoscalingFx.addAura(
+        node.id,
+        new THREE.Vector3(sx, sy - 0.32, sz),
+        'hpa',
+      );
+    }
+
     this.scene.add(instance);
     this.nodeMeshes.set(node.id, instance);
 
@@ -511,6 +788,9 @@ export class ClusterViewport {
       this.podCapsuleManager.untrack(mesh);
       this.isolatePodMaterials(mesh);
     }
+    // TASK-CV-1002: drop any ghost hull / radar aura tied to the removed pod.
+    this.autoscalingFx.clearGhost(nodeId);
+    this.autoscalingFx.removeAura(nodeId);
 
     mesh.traverse((child) => {
       if ((child as THREE.Mesh).isMesh) {
@@ -967,6 +1247,9 @@ export class ClusterViewport {
     this.layerTrayManager.update(delta, time);
     // SPEC-09: proportional pod capsule emissive pulse/glow.
     this.podCapsuleManager.update(time);
+    // TASK-CV-1002: VPA morph tweens, HPA dispatch pulses, lateral conveyor
+    // slides, ghost-hull shimmer, and KeyU radar auras.
+    this.autoscalingFx.update(delta, time);
 
     // TASK-CV-904: animate vault rings / raceway particles and plunge flows.
     this.vaultManager.update(delta, time);

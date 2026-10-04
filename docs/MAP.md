@@ -70,7 +70,9 @@
 - `src/scene/cluster_viewport.ts`: `ClusterViewport` Three.js scene manager, dynamic mutation animations, camera, and raycaster.
 - `src/scene/timeline_player.ts`: `TimelinePlayer` engine handling keyframe playback, seek interpolation, and delta transitions.
 - `src/ui/timeline_scrubber.ts`: `TimelineScrubber` bottom-docked HUD with scrub bar, event pins, play/pause, and speed multipliers.
-- `src/scene/live_stream.ts`: `LiveStreamManager` SSE client handling reconnection, heartbeat, and real-time topology mutation events.
+- `src/scene/live_stream.ts`: `LiveStreamManager` SSE client handling reconnection, heartbeat, and real-time topology mutation events (incl. SPEC-09 `vpa_recommendation`, `vpa_resize_committed`, `hpa_scale_out`).
+- `src/scene/pod_capsules.ts`: `PodCapsuleManager` procedural proportional pod capsules (SPEC-09 §3.1), status material cache, emissive pulse, and VPA resize retargeting.
+- `src/scene/autoscaling_fx.ts`: `AutoscalingFxManager` SPEC-09 §3.2/§3.3/§7.2 autoscaling pipelines — VPA recommendation ghost hulls, in-place 1200ms geometry morph tweens with energy ripples, HPA golden supervisor dispatch pulses down the central riser, lateral conveyor slides into node tray slots, and KeyU autoscaling radar aura rings.
 - `src/scene/layer_trays.ts`: `LayerTrayManager` procedural semi-transparent floor trays, machine shape chassis, and ground datum.
 - `src/scene/subterranean_vaults.ts`: `SubterraneanVaultManager` procedural 3D vaults for CloudSQL, GCS, Pub/Sub, Redis, kro manifolds.
 - `src/scene/plunge_conduits.ts`: `PlungeConduitManager` vertical Bezier conduits with latency spectrum shaders and degradation strobes.
