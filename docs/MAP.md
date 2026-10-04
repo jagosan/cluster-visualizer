@@ -20,6 +20,7 @@
 - specs/08-subterranean-dependencies-and-compute-classes.md: Master specification for subterranean foundation tiers (B1-B3), Karpenter machine shapes, GCP KCC & kro managed cloud vaults, and plunge latency conduits.
 - docs/architecture/08-subterranean-dependencies-and-compute-classes.md: Blueprint for subterranean foundation tiers (B1-B3), Karpenter machine shapes, GCP KCC & kro managed cloud vaults, and plunge latency conduits.
 - `specs/09-pod-autoscaling-morphing-and-kueue-staging.md`: Master specification for proportional pod capsule sizing, VPA in-place morphing, HPA lateral replication, and the external Kueue gang-scheduling staging yard.
+- `docs/architecture/09-pod-autoscaling-morphing-and-kueue-staging.md`: Architectural blueprint for proportional capsules, VPA morphing, staging yard tarmac, and Kueue gang containers.
 - `docs/MAP.md`: This symbol and directory reference map.
 
 ## 3D Asset Pipeline (Blender `bpy`)
