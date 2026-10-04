@@ -23,12 +23,12 @@ SPEC-10 brings **interactive cluster onboarding**, a **zero-friction simulated s
      * **OSS Upstream Kubernetes Baseline (v1.36 vanilla):** Clean reference control plane, CoreDNS, kube-proxy, CNI, and dual containerd worker nodes.
      * **Microservices E-Commerce Application:** Google Online Boutique ("gshoe" / Hipster Shop) and AWS Retail Store sample apps with 11 microservices, Redis backing, and pre-configured HPA/VPA definitions.
      * **AI / ML Workload Cluster (Ray & KubeRay):** KubeRay operator, `RayCluster` CRD with Ray Head, CPU/GPU worker groups (with NVIDIA L4/A100 accelerator bays per SPEC-08), Kueue gang-scheduling LocalQueues, and vLLM batch distributed inference.
-     * **GKE Autopilot Compute Class vs. Standard Cluster:** A benchmark comparison pair pre-wired to demonstrate compute class autoscaling differences.
+     * **GKE Compute Class vs. Karpenter / Static NodePool Benchmark:** A comparative benchmark pair demonstrating declarative auto-provisioning differences: GKE's Autopilot Compute Class (available in both GKE Standard and Autopilot clusters) vs. AWS/Azure Karpenter and traditional node pools.
 3. **Autoscaling Traffic Simulation Test Harness:**
    * A dockable HUD control deck in the UI allowing operators to inject synthetic request traffic against target workloads (e.g. `frontend`, `cartservice`, `ray-worker-cpu`).
    * **Comparative Autoscaling & Scheduling Latency Demonstration:**
-     * Contrasts **Google Cloud GKE Autopilot Compute Classes** (rapid pod scheduling onto pre-warmed compute slices $\tau_{\text{sched}} \approx 3 - 6\text{s}$ and in-place VPA morphing without node rescheduling $\tau_{\text{vpa}} \approx 1.2\text{s}$) against **Standard Node Pools / Karpenter Cold Provisioning** ($\tau_{\text{node}} \approx 90 - 150\text{s}$ cold VM boot delay).
-     * Pods in cold-provisioning clusters back up into the **Exterior Staging Yard ($X < -12.0$, SPEC-09)**, queue lengths surge, and real-time response latency jumps from $15\text{ms} \to 650\text{ms}+$ while the Autopilot cluster absorbs the spike smoothly.
+     * Contrasts **GKE Autopilot Compute Classes** (Google Cloud's implementation of declarative node auto-provisioning, featuring rapid pod scheduling onto pre-warmed compute slices $\tau_{\text{sched}} \approx 3 - 6\text{s}$ and in-place VPA morphing without node rescheduling $\tau_{\text{vpa}} \approx 1.2\text{s}$) against **Karpenter on AWS/Azure and Static NodePools** undergoing cold VM provisioning ($\tau_{\text{node}} \approx 90 - 150\text{s}$ VM allocation, OS boot, image pull).
+     * Pods in cold-provisioning clusters back up into the **Exterior Staging Yard ($X < -12.0$, SPEC-09)**, queue lengths surge, and real-time response latency jumps from $15\text{ms} \to 650\text{ms}+$ while the compute-class-optimized cluster absorbs the spike smoothly.
 
 ---
 
@@ -49,7 +49,7 @@ SPEC-10 brings **interactive cluster onboarding**, a **zero-friction simulated s
  │  │  │ [A] Helm Operator Mode  │  (1) OSS Vanilla K8s v1.36.4          │  │  │
  │  │  │     - Target API URL    │  (2) Online Boutique ("gshoe" Retail) │  │  │
  │  │  │     - Bearer Token Auth │  (3) Ray & KubeRay AI Cluster         │  │  │
- │  │  │     - Generate Helm Cmd │  (4) GKE Autopilot vs Standard Bench  │  │  │
+ │  │  │     - Generate Helm Cmd │  (4) GKE Compute Class vs Karpenter   │  │  │
  │  │  │ [B] Client-Side Connect │                                       │  │  │
  │  │  │     - Read-Only Token   │                                       │  │  │
  │  │  │     - Client-side Parse │                                       │  │  │
@@ -160,15 +160,16 @@ SPEC-10 brings **interactive cluster onboarding**, a **zero-friction simulated s
     * Pre-configured `LocalQueue` and `ClusterQueue` resources.
     * An unadmitted PyTorch gang training job held inside a **Kueue Cargo Containment Pallet** in the Exterior Staging Yard ($X = -18.0$, $Y = 0.4$), ready for interactive gang admission (KeyK).
 
-### 3.4 Catalog Entry 4: GKE Autopilot Compute Class Benchmark Cluster
-* **Identifier:** `sample-gke-autopilot-benchmark`
+### 3.4 Catalog Entry 4: GKE Compute Class vs. Karpenter Benchmark Cluster
+* **Identifier:** `sample-compute-class-benchmark`
 * **Metadata:**
-  * Platform: Google Cloud GKE Autopilot
-  * Compute Classes: `Scale-Up` (high burst), `Performance` (dedicated c3 core pin), `General-Purpose` (standard Autopilot slice).
+  * Architectural Focus: Declarative Node Auto-Provisioning Comparison
+  * Compute Class Engine: Google Cloud GKE Autopilot Compute Class (`cloud.google.com/compute-class`), GKE's native implementation of the Karpenter concept (functional in both GKE Standard and Autopilot clusters).
+  * Compute Classes Configured: `Scale-Up` (rapid burst pod scheduling onto pre-warmed compute slices), `Performance` (dedicated core affinity), `General-Purpose`.
 * **Autoscaling Mechanics:**
-  * Configured specifically for comparative split-screen benchmarking against a standard node-pool cluster.
-  * Pods define `cloud.google.com/compute-class: "Scale-Up"` annotations.
-  * Demonstrates sub-second VPA resize morphing and rapid pod admission without node provisioning latency.
+  * Configured specifically for comparative split-screen benchmarking against an AWS/Azure Karpenter cluster (`karpenter.sh/nodepool`) or traditional static node pool.
+  * Workload pods define `cloud.google.com/compute-class: "Scale-Up"` annotations.
+  * Demonstrates sub-second in-place VPA resize morphing and rapid pod admission without cold VM provisioning delays.
 
 ---
 
@@ -180,7 +181,7 @@ SPEC-10 brings **interactive cluster onboarding**, a **zero-friction simulated s
 | :--- | :--- | :--- | :--- | :--- |
 | **Approach 1: In-Cluster Load Pods (Fortio / k6 / Locust)** | Deploying ephemeral load generator pods inside the Kubernetes cluster via Job or Deployment. | Realistic in-cluster network transport; exercises real Service CIDRs, kube-proxy iptables, and CNI routing; high throughput. | Requires write permissions (`create deployment/job`) in target cluster; cannot run on offline or simulated sample clusters; adds resource overhead to target nodes. | **Essential for Live Cluster Mode** with Helm Operator. |
 | **Approach 2: Pure Browser Fetch Flooding** | JavaScript in the browser fires concurrent `fetch()` loops directly against the cluster's ingress URL. | Zero server footprint; executes entirely from user's machine. | Constrained by browser connection limits (max 6 HTTP/1.1 connections per host); blocked by CORS on unconfigured ingresses; cannot target private ClusterIPs; vulnerable to client CPU throttling. | **Rejected as Primary Engine**; retained only as optional fallback. |
-| **Approach 3: Discrete-Event Queuing Simulation Engine** | A deterministic queuing physics engine ($M/M/c/K$) running in TypeScript / Web Worker, simulating request arrivals, pod saturation, and autoscaling. | **100% universal**: Runs identically on live clusters, simulated samples, and offline demos; zero cloud cost; enables millisecond-level reproducible comparisons of Autopilot vs. Standard Karpenter latency curves. | Does not generate real HTTP packets across physical wires in live clusters unless paired with an operator. | **Recommended Core Solution** for visualizer UI harness. |
+| **Approach 3: Discrete-Event Queuing Simulation Engine** | A deterministic queuing physics engine ($M/M/c/K$) running in TypeScript / Web Worker, simulating request arrivals, pod saturation, and autoscaling. | **100% universal**: Runs identically on live clusters, simulated samples, and offline demos; zero cloud cost; enables millisecond-level reproducible comparisons of GKE Compute Class vs. Karpenter / Static NodePool latency curves. | Does not generate real HTTP packets across physical wires in live clusters unless paired with an operator. | **Recommended Core Solution** for visualizer UI harness. |
 
 ### 4.2 Recommended Solution: The "Hybrid Dual-Engine Traffic Harness"
 
@@ -230,7 +231,12 @@ For workloads managed by VPA in `Auto` mode:
 * If CPU utilization exceeds $80\%$ for more than $3\text{ seconds}$, VPA calculates an updated CPU/Memory target recommendation.
 * In Kubernetes with in-place pod resizing, the pod requests are updated directly without restarting the container if the node has sufficient unallocated capacity.
 
-### 5.3 Comparative Scheduling Latency: GKE Autopilot vs. Standard Karpenter / NodePools
+### 5.3 Comparative Scheduling Latency: GKE Compute Class vs. Karpenter (AWS/Azure) & Static NodePools
+
+In production Kubernetes environments, node auto-provisioning spans distinct implementations:
+* **GKE Autopilot Compute Class:** Google Cloud's implementation of the Karpenter concept (available across both GKE Standard and Autopilot clusters). Pods target compute classes (e.g. `Scale-Up` or `Performance`) using `cloud.google.com/compute-class`. GKE rapidly slices pre-warmed managed compute, enabling sub-second VPA resize morphing and near-instant pod scheduling without waiting for cold VM boot cycles.
+* **Karpenter (AWS EC2NodeClass / Azure NodePools):** The open-source declarative node auto-provisioner. While faster than legacy cluster-autoscalers, provisioning a brand-new instance from the cloud provider still requires cloud API VM allocation, volume attachment, OS boot, containerd initialization, and image pulls ($\tau_{\text{node}} \approx 45 - 90\text{s}$).
+* **Traditional Static NodePools (Cluster Autoscaler):** Provisioning cycles typically take $90 - 150\text{s}$.
 
 When HPA triggers scale-out from $N_1 \to N_2$ replicas, the critical visual and operational difference lies in **how quickly new pods transition from `Pending` to `Running`**:
 
@@ -242,13 +248,14 @@ When HPA triggers scale-out from $N_1 \to N_2$ replicas, the critical visual and
              ┌──────────────────────────┴──────────────────────────┐
              ▼                                                     ▼
  ┌───────────────────────────────────────┐   ┌─────────────────────────────────┐
- │ CLUSTER A: GKE AUTOPILOT COMPUTE CLASS│   │ CLUSTER B: STANDARD NODE POOL   │
+ │ CLUSTER A: GKE COMPUTE CLASS (GCP)    │   │ CLUSTER B: KARPENTER (AWS) /    │
+ │ (Available in Standard & Autopilot)   │   │            STATIC NODEPOOLS     │
  ├───────────────────────────────────────┤   ├─────────────────────────────────┤
  │ 1. Scale-Up compute class node slots  │   │ 1. Existing node capacity full  │
- │    available on pre-warmed fabric.    │   │ 2. Cluster Autoscaler / Karpent.│
+ │    available on pre-warmed fabric.    │   │ 2. Karpenter / Autoscaler       │
  │ 2. Pod scheduled immediately:         │   │    detects unschedulable pods.  │
  │    τ_sched ≈ 3.5 seconds.             │   │ 3. Cloud Provider VM provision: │
- │ 3. VPA in-place morph: τ_vpa ≈ 1.2s.  │   │    - VM API launch: 35s         │
+ │ 3. In-place VPA morph: τ_vpa ≈ 1.2s.  │   │    - VM API launch: 35s         │
  │ 4. Pods transition to Running.        │   │    - OS boot & containerd: 25s  │
  │ 5. Latency transient: max 48ms;       │   │    - Kubelet join & CNI: 15s    │
  │    recovers to 12ms baseline in <8s.  │   │    - Image pull: 20s            │
@@ -262,9 +269,9 @@ When HPA triggers scale-out from $N_1 \to N_2$ replicas, the critical visual and
 
 #### Mathematical Latency Penalty Comparison
 
-| Metric / Stage | GKE Autopilot (Compute Class) | Standard Karpenter / GKE NodePool |
+| Metric / Stage | GKE Autopilot Compute Class (GCP) | Karpenter (AWS/Azure) & Static NodePools |
 | :--- | :--- | :--- |
-| **Pod Scheduling Delay ($\tau_{\text{sched}}$)** | $\mathbf{3.0\text{ to }6.0\text{ s}}$ | $\mathbf{90.0\text{ to }150.0\text{ s}}$ |
+| **Pod Scheduling Delay ($\tau_{\text{sched}}$)** | $\mathbf{3.0\text{ to }6.0\text{ s}}$ | $\mathbf{60.0\text{ to }150.0\text{ s}}$ |
 | **In-Place VPA Morph Delay ($\tau_{\text{vpa}}$)** | $\mathbf{1.2\text{ s}}$ (In-place resize) | $\mathbf{45.0\text{ s}}$ (Requires eviction & reschedule) |
 | **Peak Latency under $10\times$ Spike** | $\mathbf{42\text{ ms}}$ (Transient) | $\mathbf{720\text{ ms}}$ (Severe Queueing Saturation) |
 | **HTTP Error Rate during Spike** | $\mathbf{0.0\%}$ | $\mathbf{18.4\%}$ (Timeouts / Drops) |
@@ -300,8 +307,8 @@ A sleek, bottom-docked control deck (toggleable via KeyT or topbar button) rende
  ║ AUTO-SCALING ENGINE: [✔] HPA (Horizontal)    [✔] VPA Morphing    [✔] Simulate Node Provisioning Latency           ║
  ║                                                                                                                   ║
  ║ ── REAL-TIME COMPARATIVE TELEMETRY ───────────────────────────────────────────────────────────────────────────── ║
- ║  VIEWPORT A (GKE Autopilot):   Latency: 14ms | Replicas: 6 (+4) | CPU: 64% | Sched Delay: 3.2s   [STABLE]        ║
- ║  VIEWPORT B (Standard Node):   Latency: 540ms| Replicas: 2 (4 Pending in Staging) | CPU: 100%   [SATURATED]     ║
+ ║  VIEWPORT A (GKE Compute Class): Latency: 14ms | Replicas: 6 (+4) | CPU: 64% | Sched Delay: 3.2s   [STABLE]        ║
+ ║  VIEWPORT B (Karpenter/Standard): Latency: 540ms| Replicas: 2 (4 Pending in Staging) | CPU: 100%   [SATURATED]     ║
  ║                                                                                                                   ║
  ║  [ ▶ INJECT TRAFFIC ]   [ ⏸ PAUSE ]   [ ↺ RESET BASELINE ]   [ ⚡ BURST 2000 RPS ]                                ║
  ╚═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════╝
@@ -377,7 +384,7 @@ export interface WorkloadScalingState {
   targetCpuUtilization: number;
   latencyMs: number;
   errorRate: number;
-  isAutopilot: boolean;
+  computeClassType: 'gke-compute-class' | 'karpenter' | 'static-nodepool';
   provisioningTimeRemainingMs: number;
 }
 ```
@@ -399,7 +406,7 @@ export interface WorkloadScalingState {
   * `sample-upstream-k8s.json`: Baseline OSS v1.36.4 with 3 nodes.
   * `sample-online-boutique.json`: 11-microservice Google Online Boutique / retail store with Redis and HPA/VPA.
   * `sample-ray-kuberay.json`: KubeRay cluster with Ray Head, CPU/GPU workers, and Kueue gang pallet.
-  * `sample-autopilot-bench.json`: GKE Autopilot compute class cluster.
+  * `sample-compute-class-bench.json`: GKE Compute Class vs Karpenter / Static NodePool benchmark cluster.
   * One-click catalog selector in onboarding modal instantly loading chosen sample into any viewport slot.
 
 ### TASK-CV-1103: Client-Side Direct Kubernetes API Extractor
@@ -414,7 +421,7 @@ export interface WorkloadScalingState {
   * Traffic profile generators (Step, Spike, Sine, Chaos).
   * HPA replica calculation with scale-up rates and stabilization windows.
   * VPA in-place morph triggers.
-  * Scheduling delay model contrasting GKE Autopilot ($\tau_{\text{sched}} \approx 3.5\text{s}$) vs Standard Karpenter NodePool ($\tau_{\text{node}} \approx 95\text{s}$).
+  * Scheduling delay model contrasting GKE Compute Class ($\tau_{\text{sched}} \approx 3.5\text{s}$) vs Karpenter ($\tau_{\text{node}} \approx 60\text{s}$) and Standard NodePools ($\tau_{\text{node}} \approx 95 - 120\text{s}$).
 
 ### TASK-CV-1105: Traffic Simulation Control Deck HUD & Comparative Visuals
 * **Scope:** Author `src/ui/traffic_deck.ts` and wire real-time particle and autoscaling animations.
@@ -445,8 +452,8 @@ export interface WorkloadScalingState {
    * Online Boutique sample correctly maps microservices, Redis cache, and HPA badges.
 3. **Traffic Simulation & Latency Dynamics:**
    * Triggering a traffic spike ($850\text{ RPS}$) against `frontend` causes CPU utilization to rise and triggers HPA scale-out.
-   * In GKE Autopilot mode, pods schedule and transition to Running within $4\text{ seconds}$, and latency stabilizes under $20\text{ms}$.
-   * In Standard NodePool mode, pods sit in the Exterior Staging Yard in `Pending` state for the simulated node boot delay, while latency spikes above $500\text{ms}$ and particles turn warning amber/red.
+   * In GKE Compute Class mode, pods schedule and transition to Running within $4\text{ seconds}$, and latency stabilizes under $20\text{ms}$.
+   * In Karpenter / Static NodePool mode, pods sit in the Exterior Staging Yard in `Pending` state for the simulated node boot delay, while latency spikes above $500\text{ms}$ and particles turn warning amber/red.
 4. **Code Quality & Build:**
    * `npm run build` succeeds with zero TypeScript warnings or errors.
    * `docs/MAP.md` and `Kanban-Cluster-Visualizer.md` accurately reflect SPEC-10.
