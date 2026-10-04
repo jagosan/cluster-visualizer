@@ -41,6 +41,37 @@ export interface HpaScaleOutPayload {
   timestamp?: string;
 }
 
+/** SPEC-09 §4.2: Karpenter NodeClaim wire shape (mirror of models.py). */
+export interface KarpenterNodeClaimWire {
+  claim_name: string;
+  namespace?: string;
+  nodepool?: string;
+  instance_type?: string | null;
+  capacity_type?: 'spot' | 'on-demand';
+  requested_cpu_cores?: number;
+  requested_memory_gib?: number;
+  requested_gpu_count?: number;
+  pending_pod_uids?: string[];
+  is_provisioned?: boolean;
+  created_at?: string | null;
+}
+
+/** SPEC-09 §4.2: Karpenter NodeClaim snapshot payload (ghost chassis dock). */
+export interface KarpenterClaimUpdatedPayload {
+  claim: KarpenterNodeClaimWire;
+  ghost_position?: { x: number; y: number; z: number } | null;
+  staging_focus_x?: number;
+  timestamp?: string;
+}
+
+/** SPEC-09 §4.2: amber provisioning tractor beam endpoints payload. */
+export interface KarpenterTractorBeamPayload {
+  node_id: string;
+  claim_name: string;
+  beam: { top?: number[] | null; bottom?: number[] | null; span_y?: number };
+  timestamp?: string;
+}
+
 export interface LiveStreamCallbacks {
   onStatusChange?: (status: StreamStatus, url?: string) => void;
   onInitialSnapshot?: (snapshot: any) => void;
@@ -52,6 +83,9 @@ export interface LiveStreamCallbacks {
   onVpaRecommendation?: (payload: VpaRecommendationPayload) => void;
   onVpaResizeCommitted?: (payload: VpaResizeCommittedPayload) => void;
   onHpaScaleOut?: (payload: HpaScaleOutPayload) => void;
+  // SPEC-09 / TASK-CV-1003 staging yard: Karpenter NodeClaim + tractor beams.
+  onKarpenterClaimUpdated?: (payload: KarpenterClaimUpdatedPayload) => void;
+  onKarpenterTractorBeam?: (payload: KarpenterTractorBeamPayload) => void;
   onHeartbeat?: (data: { timestamp: number; active_clients: number }) => void;
   onError?: (error: any) => void;
 }
@@ -208,6 +242,34 @@ export class LiveStreamManager {
           const payload = JSON.parse(e.data) as HpaScaleOutPayload;
           if (this.callbacks.onHpaScaleOut) {
             this.callbacks.onHpaScaleOut(payload);
+          }
+        } catch (err) {
+          if (this.callbacks.onError) {
+            this.callbacks.onError(err);
+          }
+        }
+      });
+
+      // SPEC-09 §4.2: Karpenter NodeClaim provisioning snapshot + ghost dock
+      this.eventSource.addEventListener('karpenter_claim_updated', (e: MessageEvent) => {
+        try {
+          const payload = JSON.parse(e.data) as KarpenterClaimUpdatedPayload;
+          if (this.callbacks.onKarpenterClaimUpdated) {
+            this.callbacks.onKarpenterClaimUpdated(payload);
+          }
+        } catch (err) {
+          if (this.callbacks.onError) {
+            this.callbacks.onError(err);
+          }
+        }
+      });
+
+      // SPEC-09 §4.2: amber tractor beam from pending pods to ghost chassis
+      this.eventSource.addEventListener('karpenter_tractor_beam', (e: MessageEvent) => {
+        try {
+          const payload = JSON.parse(e.data) as KarpenterTractorBeamPayload;
+          if (this.callbacks.onKarpenterTractorBeam) {
+            this.callbacks.onKarpenterTractorBeam(payload);
           }
         } catch (err) {
           if (this.callbacks.onError) {

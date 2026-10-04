@@ -28,6 +28,14 @@ import type {
   HpaScaleOutEvent,
   MorphDimensions,
 } from './autoscaling_fx.js';
+// SPEC-09 / TASK-CV-1003: exterior staging yard — tarmac, pending-pod hover,
+// Karpenter ghost chassis, tractor beams, and the KeyY apron focus control.
+import { StagingYardManager } from './staging_yard.js';
+import type {
+  KarpenterClaimUpdatedPayload,
+  KarpenterNodeClaimData,
+  KarpenterTractorBeamPayload,
+} from './staging_yard.js';
 
 export interface ClusterNodeData {
   id: string;
@@ -157,6 +165,19 @@ export interface ClusterGraphData {
   machine_shapes?: MachineShapeData[];
   // SPEC-08 / TASK-CV-904: managed cloud service vaults (optional on the wire)
   subterranean_resources?: RemoteServiceResourceData[];
+  // SPEC-09 / TASK-CV-1003: Karpenter NodeClaims provisioning B1 ghost nodes
+  karpenter_node_claims?: KarpenterNodeClaimData[];
+}
+
+/**
+ * SPEC-09 §4.2 (ADR-02): a pod is pending when the ingestion layout flagged
+ * its geometry or the metrics bag carries pending / PodScheduled=False.
+ */
+export function isPendingPod(node: ClusterNodeData): boolean {
+  if (node.pod_geometry?.is_pending === true) return true;
+  const metrics = node.metrics as Record<string, unknown> | undefined;
+  if (!metrics) return false;
+  return metrics['pending'] === true || metrics['scheduled'] === false;
 }
 
 export class ClusterViewport {
@@ -191,6 +212,19 @@ export class ClusterViewport {
   // SPEC-09 / TASK-CV-1002: VPA ghost hulls, morph tweens, HPA dispatch
   // pulses / lateral conveyor slides, and the KeyU autoscaling radar.
   public autoscalingFx: AutoscalingFxManager;
+  // SPEC-09 / TASK-CV-1003: exterior pre-admission staging yard (tarmac,
+  // pending-pod hover, Karpenter ghost chassis + amber tractor beams).
+  public stagingYard: StagingYardManager;
+  // SPEC-09 §7.1: Staging Apron Focus (KeyY) camera tween state.
+  private stagingFocused = false;
+  private cameraTween: {
+    elapsed: number;
+    duration: number;
+    fromPos: THREE.Vector3;
+    toPos: THREE.Vector3;
+    fromTarget: THREE.Vector3;
+    toTarget: THREE.Vector3;
+  } | null = null;
   // HPA replica capsules spawned by scale-out events (viewport-owned cleanup).
   private hpaReplicas: THREE.Object3D[] = [];
   private raycaster = new THREE.Raycaster();
@@ -254,6 +288,7 @@ export class ClusterViewport {
     this.vaultManager = new SubterraneanVaultManager(this.scene);
     this.plungeConduitManager = new PlungeConduitManager(this.scene);
     this.autoscalingFx = new AutoscalingFxManager(this.scene);
+    this.stagingYard = new StagingYardManager(this.scene);
     
     // Initialize DiffCardManager
     this.diffCard = new DiffCardManager(this.container);
@@ -442,6 +477,106 @@ export class ClusterViewport {
     // TASK-CV-1002: VPA recommendation ghost hulls + autoscaling radar auras
     // for every pod carrying `autoscaling` metadata in the snapshot.
     this.buildAutoscalingLayer(data);
+
+    // TASK-CV-1003: exterior staging yard — pending-pod hover registration
+    // plus Karpenter ghost chassis docking and amber tractor beams.
+    this.buildStagingLayer(data, nodePositions);
+  }
+
+  // -------------------------------------------------------------------------
+  // TASK-CV-1003 / SPEC-09 §4.1-§4.2, §7.1: staging yard pipelines
+  // -------------------------------------------------------------------------
+
+  /**
+   * Refresh the staging yard from snapshot metadata: every pending pod
+   * (PodScheduled=False) hovering over the tarmac joins the anti-gravity
+   * bob, and every Karpenter NodeClaim docks a wireframe ghost chassis on
+   * Sub-Level B1 with beams lancing down from its pending pods.
+   */
+  private buildStagingLayer(
+    data: ClusterGraphData,
+    nodePositions: Map<string, THREE.Vector3>,
+  ): void {
+    this.stagingYard.clearGhostsAndBeams();
+    this.stagingYard.clearHovering();
+
+    const pendingPositions = new Map<string, THREE.Vector3>();
+    for (const node of data.nodes) {
+      if (!isPendingPod(node)) continue;
+      const mesh = this.nodeMeshes.get(node.id);
+      if (mesh && mesh.position.y > 0.5) {
+        this.stagingYard.registerPendingPod(mesh);
+        pendingPositions.set(node.id, mesh.position.clone());
+      } else {
+        // Layout already parked it on the hover band; trust the wire coords.
+        pendingPositions.set(node.id, nodePositions.get(node.id)?.clone()
+          ?? new THREE.Vector3(node.spatial.x, node.spatial.y, node.spatial.z));
+      }
+    }
+
+    this.stagingYard.applyClaims(data.karpenter_node_claims, pendingPositions);
+  }
+
+  /**
+   * SSE `karpenter_claim_updated`: dock/refresh a NodeClaim's ghost chassis
+   * on Sub-Level B1 (SPEC-09 §4.2).
+   */
+  public applyKarpenterClaim(payload: KarpenterClaimUpdatedPayload): void {
+    const claim = payload.claim;
+    const pos = payload.ghost_position
+      ? new THREE.Vector3(payload.ghost_position.x, payload.ghost_position.y, payload.ghost_position.z)
+      : new THREE.Vector3(0, -2.5, 0);
+    this.stagingYard.upsertGhostChassis(
+      claim.claim_name,
+      pos,
+      claim.is_provisioned === true,
+    );
+  }
+
+  /**
+   * SSE `karpenter_tractor_beam`: project the luminous amber provisioning
+   * beam from a pending pod down into its ghost chassis (SPEC-09 §4.2).
+   */
+  public applyKarpenterTractorBeam(payload: KarpenterTractorBeamPayload): void {
+    const top = payload.beam.top;
+    const bottom = payload.beam.bottom;
+    if (!top || top.length < 3 || !bottom || bottom.length < 3) return;
+    this.stagingYard.setTractorBeam(
+      payload.node_id,
+      payload.claim_name,
+      new THREE.Vector3(top[0] ?? 0, top[1] ?? 1, top[2] ?? 0),
+      new THREE.Vector3(bottom[0] ?? 0, bottom[1] ?? -2.5, bottom[2] ?? 0),
+    );
+  }
+
+  /**
+   * SPEC-09 §7.1: Staging Apron Focus (KeyY) — smoothly pans/orbits the
+   * camera to frame the pre-admission staging yard at X = -18.0. Toggles
+   * back to the tower preset. Returns true when focused on the apron.
+   */
+  public toggleStagingFocus(durationMs = 1200): boolean {
+    this.stagingFocused = !this.stagingFocused;
+    const focus = StagingYardManager.stagingFocusTargets();
+    const toPos = this.stagingFocused
+      ? focus.camera
+      : new THREE.Vector3(16, 7, 20);
+    const toTarget = this.stagingFocused
+      ? focus.target
+      : new THREE.Vector3(0, 3.5, 0);
+
+    this.cameraTween = {
+      elapsed: 0,
+      duration: Math.max(0.05, durationMs / 1000),
+      fromPos: this.camera.position.clone(),
+      toPos,
+      fromTarget: this.controls.target.clone(),
+      toTarget,
+    };
+    return this.stagingFocused;
+  }
+
+  public isStagingFocus(): boolean {
+    return this.stagingFocused;
   }
 
   // -------------------------------------------------------------------------
@@ -767,6 +902,12 @@ export class ClusterViewport {
     this.scene.add(instance);
     this.nodeMeshes.set(node.id, instance);
 
+    // TASK-CV-1003: a live pod that arrives PodScheduled=False hovers over
+    // the staging tarmac until Karpenter/admission lands it inside the tower.
+    if (isPendingPod(node)) {
+      this.stagingYard.registerPendingPod(instance);
+    }
+
     this.animatingEntrances.set(node.id, {
       mesh: instance,
       startTime: this.clock.getElapsedTime(),
@@ -791,6 +932,8 @@ export class ClusterViewport {
     // TASK-CV-1002: drop any ghost hull / radar aura tied to the removed pod.
     this.autoscalingFx.clearGhost(nodeId);
     this.autoscalingFx.removeAura(nodeId);
+    // TASK-CV-1003: stop hover bobbing / tractor beams for the removed pod.
+    this.stagingYard.removePendingPod(nodeId);
 
     mesh.traverse((child) => {
       if ((child as THREE.Mesh).isMesh) {
@@ -1250,6 +1393,21 @@ export class ClusterViewport {
     // TASK-CV-1002: VPA morph tweens, HPA dispatch pulses, lateral conveyor
     // slides, ghost-hull shimmer, and KeyU radar auras.
     this.autoscalingFx.update(delta, time);
+    // TASK-CV-1003: pending-pod hover bobbing, Karpenter ghost-chassis
+    // shimmer, and amber tractor-beam pulses in the exterior staging yard.
+    this.stagingYard.update(delta, time);
+
+    // SPEC-09 §7.1: KeyY staging apron focus camera tween.
+    if (this.cameraTween) {
+      const tw = this.cameraTween;
+      tw.elapsed += delta;
+      const t = THREE.MathUtils.clamp(tw.elapsed / tw.duration, 0, 1);
+      const ease = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+      this.camera.position.lerpVectors(tw.fromPos, tw.toPos, ease);
+      this.controls.target.lerpVectors(tw.fromTarget, tw.toTarget, ease);
+      this.controls.update();
+      if (t >= 1) this.cameraTween = null;
+    }
 
     // TASK-CV-904: animate vault rings / raceway particles and plunge flows.
     this.vaultManager.update(delta, time);
