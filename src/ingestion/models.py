@@ -65,6 +65,28 @@ class KueueWorkloadStatus(BaseModel):
     phase: Literal["Inadmissible", "Admissible", "Admitted", "Finished"] = "Admissible"
 
 
+class KarpenterNodeClaim(BaseModel):
+    """Karpenter NodeClaim provisioning a ghost chassis (SPEC-09 §4.2).
+
+    A claim links a batch of pending pods (PodScheduled=False) to a
+    holographic wireframe ghost-node chassis on Sub-Level B1 (Y = -2.5)
+    while cloud compute is being provisioned; the staging yard renders the
+    amber tractor beam from the pending pods down onto the ghost footprint.
+    """
+
+    claim_name: str
+    namespace: str = "default"
+    nodepool: str = "default"
+    instance_type: Optional[str] = None
+    capacity_type: Literal["spot", "on-demand"] = "on-demand"
+    requested_cpu_cores: float = 0.0
+    requested_memory_gib: float = 0.0
+    requested_gpu_count: int = 0
+    pending_pod_uids: List[str] = Field(default_factory=list)
+    is_provisioned: bool = False   # NodeReady=True -> chassis solidifies
+    created_at: Optional[str] = None
+
+
 class PodGeometrySpec(BaseModel):
     """Proportional capsule dimensions and staging assignments (SPEC-09 §6)."""
 
@@ -207,6 +229,8 @@ class ClusterGraph(BaseModel):
     machine_shapes: List[MachineShape] = Field(default_factory=list)
     # SPEC-09: Kueue gang scheduling workloads (pre-admission staging yard)
     kueue_workloads: List[KueueWorkloadStatus] = Field(default_factory=list)
+    # SPEC-09 §4.2: Karpenter NodeClaims provisioning Sub-Level B1 ghost nodes
+    karpenter_node_claims: List[KarpenterNodeClaim] = Field(default_factory=list)
 
     class Config:
         populate_by_name = True

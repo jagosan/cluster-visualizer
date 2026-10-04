@@ -73,6 +73,7 @@
 - `src/scene/live_stream.ts`: `LiveStreamManager` SSE client handling reconnection, heartbeat, and real-time topology mutation events (incl. SPEC-09 `vpa_recommendation`, `vpa_resize_committed`, `hpa_scale_out`).
 - `src/scene/pod_capsules.ts`: `PodCapsuleManager` procedural proportional pod capsules (SPEC-09 §3.1), status material cache, emissive pulse, and VPA resize retargeting.
 - `src/scene/autoscaling_fx.ts`: `AutoscalingFxManager` SPEC-09 §3.2/§3.3/§7.2 autoscaling pipelines — VPA recommendation ghost hulls, in-place 1200ms geometry morph tweens with energy ripples, HPA golden supervisor dispatch pulses down the central riser, lateral conveyor slides into node tray slots, and KeyU autoscaling radar aura rings.
+- `src/scene/staging_yard.ts`: `StagingYardManager` SPEC-09 §4.1/§4.2 exterior pre-admission staging yard — reinforced freight tarmac ($X \in [-24, -12]$, $Y = 0.2$) with runway beacons, taxiway markers, and cargo rail intake rails; pending-pod anti-gravity hover bobbing at $Y = 1.0$; Karpenter NodeClaim ghost chassis wireframes on Sub-Level B1 ($Y = -2.5$) with luminous amber tractor beams; KeyY staging apron focus camera targets.
 - `src/scene/layer_trays.ts`: `LayerTrayManager` procedural semi-transparent floor trays, machine shape chassis, and ground datum.
 - `src/scene/subterranean_vaults.ts`: `SubterraneanVaultManager` procedural 3D vaults for CloudSQL, GCS, Pub/Sub, Redis, kro manifolds.
 - `src/scene/plunge_conduits.ts`: `PlungeConduitManager` vertical Bezier conduits with latency spectrum shaders and degradation strobes.

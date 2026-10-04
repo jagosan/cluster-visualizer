@@ -226,6 +226,17 @@ async function bootstrap() {
   }
 
   const btnResetCam = document.getElementById('btn-reset-cam');
+  // SPEC-09 §7.1 / TASK-CV-1003: Staging Apron Focus HUD button (KeyY twin).
+  const btnStaging = document.getElementById('btn-staging');
+  if (btnStaging) {
+    btnStaging.addEventListener('click', () => {
+      let focused = false;
+      for (const vp of allViewports) {
+        if (vp) focused = vp.toggleStagingFocus() || focused;
+      }
+      btnStaging.classList.toggle('active', focused);
+    });
+  }
   // TASK-CV-1002: Autoscaling Radar HUD button (mirrors the KeyU hotkey).
   const btnRadar = document.getElementById('btn-autoscaling-radar');
   if (btnRadar) {
@@ -282,6 +293,18 @@ async function bootstrap() {
       }
       btnRadar?.classList.toggle('active', active);
     }
+    // SPEC-09 §7.1 / TASK-CV-1003: KeyY Staging Apron Focus — smoothly
+    // pans/orbits to the pre-admission staging yard at X = -18.0 showing
+    // pending pods, ghost chassis, and tractor beams; toggles back to the
+    // tower preset.
+    if (e.code === 'KeyY' || e.key === 'y' || e.key === 'Y') {
+      e.preventDefault();
+      let focused = false;
+      for (const vp of allViewports) {
+        if (vp) focused = vp.toggleStagingFocus() || focused;
+      }
+      btnStaging?.classList.toggle('active', focused);
+    }
   });
 
   // 9. In-Cluster Streaming Operator Client (SPEC-04)
@@ -337,6 +360,13 @@ async function bootstrap() {
     },
     onHpaScaleOut: (payload) => {
       viewportA.applyHpaScaleOut(payload);
+    },
+    // SPEC-09 / TASK-CV-1003: staging-yard Karpenter provisioning pipeline.
+    onKarpenterClaimUpdated: (payload) => {
+      viewportA.applyKarpenterClaim(payload);
+    },
+    onKarpenterTractorBeam: (payload) => {
+      viewportA.applyKarpenterTractorBeam(payload);
     },
   });
 

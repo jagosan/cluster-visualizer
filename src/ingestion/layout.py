@@ -119,9 +119,128 @@ def assign_pod_geometry(node: NodeComponent) -> PodGeometrySpec:
     height, radius = calculate_pod_dimensions(cpu, mem)
     scheduled = metrics.get("scheduled", True)
     is_pending = bool(metrics.get("pending", False)) or scheduled is False
-    geometry = PodGeometrySpec(height=height, radius=radius, is_pending=is_pending)
+    # SPEC-09 §4.2: pods targeting a Karpenter NodeClaim link to a ghost chassis
+    claim = metrics.get("karpenter_target_node_claim")
+    if claim is None:
+        claim = (getattr(node, "raw_labels", None) or {}).get("karpenter_target_node_claim")
+    geometry = PodGeometrySpec(
+        height=height,
+        radius=radius,
+        is_pending=is_pending,
+        karpenter_target_node_claim=str(claim) if claim else None,
+    )
     node.pod_geometry = geometry
     return geometry
+
+
+# ---------------------------------------------------------------------------
+# SPEC-09 §4.1 / §4.2 (ADR-02): Exterior Pre-Admission Staging Yard
+# ---------------------------------------------------------------------------
+
+# Reinforced industrial tarmac plane (SPEC-09 §4.1)
+STAGING_TARMAC_Y = 0.2
+STAGING_TARMAC_X_MIN = -24.0
+STAGING_TARMAC_X_MAX = -12.0
+STAGING_TARMAC_Z_MIN = -8.0
+STAGING_TARMAC_Z_MAX = 8.0
+
+# Raw pending-pod low anti-gravity hover band (SPEC-09 §4.2)
+PENDING_HOVER_Y = 1.0
+PENDING_HOVER_X_MIN = -22.0
+PENDING_HOVER_X_MAX = -14.0
+PENDING_HOVER_Z_MIN = -6.0
+PENDING_HOVER_Z_MAX = 6.0
+PENDING_HOVER_COLS = 4
+PENDING_HOVER_SPACING = 2.0
+
+# Sub-Level B1 holographic ghost-node chassis row (SPEC-09 §4.2, ADR-02)
+GHOST_NODE_Y = ELEVATION_TIERS["compute_chassis"]  # Y = -2.5
+GHOST_NODE_X_MIN = -10.0
+GHOST_NODE_X_MAX = 10.0
+GHOST_NODE_Z_MIN = -4.0
+GHOST_NODE_Z_MAX = 4.0
+GHOST_CHASSIS_SPACING_X = 2.4
+
+# Camera focus anchor for the Staging Apron Focus control (SPEC-09 §7.1)
+STAGING_YARD_FOCUS_X = -18.0
+
+
+def stage_pending_pod(pod: NodeComponent, index: int) -> Tuple[float, float, float]:
+    """Route a pending pod (PodScheduled=False) into the exterior staging yard.
+
+    Pending pods leave the worker deck entirely: they hover in low suspension
+    at Y = 1.0 inside the hover band X in [-22.0, -14.0], Z in [-6.0, +6.0]
+    (SPEC-09 §4.2 / ADR-02), parked on a deterministic 4-column grid so the
+    staging layout is stable across snapshot refreshes. The pod's geometry
+    records the staging track X for the client's tractor-beam wiring.
+    """
+    geometry = pod.pod_geometry if pod.pod_geometry is not None else assign_pod_geometry(pod)
+    col = index % PENDING_HOVER_COLS
+    row = index // PENDING_HOVER_COLS
+    x = _clamp(
+        PENDING_HOVER_X_MIN + col * PENDING_HOVER_SPACING,
+        PENDING_HOVER_X_MIN,
+        PENDING_HOVER_X_MAX,
+    )
+    z = _clamp(
+        PENDING_HOVER_Z_MIN + (row % 7) * PENDING_HOVER_SPACING,
+        PENDING_HOVER_Z_MIN,
+        PENDING_HOVER_Z_MAX,
+    )
+    pod.spatial.x = round(x, 3)
+    pod.spatial.y = PENDING_HOVER_Y
+    pod.spatial.z = round(z, 3)
+    geometry.staging_track_x = round(x, 3)
+    return (pod.spatial.x, pod.spatial.y, pod.spatial.z)
+
+
+def ghost_node_positions(count: int) -> List[Tuple[float, float, float]]:
+    """Dock holographic Karpenter ghost-node chassis on Sub-Level B1.
+
+    Returns ``count`` positions at Y = -2.5 docked left-to-right along X with
+    GHOST_CHASSIS_SPACING_X spacing, clamped to the B1 domain
+    X in [-10.0, +10.0], Z in [-4.0, +4.0] (SPEC-09 §4.2).
+    """
+    if count <= 0:
+        return []
+    span = GHOST_CHASSIS_SPACING_X * count
+    start = -span / 2.0 + GHOST_CHASSIS_SPACING_X / 2.0
+    positions: List[Tuple[float, float, float]] = []
+    for i in range(count):
+        x = _clamp(start + i * GHOST_CHASSIS_SPACING_X, GHOST_NODE_X_MIN, GHOST_NODE_X_MAX)
+        positions.append((round(x, 2), GHOST_NODE_Y, 0.0))
+    return positions
+
+
+def karpenter_tractor_beam(
+    pod_position: Tuple[float, float, float],
+    ghost_position: Tuple[float, float, float],
+    bottom_y: Optional[float] = None,
+) -> Dict[str, object]:
+    """Endpoints of the luminous amber Karpenter provisioning tractor beam.
+
+    The beam projects from a pending pod hovering over the staging tarmac
+    (top) down into the ghost-node chassis on Sub-Level B1 (bottom). The top
+    anchors exactly on the pod's hover position; the bottom snaps to the
+    ghost's X/Z footprint at the B1 stratum elevation (Y = -2.5 unless
+    overridden), so client renderers always draw a beam terminating on the
+    chassis (SPEC-09 §4.2).
+    """
+    top = (
+        round(float(pod_position[0]), 3),
+        round(float(pod_position[1]), 3),
+        round(float(pod_position[2]), 3),
+    )
+    bottom = (
+        round(float(ghost_position[0]), 3),
+        round(float(bottom_y if bottom_y is not None else ghost_position[1]), 3),
+        round(float(ghost_position[2]), 3),
+    )
+    return {
+        "top": top,
+        "bottom": bottom,
+        "span_y": round(top[1] - bottom[1], 3),
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -304,6 +423,16 @@ def apply_spatial_layout(nodes: List[NodeComponent]) -> List[NodeComponent]:
         name_lower = n.name.lower()
         kind_lower = n.kind.lower()
 
+        # SPEC-09 §4.2 / ADR-02 (TASK-CV-1003): a PodScheduled=False pod is a
+        # pending pod first and a framework member second — divert it before
+        # name-based framework/deck categorization so it lands on the staging
+        # yard hover band instead of the tower interior.
+        n_metrics = n.metrics or {}
+        n_pending = bool(n_metrics.get("pending", False)) or n_metrics.get("scheduled", True) is False
+        if n_pending and kind_lower != "node" and not _is_daemonset(n):
+            workload_pods.append(n)
+            continue
+
         if "client" in name_lower or "kubectl" in name_lower or kind_lower == "client":
             clients.append(n)
         elif "aggregator" in name_lower or "ingress" in name_lower or kind_lower in ("ingress", "apiaggregator"):
@@ -452,10 +581,20 @@ def apply_spatial_layout(nodes: List[NodeComponent]) -> List[NodeComponent]:
     # In chassis i, position pods in front slots at Z = 0.2 and Z = 1.2, with X staggered
     
     pod_slots_per_chassis: Dict[int, int] = {i: 0 for i in range(N)}
-    
+    staged_pending_count = 0
+
     for i, pod in enumerate(workload_pods):
         chassis_idx = i % N
         slot_count = pod_slots_per_chassis[chassis_idx]
+
+        # SPEC-09 §4.2 / ADR-02 (TASK-CV-1003): pods with PodScheduled=False
+        # never reach the worker deck — they hover in the exterior staging
+        # yard at Y = 1.0 awaiting admission / Karpenter provisioning.
+        geometry = assign_pod_geometry(pod)
+        if geometry.is_pending:
+            stage_pending_pod(pod, staged_pending_count)
+            staged_pending_count += 1
+            continue
         
         # Determine slot position within the chassis
         # Slots: 
@@ -504,10 +643,14 @@ def apply_spatial_layout(nodes: List[NodeComponent]) -> List[NodeComponent]:
         pod_slots_per_chassis[chassis_idx] += 1
 
     # SPEC-09: any pod-like component that bypassed the worker-deck pod loop
-    # (e.g. framework-layer Pods) still receives proportional dimensions.
+    # (e.g. framework-layer Pods) still receives proportional dimensions,
+    # and pending ones are routed to the exterior staging yard (ADR-02).
     for n in nodes:
         if n.pod_geometry is None and (n.layer == "workload" or n.kind.lower() == "pod"):
-            assign_pod_geometry(n)
+            swept = assign_pod_geometry(n)
+            if swept.is_pending:
+                stage_pending_pod(n, staged_pending_count)
+                staged_pending_count += 1
 
     return nodes
 

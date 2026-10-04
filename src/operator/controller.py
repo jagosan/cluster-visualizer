@@ -11,6 +11,7 @@ from src.ingestion.models import (
     ClusterGraph,
     ClusterMetadata,
     DataFlowEdge,
+    KarpenterNodeClaim,
     MachineShape,
     NodeComponent,
     RemoteServiceResource,
@@ -20,12 +21,15 @@ from src.ingestion.layout import (
     CENTRAL_RISER_X,
     CENTRAL_RISER_Z,
     POD_X_STAGGER,
+    STAGING_YARD_FOCUS_X,
     SUPERVISOR_FLOOR_Y,
     apply_spatial_layout,
     apply_subterranean_layout,
     generate_skyscraper_edges,
+    ghost_node_positions,
     hpa_lateral_path,
     hpa_scale_out_delta,
+    karpenter_tractor_beam,
     parse_resource_quantity,
     vpa_morph_dimensions,
 )
@@ -42,6 +46,8 @@ class TopologyController:
         self.edges: List[DataFlowEdge] = []
         self.subterranean_resources: Dict[str, RemoteServiceResource] = {}
         self.machine_shapes: Dict[str, MachineShape] = {}
+        # SPEC-09 §4.2: Karpenter NodeClaims -> Sub-Level B1 ghost chassis
+        self.karpenter_node_claims: Dict[str, KarpenterNodeClaim] = {}
         self.listeners: List[queue.Queue] = []
         self.lock = threading.RLock()
         self.running = False
@@ -94,6 +100,7 @@ class TopologyController:
                 edges=self.edges,
                 subterranean_resources=list(self.subterranean_resources.values()),
                 machine_shapes=list(self.machine_shapes.values()),
+                karpenter_node_claims=list(self.karpenter_node_claims.values()),
             )
             return graph.model_dump()
 
@@ -189,6 +196,62 @@ class TopologyController:
                 })
             elif event_name == "autoscaling_updated":
                 self._apply_autoscaling_update(payload, ts)
+            elif event_name == "karpenter_claim_updated":
+                self._apply_karpenter_claim_update(payload, ts)
+
+    # -----------------------------------------------------------------
+    # SPEC-09 §4.2 / ADR-02 (TASK-CV-1003): Karpenter NodeClaim events
+    # -----------------------------------------------------------------
+
+    def _apply_karpenter_claim_update(self, payload: dict, ts: str) -> None:
+        """Register/refresh a Karpenter NodeClaim and fan out staging events.
+
+        Emits:
+        - ``karpenter_claim_updated``  -> claim snapshot + ghost-chassis dock
+          position on Sub-Level B1 (Y = -2.5)
+        - ``karpenter_tractor_beam``   -> per pending pod, amber beam
+          endpoints from the staging-yard hover position down to the ghost
+          chassis (SPEC-09 §4.2)
+        """
+        raw = payload.get("claim", payload.get("node_claim"))
+        if raw is None:
+            return
+        claim = raw if isinstance(raw, KarpenterNodeClaim) else KarpenterNodeClaim(**raw)
+        self.karpenter_node_claims[claim.claim_name] = claim
+
+        # Dock this claim's ghost chassis on Sub-Level B1 alongside the
+        # already-provisioned claims.
+        names = sorted(self.karpenter_node_claims.keys())
+        idx = names.index(claim.claim_name)
+        dock = ghost_node_positions(len(names))[idx]
+
+        # Staging focus anchor + tractor beams for every pending pod this
+        # claim is provisioning compute for.
+        beams = []
+        for uid in claim.pending_pod_uids:
+            pod = self.nodes.get(uid)
+            if pod is None:
+                continue
+            if pod.pod_geometry is not None:
+                pod.pod_geometry.karpenter_target_node_claim = claim.claim_name
+            beams.append({
+                "node_id": uid,
+                "claim_name": claim.claim_name,
+                "beam": karpenter_tractor_beam(
+                    (pod.spatial.x, pod.spatial.y, pod.spatial.z), dock
+                ),
+            })
+
+        self.broadcast_event("karpenter_claim_updated", {
+            "claim": claim.model_dump(),
+            "ghost_position": {"x": dock[0], "y": dock[1], "z": dock[2]},
+            "staging_focus_x": STAGING_YARD_FOCUS_X,
+            "timestamp": ts,
+        })
+        for beam in beams:
+            self.broadcast_event("karpenter_tractor_beam", {
+                **beam, "timestamp": ts,
+            })
 
     # -----------------------------------------------------------------
     # SPEC-09 §3.2 / §3.3: VPA morph + HPA lateral dispatch events
@@ -386,6 +449,46 @@ class TopologyController:
                 desired_replicas=2,
                 target_metric="cpu: 70%",
             )
+
+        # SPEC-09 §4.1/§4.2: seed the exterior staging yard — two pending
+        # pods hovering over the tarmac with a Karpenter NodeClaim ghost
+        # chassis provisioning on Sub-Level B1.
+        pending_ray = NodeComponent(
+            id="mock/ray-train-7f8c-pending",
+            layer="workload",
+            kind="Pod",
+            name="ray-train-7f8c",
+            namespace="batch-ai",
+            version="v2.9.0",
+            status="Pending",
+            metrics={
+                "cpu_request_cores": 8.0,
+                "memory_request_gib": 32.0,
+                "scheduled": False,
+                "karpenter_target_node_claim": "karpenter-general-9x2k",
+            },
+        )
+        pending_cache = NodeComponent(
+            id="mock/cache-warm-4d1a-pending",
+            layer="workload",
+            kind="Pod",
+            name="cache-warm-4d1a",
+            namespace="default",
+            version="v7.2.0",
+            status="Pending",
+            metrics={"pending": True},
+        )
+        self.nodes[pending_ray.id] = pending_ray
+        self.nodes[pending_cache.id] = pending_cache
+        self.karpenter_node_claims["karpenter-general-9x2k"] = KarpenterNodeClaim(
+            claim_name="karpenter-general-9x2k",
+            namespace="default",
+            nodepool="general-pool",
+            instance_type="c3-standard-8",
+            requested_cpu_cores=8.0,
+            requested_memory_gib=32.0,
+            pending_pod_uids=[pending_ray.id],
+        )
 
     def _run_mock_loop(self, interval: float) -> None:
         counter = 0
