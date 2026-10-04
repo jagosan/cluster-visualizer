@@ -21,6 +21,8 @@
 - docs/architecture/08-subterranean-dependencies-and-compute-classes.md: Blueprint for subterranean foundation tiers (B1-B3), Karpenter machine shapes, GCP KCC & kro managed cloud vaults, and plunge latency conduits.
 - `specs/09-pod-autoscaling-morphing-and-kueue-staging.md`: Master specification for proportional pod capsule sizing, VPA in-place morphing, HPA lateral replication, and the external Kueue gang-scheduling staging yard.
 - `docs/architecture/09-pod-autoscaling-morphing-and-kueue-staging.md`: Architectural blueprint for proportional capsules, VPA morphing, staging yard tarmac, and Kueue gang containers.
+- `specs/10-interactive-ui-cluster-onboarding-sample-catalog-and-autoscaling-traffic-harness.md`: Master specification for interactive UI cluster onboarding, Helm install generator, instant simulated sample catalog, and autoscaling traffic simulation test harness.
+- `docs/architecture/10-interactive-ui-cluster-onboarding-sample-catalog-and-autoscaling-traffic-harness.md`: Architectural blueprint for UI onboarding modals, sample catalog fixtures, discrete-event queuing simulation, and comparative scheduling latency dynamics.
 - `docs/MAP.md`: This symbol and directory reference map.
 
 ## 3D Asset Pipeline (Blender `bpy`)
@@ -89,3 +91,8 @@
 - `src/ui/mode_toggle.ts`: HUD control for switching and tweening layout modes (`Skyscraper ⇄ Latency Field`).
 - `src/ui/cluster_federation.ts`: Multi-cluster session store and client-side aggregator across SSE endpoints.
 - `src/ui/auth_modal.ts`: Bearer token and OIDC authentication modal dialog.
+- `src/ui/cluster_onboarding.ts`: SPEC-10 onboarding modal dialog for live Helm clusters and client-side connect.
+- `src/ui/sample_catalog.ts`: SPEC-10 pre-packaged sample cluster registry for zero-delay instant loading.
+- `src/scene/traffic_simulator.ts`: SPEC-10 discrete-event M/M/c/K queuing, autoscaling, and scheduling latency skew engine.
+- `src/ui/traffic_deck.ts`: SPEC-10 bottom-docked translucent HUD traffic control deck.
+- `src/ingestion/client_extractor.ts`: SPEC-10 in-browser Kubernetes API resource graph extractor.
