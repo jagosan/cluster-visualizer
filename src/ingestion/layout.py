@@ -13,7 +13,7 @@ SPEC-03 Update:
 from __future__ import annotations
 import math
 from typing import Dict, List, Optional, Tuple
-from .models import NodeComponent, DataFlowEdge, MachineShape, RemoteServiceResource, ManagedServiceCategory, PodGeometrySpec
+from .models import NodeComponent, DataFlowEdge, MachineShape, RemoteServiceResource, ManagedServiceCategory, PodGeometrySpec, KueueWorkloadStatus
 
 # Vertical elevation tiers per skyscraper layer (SPEC-03)
 ELEVATION_TIERS: Dict[str, float] = {
@@ -244,6 +244,241 @@ def karpenter_tractor_beam(
 
 
 # ---------------------------------------------------------------------------
+# SPEC-09 §5.2 / §5.3 (ADR-03, TASK-CV-1004): Kueue gang cargo pallets
+# ---------------------------------------------------------------------------
+
+# Modular cargo containment frame domain (docs/architecture/09 §2.1).
+KUEUE_PALLET_X_MIN = -21.0
+KUEUE_PALLET_X_MAX = -15.0
+KUEUE_PALLET_Y_MIN = 0.4
+KUEUE_PALLET_Y_MAX = 1.8
+KUEUE_PALLET_Z_MIN = -6.0
+KUEUE_PALLET_Z_MAX = 6.0
+
+# Staging-track rail centerline the pallets dock along (also the mag-rail
+# transit start X — SPEC-09 §5.3 "Admitted" row, transit from X = -18).
+KUEUE_PALLET_RAIL_X = -18.0
+# Row pitch: successive pallets dock along Z along the rail.
+KUEUE_PALLET_ROW_SPACING_Z = 5.6
+
+# Structured grid slot packing inside the containment frame.
+KUEUE_GRID_COLS = 4
+KUEUE_SLOT_SPACING_X = 1.3
+KUEUE_SLOT_SPACING_Z = 1.5
+# Constituent pods ride at hover height inside the frame (Y = 1.0 sits
+# inside the pallet volume Y in [0.4, 1.8] and matches the staging hover).
+KUEUE_SLOT_Y = 1.0
+KUEUE_FRAME_HEIGHT = KUEUE_PALLET_Y_MAX - KUEUE_PALLET_Y_MIN  # 1.4
+KUEUE_FRAME_MARGIN = 0.6
+
+# High-speed mag-rail intake (SPEC-09 §2.1 / §5.3): admitted pallets glide
+# from the staging rail (X = -18) into the tower intake bay (X = -8).
+MAGRAIL_INTAKE_X = -8.0
+MAGRAIL_INTAKE_Y = 1.2
+MAGRAIL_INTAKE_Z = 0.0
+MAGRAIL_TRANSIT_DURATION_MS = 2600
+GANG_DEPLOY_BURST_MS = 900
+
+# Canonical tween durations consumed by the Kueue client pipelines.
+KUEUE_RESERVE_LOCK_MS = 800
+
+
+def kueue_pallet_dimensions(pod_count: int) -> Tuple[float, float, float]:
+    """Bounding-frame dimensions (width X, height Y, depth Z) for a gang.
+
+    Slots pack in a ``KUEUE_GRID_COLS``-column grid; the industrial frame is
+    sized to the grid plus a structural margin, clamped inside the freight
+    pallet domain (SPEC-09 §5.2 / docs/architecture/09 §2.1).
+    """
+    count = max(int(pod_count), 1)
+    rows = (count + KUEUE_GRID_COLS - 1) // KUEUE_GRID_COLS
+    cols = min(KUEUE_GRID_COLS, count)
+    width = _clamp(
+        cols * KUEUE_SLOT_SPACING_X + KUEUE_FRAME_MARGIN,
+        KUEUE_SLOT_SPACING_X + KUEUE_FRAME_MARGIN,
+        KUEUE_PALLET_X_MAX - KUEUE_PALLET_X_MIN,  # 6.0
+    )
+    depth = _clamp(
+        rows * KUEUE_SLOT_SPACING_Z + KUEUE_FRAME_MARGIN,
+        KUEUE_SLOT_SPACING_Z + KUEUE_FRAME_MARGIN,
+        KUEUE_PALLET_Z_MAX - KUEUE_PALLET_Z_MIN,  # 12.0
+    )
+    return (round(width, 3), round(KUEUE_FRAME_HEIGHT, 3), round(depth, 3))
+
+
+def kueue_pallet_anchor(index: int) -> Tuple[float, float, float]:
+    """Dock the ``index``-th cargo pallet on the staging-track rail.
+
+    Pallets center-line on X = -18.0 (the rail / transit start anchor) and
+    step along Z with KUEUE_PALLET_ROW_SPACING_Z, clamped inside the freight
+    domain (SPEC-09 §5.3).
+    """
+    z = _clamp(
+        KUEUE_PALLET_Z_MAX - 2.8 - index * KUEUE_PALLET_ROW_SPACING_Z,
+        KUEUE_PALLET_Z_MIN,
+        KUEUE_PALLET_Z_MAX,
+    )
+    y = (KUEUE_PALLET_Y_MIN + KUEUE_PALLET_Y_MAX) / 2.0  # 1.1
+    return (KUEUE_PALLET_RAIL_X, y, round(z, 3))
+
+
+def pack_kueue_workload(
+    workload: object,
+    pods: List[NodeComponent],
+    anchor: Optional[Tuple[float, float, float]] = None,
+) -> Dict[str, object]:
+    """Route a Kueue Workload's constituent pods into structured pallet slots.
+
+    Every pod belonging to the Workload CRD is parked inside the cargo
+    containment bounding volume on the staging-track rail (ADR-03): a
+    deterministic column-major grid at Y = 1.0 inside
+    ``X in [-21, -15], Y in [0.4, 1.8], Z in [-6, +6]``. Queued /
+    inadmissible pods carry ``is_pending`` geometry so the client renders
+    them inside the frame under cold-blue standby lighting; admitted
+    workloads keep their geometry live (the client animates the mag-rail
+    transit and gang-deployment burst before the next snapshot lands).
+
+    Mutates each pod's ``spatial`` + ``pod_geometry`` and returns the pallet
+    wire payload ``{anchor, width, height, depth, slots}`` where ``slots``
+    maps pod uid -> [x, y, z].
+    """
+    pallet_x, pallet_y, pallet_z = anchor if anchor is not None else kueue_pallet_anchor(0)
+    width, height, depth = kueue_pallet_dimensions(len(pods))
+    # Keep the whole frame inside the freight Z domain.
+    pallet_z = _clamp(pallet_z, KUEUE_PALLET_Z_MIN + depth / 2.0, KUEUE_PALLET_Z_MAX - depth / 2.0)
+
+    rows = (max(len(pods), 1) + KUEUE_GRID_COLS - 1) // KUEUE_GRID_COLS
+    admitted = bool(getattr(workload, "is_admitted", False))
+    workload_uid = str(getattr(workload, "workload_uid", "")) or None
+    slots: Dict[str, List[float]] = {}
+    for i, pod in enumerate(pods):
+        col = i % KUEUE_GRID_COLS
+        row = i // KUEUE_GRID_COLS
+        cols_in_row = min(
+            KUEUE_GRID_COLS,
+            max(len(pods) - row * KUEUE_GRID_COLS, 1),
+        )
+        x = pallet_x + (col - (cols_in_row - 1) / 2.0) * KUEUE_SLOT_SPACING_X
+        z = pallet_z + (row - (rows - 1) / 2.0) * KUEUE_SLOT_SPACING_Z
+        x = round(_clamp(x, KUEUE_PALLET_X_MIN, KUEUE_PALLET_X_MAX), 3)
+        z = round(_clamp(z, KUEUE_PALLET_Z_MIN, KUEUE_PALLET_Z_MAX), 3)
+
+        geometry = pod.pod_geometry if pod.pod_geometry is not None else assign_pod_geometry(pod)
+        pod.spatial.x = x
+        pod.spatial.y = KUEUE_SLOT_Y
+        pod.spatial.z = z
+        pod.spatial.asset_type = ""
+        geometry.is_pending = not admitted
+        geometry.staging_track_x = x
+        geometry.kueue_workload = workload_uid
+        slots[pod.id] = [x, KUEUE_SLOT_Y, z]
+
+    return {
+        "anchor": [round(pallet_x, 3), round(pallet_y, 3), round(pallet_z, 3)],
+        "width": width,
+        "height": height,
+        "depth": depth,
+        "slots": slots,
+    }
+
+
+def sum_kueue_quota(pods: List[NodeComponent]) -> Tuple[float, float, int]:
+    """Sum required quota (vCPU cores, RAM GiB, GPU count) over gang pods."""
+    cpu = mem = 0.0
+    gpus = 0
+    for pod in pods:
+        c, m = extract_pod_requests(pod.metrics or {})
+        cpu += c
+        mem += m
+        raw_gpu = (pod.metrics or {}).get("gpu_request", (pod.metrics or {}).get("gpu_count"))
+        try:
+            gpus += int(raw_gpu) if raw_gpu is not None else 0
+        except (TypeError, ValueError):
+            pass
+    return (round(cpu, 3), round(mem, 3), gpus)
+
+
+def kueue_magrail_path(
+    anchor: Tuple[float, float, float],
+) -> Dict[str, List[float]]:
+    """Endpoints of the high-speed mag-rail transit (SPEC-09 §5.3).
+
+    The admitted pallet accelerates from its staging-rail anchor (X = -18)
+    into the tower intake bay (X = -8.0, Y = 1.2, Z = 0.0).
+    """
+    return {
+        "from": [round(float(anchor[0]), 3), round(float(anchor[1]), 3), round(float(anchor[2]), 3)],
+        "to": [MAGRAIL_INTAKE_X, MAGRAIL_INTAKE_Y, MAGRAIL_INTAKE_Z],
+    }
+
+
+def gang_deployment_targets(count: int) -> List[Tuple[float, float, float]]:
+    """Worker-deck target slots for a coordinated gang-deployment burst.
+
+    All constituent pods deploy simultaneously onto the worker deck
+    (Y = 0.75, X in [-9.6, +9.6], front / back pod rows alternating) so the
+    whole gang lands in a single coordinated burst (SPEC-09 §5.3).
+    """
+    targets: List[Tuple[float, float, float]] = []
+    for i in range(max(int(count), 0)):
+        if count == 1:
+            x = 0.0
+        else:
+            x = -9.6 + (19.2 * i) / (count - 1)
+        z = POD_Z_FRONT if i % 2 == 0 else POD_Z_BACK
+        targets.append((round(_clamp(x, -10.0, 10.0), 3), POD_Y, z))
+    return targets
+
+
+def quota_deficit_reason(workload: object) -> Optional[str]:
+    """Human-readable quota-deficit indicator for an inadmissible workload.
+
+    Kueue reports quota shortfalls through ``admission_checks`` entries of
+    type ``QuotaCheck`` / ``Capacity``; the staging HUD overlays this reason
+    on the pallet under cold-blue standby lighting (SPEC-09 §5.3).
+    """
+    if getattr(workload, "is_admitted", False):
+        return None
+    for check in list(getattr(workload, "admission_checks", []) or []):
+        if not isinstance(check, dict):
+            continue
+        ctype = str(check.get("type", "")).lower()
+        status = str(check.get("status", "")).lower()
+        if status in ("false", "failed", "inadmissible") and "quota" in ctype:
+            return str(check.get("reason") or "QuotaExceeded")
+    for check in list(getattr(workload, "admission_checks", []) or []):
+        if isinstance(check, dict) and str(check.get("status", "")).lower() in ("false", "failed"):
+            return str(check.get("reason") or check.get("type") or "Inadmissible")
+    if str(getattr(workload, "phase", "")) == "Inadmissible" and not getattr(workload, "is_admitted", False):
+        return "QuotaExceeded"
+    return None
+
+
+def kueue_hud_summary(workload: object) -> Dict[str, object]:
+    """Holographic HUD badge payload for a cargo pallet (SPEC-09 §5.2).
+
+    Carries the Workload name, LocalQueue, constituent pod count
+    (``X/Y Pods``), and required quota (vCPU / RAM GiB / GPUs) plus the
+    quota-deficit indicator when the workload is queued / inadmissible.
+    """
+    pod_count = len(list(getattr(workload, "pod_uids", []) or []))
+    deficit = quota_deficit_reason(workload)
+    return {
+        "workload_name": str(getattr(workload, "workload_name", "")),
+        "local_queue": str(getattr(workload, "local_queue", "")),
+        "cluster_queue": str(getattr(workload, "cluster_queue", "")),
+        "pod_count": pod_count,
+        "pod_count_label": f"{pod_count}/{pod_count} Pods",
+        "cpu": float(getattr(workload, "total_cpu_requested", 0.0)),
+        "memory_gib": float(getattr(workload, "total_memory_gib_requested", 0.0)),
+        "gpus": int(getattr(workload, "total_gpu_requested", 0)),
+        "phase": str(getattr(workload, "phase", "Admissible")),
+        "is_admitted": bool(getattr(workload, "is_admitted", False)),
+        "quota_deficit": deficit,
+    }
+
+
+# ---------------------------------------------------------------------------
 # SPEC-09 §3.2 / §3.3: VPA morph & HPA lateral dynamics math
 # ---------------------------------------------------------------------------
 
@@ -403,8 +638,19 @@ def _is_daemonset(node: NodeComponent) -> bool:
     return False
 
 
-def apply_spatial_layout(nodes: List[NodeComponent]) -> List[NodeComponent]:
-    """Calculate and assign (X, Y, Z) spatial positions and asset_type to all nodes."""
+def apply_spatial_layout(
+    nodes: List[NodeComponent],
+    kueue_workloads: Optional[List[KueueWorkloadStatus]] = None,
+) -> List[NodeComponent]:
+    """Calculate and assign (X, Y, Z) spatial positions and asset_type to all nodes.
+
+    SPEC-09 §5.2 / ADR-03 (TASK-CV-1004): when ``kueue_workloads`` is
+    supplied, every pod that is a constituent of a Kueue ``Workload`` CRD is
+    grouped into its cargo containment pallet — structured grid slots inside
+    the freight bounding volume on the staging-track rail — before the
+    generic pending-pod hover routing runs. Unaffiliated pending pods keep
+    the SPEC-09 §4.2 hover band behaviour.
+    """
     clients: List[NodeComponent] = []
     aggregations: List[NodeComponent] = []
     apiservers: List[NodeComponent] = []
@@ -418,8 +664,44 @@ def apply_spatial_layout(nodes: List[NodeComponent]) -> List[NodeComponent]:
     daemonsets: List[NodeComponent] = []
     workload_pods: List[NodeComponent] = []
 
+    # SPEC-09 §5.2 / ADR-03 (TASK-CV-1004): group Kueue Workload constituents
+    # into cargo containment pallets on the staging-track rail BEFORE generic
+    # categorization so gang pods never scatter onto the hover band or deck.
+    # Admitted workloads have already completed their gang-deployment burst —
+    # their pods land on worker-deck targets instead of staying in the frame.
+    pallet_pod_ids: set = set()
+    if kueue_workloads:
+        by_id = {n.id: n for n in nodes}
+        ordered = sorted(kueue_workloads, key=lambda w: str(getattr(w, "workload_name", "")))
+        for slot_index, workload in enumerate(ordered):
+            member_uids = [str(u) for u in (getattr(workload, "pod_uids", []) or [])]
+            members = [by_id[u] for u in member_uids if u in by_id]
+            if not members:
+                continue
+            workload_uid = str(getattr(workload, "workload_uid", "")) or None
+            if getattr(workload, "is_admitted", False):
+                targets = gang_deployment_targets(len(members))
+                for pod, (x, y, z) in zip(members, targets):
+                    geometry = (
+                        pod.pod_geometry
+                        if pod.pod_geometry is not None
+                        else assign_pod_geometry(pod)
+                    )
+                    pod.spatial.x = x
+                    pod.spatial.y = y
+                    pod.spatial.z = z
+                    geometry.is_pending = False
+                    geometry.staging_track_x = None
+                    geometry.kueue_workload = workload_uid
+            else:
+                pack_kueue_workload(workload, members, kueue_pallet_anchor(slot_index))
+            pallet_pod_ids.update(m.id for m in members)
+
     # Categorize nodes
     for n in nodes:
+        # SPEC-09 / ADR-03: palletized gang pods already hold their slots.
+        if n.id in pallet_pod_ids:
+            continue
         name_lower = n.name.lower()
         kind_lower = n.kind.lower()
 

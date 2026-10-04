@@ -96,6 +96,9 @@ class PodGeometrySpec(BaseModel):
     is_pending: bool = False
     staging_track_x: Optional[float] = None
     karpenter_target_node_claim: Optional[str] = None
+    # SPEC-09 §5.2 (ADR-03): workload_uid of the Kueue Workload whose cargo
+    # pallet encloses this pod, when gang-packed on the staging-track rail.
+    kueue_workload: Optional[str] = None
 
 
 class NodeComponent(BaseModel):

@@ -12,6 +12,7 @@ from src.ingestion.models import (
     ClusterMetadata,
     DataFlowEdge,
     KarpenterNodeClaim,
+    KueueWorkloadStatus,
     MachineShape,
     NodeComponent,
     RemoteServiceResource,
@@ -20,17 +21,27 @@ from src.ingestion.frameworks import enrich_framework_components
 from src.ingestion.layout import (
     CENTRAL_RISER_X,
     CENTRAL_RISER_Z,
+    GANG_DEPLOY_BURST_MS,
+    KUEUE_RESERVE_LOCK_MS,
+    MAGRAIL_TRANSIT_DURATION_MS,
     POD_X_STAGGER,
     STAGING_YARD_FOCUS_X,
     SUPERVISOR_FLOOR_Y,
     apply_spatial_layout,
     apply_subterranean_layout,
+    gang_deployment_targets,
     generate_skyscraper_edges,
     ghost_node_positions,
     hpa_lateral_path,
     hpa_scale_out_delta,
     karpenter_tractor_beam,
+    kueue_hud_summary,
+    kueue_magrail_path,
+    kueue_pallet_anchor,
+    pack_kueue_workload,
     parse_resource_quantity,
+    quota_deficit_reason,
+    sum_kueue_quota,
     vpa_morph_dimensions,
 )
 from src.ingestion.exporter import generate_mock_cluster_graph
@@ -48,6 +59,8 @@ class TopologyController:
         self.machine_shapes: Dict[str, MachineShape] = {}
         # SPEC-09 §4.2: Karpenter NodeClaims -> Sub-Level B1 ghost chassis
         self.karpenter_node_claims: Dict[str, KarpenterNodeClaim] = {}
+        # SPEC-09 §5.1-§5.3: Kueue Workload CRDs -> cargo containment pallets
+        self.kueue_workloads: Dict[str, KueueWorkloadStatus] = {}
         self.listeners: List[queue.Queue] = []
         self.lock = threading.RLock()
         self.running = False
@@ -76,7 +89,7 @@ class TopologyController:
                 self._seed_mock_data()
             nodes_list = list(self.nodes.values())
             nodes_list, edges_list = enrich_framework_components(nodes_list, list(self.edges))
-            nodes_list = apply_spatial_layout(nodes_list)
+            nodes_list = apply_spatial_layout(nodes_list, list(self.kueue_workloads.values()))
             self.edges = generate_skyscraper_edges(nodes_list)
             for n in nodes_list:
                 self.nodes[n.id] = n
@@ -101,6 +114,7 @@ class TopologyController:
                 subterranean_resources=list(self.subterranean_resources.values()),
                 machine_shapes=list(self.machine_shapes.values()),
                 karpenter_node_claims=list(self.karpenter_node_claims.values()),
+                kueue_workloads=list(self.kueue_workloads.values()),
             )
             return graph.model_dump()
 
@@ -113,7 +127,7 @@ class TopologyController:
                 self.nodes[node.id] = node
                 nodes_list = list(self.nodes.values())
                 nodes_list, _ = enrich_framework_components(nodes_list, list(self.edges))
-                nodes_list = apply_spatial_layout(nodes_list)
+                nodes_list = apply_spatial_layout(nodes_list, list(self.kueue_workloads.values()))
                 self.edges = generate_skyscraper_edges(nodes_list)
                 for n in nodes_list:
                     self.nodes[n.id] = n
@@ -124,7 +138,9 @@ class TopologyController:
                 if nid in self.nodes:
                     del self.nodes[nid]
                     nodes_list = list(self.nodes.values())
-                    nodes_list = apply_spatial_layout(nodes_list)
+                    nodes_list = apply_spatial_layout(
+                        nodes_list, list(self.kueue_workloads.values())
+                    )
                     self.edges = generate_skyscraper_edges(nodes_list)
                     for n in nodes_list:
                         self.nodes[n.id] = n
@@ -198,6 +214,143 @@ class TopologyController:
                 self._apply_autoscaling_update(payload, ts)
             elif event_name == "karpenter_claim_updated":
                 self._apply_karpenter_claim_update(payload, ts)
+            elif event_name == "kueue_workload_updated":
+                self._apply_kueue_workload_update(payload, ts)
+
+    # -----------------------------------------------------------------
+    # SPEC-09 §5.1-§5.3 / ADR-03 (TASK-CV-1004): Kueue gang workload events
+    # -----------------------------------------------------------------
+
+    def _kueue_pallet_index(self, workload_name: str) -> int:
+        """Dock index of a workload on the staging rail (sorted by name).
+
+        Mirrors the ordering apply_spatial_layout uses so the client's
+        pallet frames always land where the layout packed their pods.
+        """
+        names = sorted(
+            str(getattr(w, "workload_name", "")) for w in self.kueue_workloads.values()
+        )
+        try:
+            return names.index(workload_name)
+        except ValueError:
+            return 0
+
+    def _apply_kueue_workload_update(self, payload: dict, ts: str) -> None:
+        """Register/refresh a Kueue Workload and fan out staging events.
+
+        Constituent pods carried alongside the workload (``pods``) are
+        registered so the pallet can pack them. Emits:
+        - ``kueue_workload_updated`` -> workload snapshot + HUD badge +
+          pallet bounding volume + staging focus anchor
+        - ``kueue_quota_deficit``    -> quota shortfall indicator while the
+          workload sits queued / inadmissible (cold-blue standby)
+        - ``kueue_quota_reserved``   -> magnetic intake-rail engagement:
+          amber beacons spin, gantry cranes lock onto the frame
+        - ``kueue_admission_admitted`` -> high-speed mag-rail transit
+          endpoints (X = -18 rail -> X = -8 tower intake bay)
+        - ``kueue_gang_deployed``    -> coordinated simultaneous worker-deck
+          deployment targets for the frame disassembly burst
+        """
+        raw = payload.get("workload", payload.get("kueue_workload"))
+        if raw is None:
+            return
+        workload = (
+            raw if isinstance(raw, KueueWorkloadStatus) else KueueWorkloadStatus(**raw)
+        )
+
+        # Register any constituent pods the informer carries with the CRD.
+        for pod_raw in payload.get("pods", []) or []:
+            if isinstance(pod_raw, NodeComponent):
+                self.nodes[pod_raw.id] = pod_raw
+            elif isinstance(pod_raw, dict):
+                pod = NodeComponent(**pod_raw)
+                self.nodes[pod.id] = pod
+
+        previous = self.kueue_workloads.get(workload.workload_uid)
+        was_admitted = bool(previous.is_admitted) if previous is not None else False
+        self.kueue_workloads[workload.workload_uid] = workload
+
+        members = [
+            self.nodes[str(uid)]
+            for uid in workload.pod_uids
+            if str(uid) in self.nodes
+        ]
+        anchor = kueue_pallet_anchor(self._kueue_pallet_index(workload.workload_name))
+        pallet = pack_kueue_workload(workload, members, anchor) if members else None
+
+        # Quota bookkeeping: recompute from live members when available so
+        # the HUD always shows the summed gang request (SPEC-09 §5.2).
+        if members:
+            cpu, mem, gpus = sum_kueue_quota(members)
+            workload.total_cpu_requested = cpu
+            workload.total_memory_gib_requested = mem
+            workload.total_gpu_requested = gpus
+
+        hud = kueue_hud_summary(workload)
+        event_pallet = {
+            "anchor": pallet["anchor"] if pallet else list(anchor),
+            "width": pallet["width"] if pallet else 0.0,
+            "height": pallet["height"] if pallet else 0.0,
+            "depth": pallet["depth"] if pallet else 0.0,
+            "slots": pallet["slots"] if pallet else {},
+        }
+        self.broadcast_event("kueue_workload_updated", {
+            "workload": workload.model_dump(),
+            "hud": hud,
+            "pallet": event_pallet,
+            "staging_focus_x": STAGING_YARD_FOCUS_X,
+            "timestamp": ts,
+        })
+
+        # --- Queued / Inadmissible: quota deficit indicator ----------------
+        deficit = quota_deficit_reason(workload)
+        if deficit is not None and not workload.is_admitted:
+            self.broadcast_event("kueue_quota_deficit", {
+                "workload_uid": workload.workload_uid,
+                "workload_name": workload.workload_name,
+                "reason": deficit,
+                "required": {
+                    "cpu": workload.total_cpu_requested,
+                    "memory_gib": workload.total_memory_gib_requested,
+                    "gpus": workload.total_gpu_requested,
+                },
+                "anchor": event_pallet["anchor"],
+                "timestamp": ts,
+            })
+
+        # --- Quota Reserved: magnetic intake rail + gantry crane lock ------
+        if payload.get("quota_reserved") and not workload.is_admitted:
+            self.broadcast_event("kueue_quota_reserved", {
+                "workload_uid": workload.workload_uid,
+                "workload_name": workload.workload_name,
+                "anchor": event_pallet["anchor"],
+                "lock_duration_ms": KUEUE_RESERVE_LOCK_MS,
+                "timestamp": ts,
+            })
+
+        # --- Admitted: high-speed mag-rail transit --------------------------
+        if workload.is_admitted and (payload.get("force_admission") or not was_admitted):
+            self.broadcast_event("kueue_admission_admitted", {
+                "workload_uid": workload.workload_uid,
+                "workload_name": workload.workload_name,
+                "local_queue": workload.local_queue,
+                "cluster_queue": workload.cluster_queue,
+                "magrail": kueue_magrail_path(anchor),
+                "transit_duration_ms": MAGRAIL_TRANSIT_DURATION_MS,
+                "pod_uids": list(workload.pod_uids),
+                "timestamp": ts,
+            })
+            # --- Gang Deployment: frame disassembly coordinated burst ------
+            self.broadcast_event("kueue_gang_deployed", {
+                "workload_uid": workload.workload_uid,
+                "workload_name": workload.workload_name,
+                "pod_uids": list(workload.pod_uids),
+                "targets": [
+                    list(t) for t in gang_deployment_targets(len(workload.pod_uids))
+                ],
+                "burst_duration_ms": GANG_DEPLOY_BURST_MS,
+                "timestamp": ts,
+            })
 
     # -----------------------------------------------------------------
     # SPEC-09 §4.2 / ADR-02 (TASK-CV-1003): Karpenter NodeClaim events
@@ -293,7 +446,9 @@ class TopologyController:
                 node.metrics["cpu_request_cores"] = cpu
             if mem is not None:
                 node.metrics["memory_request_gib"] = mem
-            nodes_list = apply_spatial_layout(list(self.nodes.values()))
+            nodes_list = apply_spatial_layout(
+                list(self.nodes.values()), list(self.kueue_workloads.values())
+            )
             self.nodes = {n.id: n for n in nodes_list}
             resized = self.nodes.get(nid)
             if resized is not None:
@@ -490,6 +645,47 @@ class TopologyController:
             pending_pod_uids=[pending_ray.id],
         )
 
+        # SPEC-09 §5.2/§5.3: seed a Kueue gang so demo mode renders a cargo
+        # containment pallet — a queued RayCluster workload (cold-blue
+        # standby + quota deficit) whose admission the demo loop replays.
+        gang_pods: List[NodeComponent] = []
+        for i in range(4):
+            gang_pod = NodeComponent(
+                id=f"batch-ai/ray-finetune-{i}",
+                layer="workload",
+                kind="Pod",
+                name=f"ray-finetune-{i}",
+                namespace="batch-ai",
+                version="v2.9.0",
+                status="Pending",
+                metrics={
+                    "cpu_request_cores": 8.0,
+                    "memory_request_gib": 32.0,
+                    "gpu_request": 2 if i == 0 else 0,
+                    "scheduled": False,
+                },
+            )
+            self.nodes[gang_pod.id] = gang_pod
+            gang_pods.append(gang_pod)
+        self.kueue_workloads["wl-ray-finetune-0001"] = KueueWorkloadStatus(
+            workload_uid="wl-ray-finetune-0001",
+            workload_name="ray-finetune-job",
+            namespace="batch-ai",
+            local_queue="batch-ai",
+            cluster_queue="cluster-ml-bq",
+            is_admitted=False,
+            phase="Inadmissible",
+            admission_checks=[{
+                "type": "QuotaCheck",
+                "status": "False",
+                "reason": "QuotaExceeded: waiting for 64 vCPU / 256Gi in cohort ml-cohort",
+            }],
+            pod_uids=[p.id for p in gang_pods],
+            total_cpu_requested=32.0,
+            total_memory_gib_requested=128.0,
+            total_gpu_requested=2,
+        )
+
     def _run_mock_loop(self, interval: float) -> None:
         counter = 0
         while self.running:
@@ -540,6 +736,45 @@ class TopologyController:
                         "current_replicas": current,
                         "desired_replicas": current + 1,
                         "target_metric": "cpu: 70%",
+                    },
+                })
+
+            # SPEC-09 §5.3: replay the Kueue gang admission lifecycle
+            # (queued -> quota reserved -> admitted -> gang deployed) against
+            # the seeded ray-finetune workload roughly every 18 ticks so the
+            # demo exercises mag-rail transit + deployment burst end to end.
+            kueue_phase = counter % 18
+            if kueue_phase == 10:
+                self.inject_mutation("kueue_workload_updated", {
+                    "workload": {
+                        "workload_uid": "wl-ray-finetune-0001",
+                        "workload_name": "ray-finetune-job",
+                        "namespace": "batch-ai",
+                        "local_queue": "batch-ai",
+                        "cluster_queue": "cluster-ml-bq",
+                        "is_admitted": False,
+                        "phase": "Admissible",
+                        "pod_uids": [f"batch-ai/ray-finetune-{i}" for i in range(4)],
+                        "total_cpu_requested": 32.0,
+                        "total_memory_gib_requested": 128.0,
+                        "total_gpu_requested": 2,
+                    },
+                    "quota_reserved": True,
+                })
+            elif kueue_phase == 13:
+                self.inject_mutation("kueue_workload_updated", {
+                    "workload": {
+                        "workload_uid": "wl-ray-finetune-0001",
+                        "workload_name": "ray-finetune-job",
+                        "namespace": "batch-ai",
+                        "local_queue": "batch-ai",
+                        "cluster_queue": "cluster-ml-bq",
+                        "is_admitted": True,
+                        "phase": "Admitted",
+                        "pod_uids": [f"batch-ai/ray-finetune-{i}" for i in range(4)],
+                        "total_cpu_requested": 32.0,
+                        "total_memory_gib_requested": 128.0,
+                        "total_gpu_requested": 2,
                     },
                 })
 

@@ -29,6 +29,8 @@ export interface PodGeometryData {
   is_pending?: boolean;
   staging_track_x?: number | null;
   karpenter_target_node_claim?: string | null;
+  /** SPEC-09 §5.2 (ADR-03): workload_uid of the enclosing Kueue cargo pallet. */
+  kueue_workload?: string | null;
 }
 
 export interface PodNodeComponent {
