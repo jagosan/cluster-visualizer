@@ -13,6 +13,9 @@ import type { PlungeConduitSpec } from './plunge_conduits.js';
 import { FlankLabelManager } from './flank_labels.js';
 import { DiffCardManager } from './diff_card.js';
 import { LayoutTransitionController } from './layout_transition.js';
+// SPEC-09 / TASK-CV-1001: procedural proportional pod capsules (ADR-01).
+import { PodCapsuleManager } from './pod_capsules.js';
+import type { PodGeometryData } from './pod_capsules.js';
 
 export interface ClusterNodeData {
   id: string;
@@ -33,6 +36,24 @@ export interface ClusterNodeData {
   };
   diffStatus?: 'identical' | 'version_skew' | 'missing' | 'added';
   diffDetails?: string[];
+  // SPEC-09: proportional capsule dimensions computed by the ingestion layout.
+  pod_geometry?: PodGeometryData | null;
+}
+
+/**
+ * SPEC-09 §3: pod components render as procedural proportional capsules
+ * instead of cloning the static `Cuboid_Pod` GLB prototype.
+ */
+export function isPodComponent(node: ClusterNodeData): boolean {
+  const assetKey = node.spatial?.asset_type ?? '';
+  return (
+    assetKey === 'Cuboid_Pod' ||
+    assetKey === 'Pod_Cylinder' ||
+    assetKey === 'Module_PodCapsule' ||
+    assetKey === 'Database_Postgres' ||
+    assetKey === 'Cache_Redis' ||
+    (node.layer === 'workload' && node.kind === 'Pod')
+  );
 }
 
 export interface ClusterGraphData {
@@ -91,6 +112,8 @@ export class ClusterViewport {
   private subterraneanFocused = false;
   private assetPrototypes: Map<string, THREE.Object3D> = new Map();
   private nodeMeshes: Map<string, THREE.Object3D> = new Map();
+  // SPEC-09: shared capsule material cache + emissive pulse driver.
+  public podCapsuleManager = new PodCapsuleManager();
   private raycaster = new THREE.Raycaster();
   private mouse = new THREE.Vector2(-1000, -1000);
   public onNodeSelected?: (node: ClusterNodeData | null) => void;
@@ -210,6 +233,7 @@ export class ClusterViewport {
     this.layerTrayManager.clear();
     this.flankLabelManager.clear();
     this.vaultManager.clearBlastHighlight();
+    this.podCapsuleManager.clear(); // SPEC-09: drop stale capsule refs
     this.pulsingMaterials = []; // Reset animation refs
 
     // Determine cluster characteristics for tower trays and flank labels
@@ -239,23 +263,21 @@ export class ClusterViewport {
         node.diffDetails = d.diffDetails;
       }
 
-      let assetKey = node.spatial.asset_type;
-      if (
-        assetKey === 'Database_Postgres' ||
-        assetKey === 'Cache_Redis' ||
-        assetKey === 'Module_PodCapsule' ||
-        assetKey === 'Pod_Cylinder'
-      ) {
-        assetKey = 'Cuboid_Pod';
+      // SPEC-09 / TASK-CV-1001: pods are procedural proportional capsules
+      // (CapsuleGeometry sized from CPU/Memory requests) instead of clones
+      // of the static Cuboid_Pod prototype. Diff accents come from the
+      // capsule's own containment brackets, not applyDiffVisuals.
+      let instance: THREE.Object3D;
+      if (isPodComponent(node)) {
+        instance = this.podCapsuleManager.create(node, node.diffStatus);
+      } else {
+        const proto = this.assetPrototypes.get(node.spatial.asset_type) || this.createFallbackMesh(node);
+        instance = proto.clone(true);
+        // Apply diff color accent rectangular brackets / glow
+        this.applyDiffVisuals(instance, node.diffStatus);
       }
-
-      const proto = this.assetPrototypes.get(assetKey) || this.createFallbackMesh(node);
-      const instance = proto.clone(true);
       instance.position.set(node.spatial.x, node.spatial.y, node.spatial.z);
-      instance.userData = { nodeData: node };
-
-      // Apply diff color accent rectangular brackets / glow
-      this.applyDiffVisuals(instance, node.diffStatus);
+      instance.userData = { ...instance.userData, nodeData: node };
 
       this.scene.add(instance);
       this.nodeMeshes.set(node.id, instance);
@@ -446,26 +468,24 @@ export class ClusterViewport {
   }
 
   public addNode(node: ClusterNodeData): void {
-    let assetKey = node.spatial?.asset_type || 'Cuboid_Pod';
-    if (
-      assetKey === 'Database_Postgres' ||
-      assetKey === 'Cache_Redis' ||
-      assetKey === 'Module_PodCapsule' ||
-      assetKey === 'Pod_Cylinder'
-    ) {
-      assetKey = 'Cuboid_Pod';
+    // SPEC-09 / TASK-CV-1001 (handleTopologyMutation path): newly observed
+    // pods materialize as procedural proportional capsules.
+    let instance: THREE.Object3D;
+    if (isPodComponent(node)) {
+      instance = this.podCapsuleManager.create(node, 'added');
+    } else {
+      const proto =
+        this.assetPrototypes.get(node.spatial?.asset_type || 'Cuboid_Pod') ||
+        this.createFallbackMesh(node);
+      instance = proto.clone(true);
+      this.applyDiffVisuals(instance, 'added');
     }
-
-    const proto = this.assetPrototypes.get(assetKey) || this.createFallbackMesh(node);
-    const instance = proto.clone(true);
     const sx = node.spatial?.x ?? 0;
     const sy = node.spatial?.y ?? 0.75;
     const sz = node.spatial?.z ?? 0;
     instance.position.set(sx, sy, sz);
     instance.scale.set(0.1, 0.1, 0.1);
-    instance.userData = { nodeData: node };
-
-    this.applyDiffVisuals(instance, 'added');
+    instance.userData = { ...instance.userData, nodeData: node };
 
     this.scene.add(instance);
     this.nodeMeshes.set(node.id, instance);
@@ -484,6 +504,13 @@ export class ClusterViewport {
   public removeNode(nodeId: string): void {
     const mesh = this.nodeMeshes.get(nodeId);
     if (!mesh) return;
+
+    // SPEC-09: capsule materials are shared via the PodCapsuleManager cache;
+    // clone before applying the decay wireframe so siblings stay intact.
+    if (mesh.userData.podCapsule) {
+      this.podCapsuleManager.untrack(mesh);
+      this.isolatePodMaterials(mesh);
+    }
 
     mesh.traverse((child) => {
       if ((child as THREE.Mesh).isMesh) {
@@ -526,7 +553,48 @@ export class ClusterViewport {
     node.diffStatus = (status as any) || 'version_skew';
     node.diffDetails = diffDetails;
 
+    // SPEC-09: for proportional capsules, swap in a cloned material (and the
+    // capsule's own accent bracket) instead of mutating the shared material.
+    if (mesh.userData.podCapsule) {
+      this.isolatePodMaterials(mesh);
+      const bracket = new THREE.Group();
+      bracket.name = 'pod_skew_accent';
+      const stripeMat = new THREE.MeshBasicMaterial({ color: 0xfbbf24, transparent: true, opacity: 0.85 });
+      let h = (mesh.userData.podHeight as number | undefined) ?? 0;
+      if (!h) {
+        mesh.traverse((c) => {
+          const ph = c.userData.podHeight as number | undefined;
+          if (ph) h = ph;
+        });
+      }
+      const crown = h || 0.7;
+      for (let i = -1; i <= 1; i++) {
+        const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.02, 0.14), stripeMat);
+        stripe.position.set(i * 0.22, crown / 2 + 0.06, 0);
+        bracket.add(stripe);
+      }
+      mesh.add(bracket);
+      this.pulsingMaterials.push(stripeMat);
+      return;
+    }
+
     this.applyDiffVisuals(mesh, node.diffStatus);
+  }
+
+  /**
+   * SPEC-09: deep-clone shared capsule materials on a pod object so that
+   * per-node decay/diff mutations don't leak into the material cache.
+   */
+  private isolatePodMaterials(obj: THREE.Object3D): void {
+    obj.traverse((child) => {
+      const m = child as THREE.Mesh;
+      if (!m.isMesh) return;
+      if (Array.isArray(m.material)) {
+        m.material = m.material.map((mat) => mat.clone());
+      } else if (m.material) {
+        m.material = m.material.clone();
+      }
+    });
   }
 
   private applyDiffVisuals(mesh: THREE.Object3D, status?: string) {
@@ -897,6 +965,8 @@ export class ClusterViewport {
     this.controls.update();
     this.flowSystem.update(delta, speedMultiplier);
     this.layerTrayManager.update(delta, time);
+    // SPEC-09: proportional pod capsule emissive pulse/glow.
+    this.podCapsuleManager.update(time);
 
     // TASK-CV-904: animate vault rings / raceway particles and plunge flows.
     this.vaultManager.update(delta, time);

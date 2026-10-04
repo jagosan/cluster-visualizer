@@ -13,7 +13,7 @@ SPEC-03 Update:
 from __future__ import annotations
 import math
 from typing import Dict, List, Optional, Tuple
-from .models import NodeComponent, DataFlowEdge, MachineShape, RemoteServiceResource, ManagedServiceCategory
+from .models import NodeComponent, DataFlowEdge, MachineShape, RemoteServiceResource, ManagedServiceCategory, PodGeometrySpec
 
 # Vertical elevation tiers per skyscraper layer (SPEC-03)
 ELEVATION_TIERS: Dict[str, float] = {
@@ -57,6 +57,71 @@ POD_Z_FRONT = 0.2
 POD_Z_BACK = 1.2
 POD_X_STAGGER = 0.6
 POD_Y = 0.75
+
+# SPEC-09 §3.1: proportional pod capsule scaling clamps
+POD_HEIGHT_MIN = 0.40
+POD_HEIGHT_MAX = 2.60
+POD_RADIUS_MIN = 0.20
+POD_RADIUS_MAX = 0.90
+# Fallback resource requests when a snapshot carries no explicit requests
+POD_DEFAULT_CPU_CORES = 0.5
+POD_DEFAULT_MEMORY_GIB = 1.0
+
+
+def calculate_pod_dimensions(cpu_cores: float, memory_gib: float) -> Tuple[float, float]:
+    """Proportional pod capsule dimensions per SPEC-09 §3.1.
+
+        Height (Y) = clamp(0.40 + 0.35 * sqrt(vCPU),        0.40, 2.60)
+        Radius (R) = clamp(0.20 + 0.12 * log2(max(1, RAM)), 0.20, 0.90)
+
+    Returns (height, radius) rounded to 3 decimals.
+    """
+    cpu = max(float(cpu_cores), 0.0)
+    mem = max(float(memory_gib), 0.0)
+    height = min(POD_HEIGHT_MAX, max(POD_HEIGHT_MIN, 0.40 + 0.35 * math.sqrt(cpu)))
+    radius = min(POD_RADIUS_MAX, max(POD_RADIUS_MIN, 0.20 + 0.12 * math.log2(max(1.0, mem))))
+    return (round(height, 3), round(radius, 3))
+
+
+def extract_pod_requests(metrics: Dict[str, object]) -> Tuple[float, float]:
+    """Pull (cpu_cores, memory_gib) requests out of a component metrics dict.
+
+    Prefers explicit request keys (``cpu_request_cores`` /
+    ``memory_request_gib``), falls back to bare capacity keys
+    (``cpu_cores`` / ``memory_gib``), then to SPEC-09 ADR "Note to Future
+    Self" defaults (0.5 cores / 1.0 GiB) for pods without requests.
+    """
+    def _pick(*keys: str, default: float) -> float:
+        for key in keys:
+            raw = metrics.get(key)
+            if raw is None:
+                continue
+            try:
+                return float(raw)  # type: ignore[arg-type]
+            except (TypeError, ValueError):
+                continue
+        return default
+
+    cpu = _pick("cpu_request_cores", "cpu_cores", default=POD_DEFAULT_CPU_CORES)
+    mem = _pick("memory_request_gib", "memory_gib", default=POD_DEFAULT_MEMORY_GIB)
+    return (cpu, mem)
+
+
+def assign_pod_geometry(node: NodeComponent) -> PodGeometrySpec:
+    """Compute and attach a PodGeometrySpec to a pod-like component.
+
+    ``is_pending`` reflects ``metrics['scheduled'] is False`` (the
+    PodScheduled=False condition of SPEC-09 §4.2) or an explicit
+    ``metrics['pending']`` flag.
+    """
+    metrics = node.metrics or {}
+    cpu, mem = extract_pod_requests(metrics)
+    height, radius = calculate_pod_dimensions(cpu, mem)
+    scheduled = metrics.get("scheduled", True)
+    is_pending = bool(metrics.get("pending", False)) or scheduled is False
+    geometry = PodGeometrySpec(height=height, radius=radius, is_pending=is_pending)
+    node.pod_geometry = geometry
+    return geometry
 
 
 def _is_daemonset(node: NodeComponent) -> bool:
@@ -295,7 +360,16 @@ def apply_spatial_layout(nodes: List[NodeComponent]) -> List[NodeComponent]:
         else:
             pod.spatial.asset_type = "Cuboid_Pod"
             
+        # SPEC-09: proportional capsule dimensions from resource requests
+        assign_pod_geometry(pod)
+
         pod_slots_per_chassis[chassis_idx] += 1
+
+    # SPEC-09: any pod-like component that bypassed the worker-deck pod loop
+    # (e.g. framework-layer Pods) still receives proportional dimensions.
+    for n in nodes:
+        if n.pod_geometry is None and (n.layer == "workload" or n.kind.lower() == "pod"):
+            assign_pod_geometry(n)
 
     return nodes
 

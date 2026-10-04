@@ -34,6 +34,48 @@ class Spatial(BaseModel):
     asset_type: str = "cube_control_plane"
 
 
+class AutoscalingStatus(BaseModel):
+    """Autoscaling metadata for VPA and HPA tracking (SPEC-09 §6)."""
+
+    has_vpa: bool = False
+    vpa_target_cpu: Optional[str] = None
+    vpa_target_memory: Optional[str] = None
+    is_resizing_in_place: bool = False
+
+    has_hpa: bool = False
+    current_replicas: int = 1
+    desired_replicas: int = 1
+    target_metric: Optional[str] = None
+
+
+class KueueWorkloadStatus(BaseModel):
+    """Atomic gang workload tracking under Kueue (SPEC-09 §6)."""
+
+    workload_uid: str
+    workload_name: str
+    namespace: str = "default"
+    local_queue: str
+    cluster_queue: str
+    is_admitted: bool = False
+    admission_checks: List[Dict[str, str]] = Field(default_factory=list)
+    pod_uids: List[str] = Field(default_factory=list)
+    total_cpu_requested: float = 0.0
+    total_memory_gib_requested: float = 0.0
+    total_gpu_requested: int = 0
+    phase: Literal["Inadmissible", "Admissible", "Admitted", "Finished"] = "Admissible"
+
+
+class PodGeometrySpec(BaseModel):
+    """Proportional capsule dimensions and staging assignments (SPEC-09 §6)."""
+
+    height: float = 0.6
+    radius: float = 0.3
+    color_tint: str = "#4FC3F7"
+    is_pending: bool = False
+    staging_track_x: Optional[float] = None
+    karpenter_target_node_claim: Optional[str] = None
+
+
 class NodeComponent(BaseModel):
     id: str
     layer: Literal["control-plane", "framework", "workload", "node", "ingress"]
@@ -47,6 +89,9 @@ class NodeComponent(BaseModel):
     metrics: Dict[str, Any] = Field(default_factory=dict)
     spatial: Spatial = Field(default_factory=Spatial)
     raw_labels: Dict[str, str] = Field(default_factory=dict)
+    # SPEC-09: proportional pod capsule dimensions + autoscaling metadata
+    pod_geometry: Optional[PodGeometrySpec] = None
+    autoscaling: Optional[AutoscalingStatus] = None
 
 
 class DataFlowEdge(BaseModel):
@@ -160,6 +205,8 @@ class ClusterGraph(BaseModel):
     # SPEC-08: Subterranean strata (machine shapes + managed cloud vaults)
     subterranean_resources: List[RemoteServiceResource] = Field(default_factory=list)
     machine_shapes: List[MachineShape] = Field(default_factory=list)
+    # SPEC-09: Kueue gang scheduling workloads (pre-admission staging yard)
+    kueue_workloads: List[KueueWorkloadStatus] = Field(default_factory=list)
 
     class Config:
         populate_by_name = True
