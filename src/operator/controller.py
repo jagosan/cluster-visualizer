@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from typing import Dict, List, Optional
 
 from src.ingestion.models import (
+    AutoscalingStatus,
     ClusterGraph,
     ClusterMetadata,
     DataFlowEdge,
@@ -16,9 +17,17 @@ from src.ingestion.models import (
 )
 from src.ingestion.frameworks import enrich_framework_components
 from src.ingestion.layout import (
+    CENTRAL_RISER_X,
+    CENTRAL_RISER_Z,
+    POD_X_STAGGER,
+    SUPERVISOR_FLOOR_Y,
     apply_spatial_layout,
     apply_subterranean_layout,
     generate_skyscraper_edges,
+    hpa_lateral_path,
+    hpa_scale_out_delta,
+    parse_resource_quantity,
+    vpa_morph_dimensions,
 )
 from src.ingestion.exporter import generate_mock_cluster_graph
 from src.operator.kcc_mapper import parse_kcc_resource, parse_node_machine_shape
@@ -178,6 +187,88 @@ class TopologyController:
                 self.broadcast_event("machine_shape_updated", {
                     "shape": shape.model_dump(), "timestamp": ts,
                 })
+            elif event_name == "autoscaling_updated":
+                self._apply_autoscaling_update(payload, ts)
+
+    # -----------------------------------------------------------------
+    # SPEC-09 §3.2 / §3.3: VPA morph + HPA lateral dispatch events
+    # -----------------------------------------------------------------
+
+    def _apply_autoscaling_update(self, payload: dict, ts: str) -> None:
+        """Apply an AutoscalingStatus to a pod and fan out VPA/HPA events.
+
+        Emits:
+        - ``vpa_recommendation``  -> ghost-hull dimensions (SPEC-09 §3.2.1)
+        - ``vpa_resize_committed``-> in-place resize geometry tween (SPEC-09 §3.2.2)
+        - ``hpa_scale_out``       -> supervisor dispatch pulse + lateral path
+          (SPEC-09 §3.3)
+        """
+        nid = str(payload.get("node_id") or "")
+        raw = payload.get("autoscaling", payload.get("status"))
+        node = self.nodes.get(nid) if nid else None
+        if node is None or raw is None:
+            return
+        status = raw if isinstance(raw, AutoscalingStatus) else AutoscalingStatus(**raw)
+        node.autoscaling = status
+
+        # --- VPA recommendation ghost hull --------------------------------
+        dims = vpa_morph_dimensions(node)
+        if dims is not None:
+            self.broadcast_event("vpa_recommendation", {
+                "node_id": nid,
+                "dimensions": dims,
+                "target_cpu": status.vpa_target_cpu,
+                "target_memory": status.vpa_target_memory,
+                "timestamp": ts,
+            })
+
+        # --- VPA in-place resize commit ------------------------------------
+        if status.is_resizing_in_place:
+            cpu = parse_resource_quantity(status.vpa_target_cpu, "cpu")
+            mem = parse_resource_quantity(status.vpa_target_memory, "memory")
+            if cpu is not None:
+                node.metrics["cpu_request_cores"] = cpu
+            if mem is not None:
+                node.metrics["memory_request_gib"] = mem
+            nodes_list = apply_spatial_layout(list(self.nodes.values()))
+            self.nodes = {n.id: n for n in nodes_list}
+            resized = self.nodes.get(nid)
+            if resized is not None:
+                node = resized
+            self.broadcast_event("vpa_resize_committed", {
+                "node_id": nid,
+                "geometry": node.pod_geometry.model_dump() if node.pod_geometry else None,
+                "duration_ms": 1200,
+                "timestamp": ts,
+            })
+
+        # --- HPA scale-out lateral dispatch --------------------------------
+        if status.has_hpa:
+            delta = hpa_scale_out_delta(status.current_replicas, status.desired_replicas)
+            if delta > 0:
+                path = hpa_lateral_path(node.spatial.x, POD_X_STAGGER)
+                self.broadcast_event("hpa_scale_out", {
+                    "node_id": nid,
+                    "delta": delta,
+                    "current_replicas": int(status.current_replicas),
+                    "desired_replicas": int(status.desired_replicas),
+                    "target_metric": status.target_metric,
+                    "dispatch_from": {
+                        "x": CENTRAL_RISER_X,
+                        "y": SUPERVISOR_FLOOR_Y,
+                        "z": CENTRAL_RISER_Z,
+                    },
+                    "riser_bottom": {
+                        "x": CENTRAL_RISER_X,
+                        "y": node.spatial.y,
+                        "z": CENTRAL_RISER_Z,
+                    },
+                    "lateral_path": {
+                        "intake": list(path["intake"]),
+                        "slot": list(path["slot"]),
+                    },
+                    "timestamp": ts,
+                })
 
     def _reapply_subterranean_layout(self) -> None:
         """Re-dock chassis row and vault grid after a subterranean mutation.
@@ -278,6 +369,24 @@ class TopologyController:
             shape = parse_node_machine_shape(raw)
             self.machine_shapes[shape.node_name] = shape
 
+        # SPEC-09 §3.2/§3.3: seed autoscaling metadata so the demo renders
+        # a VPA recommendation ghost hull and an HPA-managed replica set.
+        redis = self.nodes.get("mock/redis-0")
+        if redis is not None:
+            redis.autoscaling = AutoscalingStatus(
+                has_vpa=True,
+                vpa_target_cpu="1",
+                vpa_target_memory="16Gi",
+            )
+        postgres = self.nodes.get("mock/postgres-0")
+        if postgres is not None:
+            postgres.autoscaling = AutoscalingStatus(
+                has_hpa=True,
+                current_replicas=2,
+                desired_replicas=2,
+                target_metric="cpu: 70%",
+            )
+
     def _run_mock_loop(self, interval: float) -> None:
         counter = 0
         while self.running:
@@ -304,6 +413,31 @@ class TopologyController:
             else:
                 self.inject_mutation("node_removed", {
                     "node_id": f"pod-demo-{counter - 2}",
+                })
+
+            # SPEC-09 §3.2/§3.3: drive the VPA morph / HPA lateral pipelines
+            # roughly every 9 ticks against the seeded mock pods.
+            if counter % 9 == 4:
+                self.inject_mutation("autoscaling_updated", {
+                    "node_id": "mock/redis-0",
+                    "autoscaling": {
+                        "has_vpa": True,
+                        "vpa_target_cpu": "4",
+                        "vpa_target_memory": "32Gi",
+                        "is_resizing_in_place": True,
+                    },
+                })
+            elif counter % 9 == 7:
+                hpa = getattr(self.nodes.get("mock/postgres-0", None), "autoscaling", None)
+                current = hpa.current_replicas if hpa else 2
+                self.inject_mutation("autoscaling_updated", {
+                    "node_id": "mock/postgres-0",
+                    "autoscaling": {
+                        "has_hpa": True,
+                        "current_replicas": current,
+                        "desired_replicas": current + 1,
+                        "target_metric": "cpu: 70%",
+                    },
                 })
 
     def _run_real_loop(self, interval: float) -> None:

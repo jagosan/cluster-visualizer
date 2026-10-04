@@ -124,6 +124,144 @@ def assign_pod_geometry(node: NodeComponent) -> PodGeometrySpec:
     return geometry
 
 
+# ---------------------------------------------------------------------------
+# SPEC-09 §3.2 / §3.3: VPA morph & HPA lateral dynamics math
+# ---------------------------------------------------------------------------
+
+# Supervisor Floor (kube-scheduler / controller-manager tray) elevation from
+# which HPA scale-out dispatch pulses are fired down the central riser.
+SUPERVISOR_FLOOR_Y = ELEVATION_TIERS["supervisor"]  # Y = +4.5
+CENTRAL_RISER_X = 0.0
+CENTRAL_RISER_Z = 0.0
+# Node deck chassis-tray intake port: pods materialize at the tray's outer
+# edge and slide laterally into their designated slot (SPEC-09 §3.3.2).
+DECK_INTAKE_OFFSET_X = 2.6
+# Canonical tween durations consumed by the Three.js animation pipelines.
+VPA_MORPH_DURATION_MS = 1200
+HPA_DISPATCH_PULSE_MS = 700
+HPA_LATERAL_SLIDE_MS = 900
+
+# Kubernetes memory suffix multipliers normalized to GiB.
+_MEMORY_SUFFIX_GIB: Dict[str, float] = {
+    "Ki": 1.0 / (1024.0 ** 2),
+    "Mi": 1.0 / 1024.0,
+    "Gi": 1.0,
+    "Ti": 1024.0,
+    "K": 1000.0 / (1024.0 ** 3),
+    "M": 1e6 / (1024.0 ** 3),
+    "G": 1e9 / (1024.0 ** 3),
+    "T": 1e12 / (1024.0 ** 3),
+}
+
+
+def parse_resource_quantity(
+    quantity: Optional[object], kind: str = "cpu"
+) -> Optional[float]:
+    """Parse a Kubernetes resource quantity into a comparable float.
+
+    ``kind='cpu'``   -> cores ("500m" -> 0.5, "2" -> 2.0)
+    ``kind='memory'``-> GiB   ("512Mi" -> 0.5, "4Gi" -> 4.0, bare "4" -> 4.0)
+
+    Returns ``None`` for absent or unparseable values so callers can treat
+    missing VPA recommendation fields as "no change" instead of zero.
+    """
+    if quantity is None:
+        return None
+    text = str(quantity).strip()
+    if not text:
+        return None
+    if kind == "cpu":
+        if text.endswith("m"):
+            try:
+                return float(text[:-1]) / 1000.0
+            except ValueError:
+                return None
+        try:
+            return float(text)
+        except ValueError:
+            return None
+    # memory -> GiB
+    for suffix in sorted(_MEMORY_SUFFIX_GIB, key=len, reverse=True):
+        if text.endswith(suffix):
+            try:
+                return float(text[: -len(suffix)]) * _MEMORY_SUFFIX_GIB[suffix]
+            except ValueError:
+                return None
+    try:
+        return float(text)  # bare number is interpreted as GiB
+    except ValueError:
+        return None
+
+
+def vpa_morph_target(node: NodeComponent) -> Optional[Tuple[float, float]]:
+    """Resolve the VPA in-place morph target (cpu_cores, memory_gib).
+
+    Returns ``None`` when the pod has no VPA, the recommendation is absent,
+    or the recommended dimensions equal the current requests (no ghost hull
+    and no morph needed — SPEC-09 §3.2.1).
+    """
+    status = getattr(node, "autoscaling", None)
+    if status is None or not status.has_vpa:
+        return None
+    cur_cpu, cur_mem = extract_pod_requests(node.metrics or {})
+    tgt_cpu = parse_resource_quantity(status.vpa_target_cpu, "cpu")
+    tgt_mem = parse_resource_quantity(status.vpa_target_memory, "memory")
+    if tgt_cpu is None and tgt_mem is None:
+        return None
+    new_cpu = cur_cpu if tgt_cpu is None else tgt_cpu
+    new_mem = cur_mem if tgt_mem is None else tgt_mem
+    if math.isclose(new_cpu, cur_cpu, rel_tol=1e-6, abs_tol=1e-9) and math.isclose(
+        new_mem, cur_mem, rel_tol=1e-6, abs_tol=1e-9
+    ):
+        return None
+    return (new_cpu, new_mem)
+
+
+def vpa_morph_dimensions(node: NodeComponent) -> Optional[Dict[str, float]]:
+    """Current vs target capsule dimensions for a VPA-managed pod.
+
+    Returns ``{current_height, current_radius, target_height, target_radius}``
+    (the tween endpoints the Three.js geometry lerp consumes), or ``None``
+    when no morph is pending.
+    """
+    target = vpa_morph_target(node)
+    if target is None:
+        return None
+    cur_cpu, cur_mem = extract_pod_requests(node.metrics or {})
+    cur_h, cur_r = calculate_pod_dimensions(cur_cpu, cur_mem)
+    tgt_h, tgt_r = calculate_pod_dimensions(target[0], target[1])
+    return {
+        "current_height": cur_h,
+        "current_radius": cur_r,
+        "target_height": tgt_h,
+        "target_radius": tgt_r,
+    }
+
+
+def hpa_scale_out_delta(current_replicas: int, desired_replicas: int) -> int:
+    """Number of lateral replicas a scale-out event must spawn (SPEC-09 §3.3)."""
+    try:
+        cur = int(current_replicas)
+        des = int(desired_replicas)
+    except (TypeError, ValueError):
+        return 0
+    return max(0, des - cur)
+
+
+def hpa_lateral_path(
+    chassis_x: float, slot_offset_x: float, z: float = POD_Z_FRONT
+) -> Dict[str, Tuple[float, float, float]]:
+    """Conveyor endpoints for an HPA replica entering a node chassis tray.
+
+    ``intake`` is the tray edge port (chassis_x + DECK_INTAKE_OFFSET_X) where
+    the new pod materializes; ``slot`` is its designated lateral slot.
+    """
+    return {
+        "intake": (round(chassis_x + DECK_INTAKE_OFFSET_X, 3), POD_Y, round(z, 3)),
+        "slot": (round(chassis_x + slot_offset_x, 3), POD_Y, round(z, 3)),
+    }
+
+
 def _is_daemonset(node: NodeComponent) -> bool:
     """Detect if a node/component represents a DaemonSet or CNI plugin."""
     name_lower = node.name.lower()
