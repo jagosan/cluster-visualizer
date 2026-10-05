@@ -9,6 +9,9 @@ import { GridController, type ViewportSlot, type GridMode } from './scene/grid_c
 // SPEC-10 / TASK-CV-1101 + TASK-CV-1102: interactive cluster onboarding modal
 // and the instant simulated sample catalog registry.
 import { ClusterOnboardingModal, type ViewportSlotId } from './ui/cluster_onboarding.js';
+// SPEC-10 / TASK-CV-1105: ⚡ dockable autoscaling traffic simulation harness.
+import { TrafficControlDeck } from './ui/traffic_deck.js';
+import type { TrafficDeckViewportSlot } from './ui/traffic_deck.js';
 
 interface DiffReportData {
   source_cluster: string;
@@ -41,6 +44,9 @@ async function bootstrap() {
   if (!containerA || !containerB || !viewportsWrapper) {
     throw new Error('Viewport container panes not found in DOM');
   }
+
+  const trafficDeckRef: { current: TrafficControlDeck | null } = { current: null };
+  const btnTrafficHarness = document.getElementById('btn-traffic-harness');
 
   // 1. Initialize Viewports
   const viewportA = new ClusterViewport(containerA, 'Cluster Alpha (v1.36.4)');
@@ -324,7 +330,7 @@ async function bootstrap() {
       }
       btnStaging?.classList.toggle('active', focused);
     }
-    // SPEC-09 §7.3 / TASK-CV-1004: KeyK Simulated Gang Admission — drives
+    // SPEC-09 §7.3 / TASK-CV-1104: KeyK Simulated Gang Admission — drives
     // the Kueue cargo pallet through mag-rail transit + gang deployment.
     if (e.code === 'KeyK' || e.key === 'k' || e.key === 'K') {
       e.preventDefault();
@@ -335,6 +341,16 @@ async function bootstrap() {
       if (fired) {
         btnAdmitGang?.classList.add('active');
         window.setTimeout(() => btnAdmitGang?.classList.remove('active'), 5200);
+      }
+    }
+    // SPEC-10 §6 / TASK-CV-1105: KeyT toggles the ⚡ traffic simulation
+    // control deck (null-guarded — keys may land before bootstrap finishes).
+    if (e.code === 'KeyT' || e.key === 't' || e.key === 'T') {
+      e.preventDefault();
+      const deck = trafficDeckRef.current;
+      if (deck) {
+        deck.toggle();
+        btnTrafficHarness?.classList.toggle('active', deck.isOpen());
       }
     }
   });
@@ -461,6 +477,9 @@ async function bootstrap() {
         slot.clusterName = clusterData.metadata.cluster_name;
         slot.k8sVersion = clusterData.metadata.kubernetes_version.replace(/^v/, '');
       }
+      // TASK-CV-1105: traffic deck re-discovers target workloads from the
+      // freshly loaded graph (closure fires after bootstrap completes).
+      trafficDeckRef.current?.refreshWorkloads();
     },
     onLiveConnect: (url, _token, config) => {
       // Operator Mode streams SSE; derive the stream URL from the probed
@@ -486,6 +505,7 @@ async function bootstrap() {
         slot.clusterName = graph.metadata.cluster_name;
         slot.k8sVersion = graph.metadata.kubernetes_version.replace(/^v/, '');
       }
+      trafficDeckRef.current?.refreshWorkloads(); // TASK-CV-1105
     },
     onError: (message) => {
       console.warn('Cluster onboarding:', message);
@@ -500,6 +520,32 @@ async function bootstrap() {
       } else {
         onboardingModal.open();
       }
+    });
+  }
+
+  // 9c. SPEC-10 / TASK-CV-1105: ⚡ Autoscaling Traffic Simulation Harness.
+  // Bottom-docked glass control deck driving the client-side M/M/c/K engine
+  // (Engine A) with comparative per-viewport telemetry and SPEC-10 §6.3 flow
+  // particle modulation. Workloads are discovered live from each viewport's
+  // loaded cluster graph (refreshed on every cluster swap below).
+  const deckSlots: TrafficDeckViewportSlot[] = [
+    { id: 'a', label: 'Viewport A', title: 'Cluster Alpha', viewport: viewportA },
+    { id: 'b', label: 'Viewport B', title: 'Cluster Beta', viewport: viewportB },
+  ];
+  if (viewportC) deckSlots.push({ id: 'c', label: 'Viewport C', title: 'Cluster Gamma', viewport: viewportC });
+  if (viewportD) deckSlots.push({ id: 'd', label: 'Viewport D', title: 'Cluster Delta', viewport: viewportD });
+
+  const trafficDeck = new TrafficControlDeck({
+    slots: deckSlots,
+    dockContainer: document.getElementById('traffic-deck-dock'),
+    hpaIntervalSeconds: 1,
+  });
+  trafficDeckRef.current = trafficDeck;
+
+  if (btnTrafficHarness) {
+    btnTrafficHarness.addEventListener('click', () => {
+      trafficDeck.toggle();
+      btnTrafficHarness.classList.toggle('active', trafficDeck.isOpen());
     });
   }
 
@@ -544,6 +590,8 @@ async function bootstrap() {
   (window as any).__liveStream = liveStream;
   (window as any).__timelinePlayer = timelinePlayer;
   (window as any).__timelineScrubber = timelineScrubber;
+  (window as any).__trafficDeck = trafficDeck;
+  (window as any).__trafficSimulator = trafficDeck.simulator;
 
   // 11. Animation Loop
   let lastTime = performance.now();
@@ -553,6 +601,9 @@ async function bootstrap() {
     lastTime = now;
 
     timelinePlayer.update(delta);
+    // SPEC-10 / TASK-CV-1105: pump Engine A (queuing + autoscaling physics),
+    // flow-particle modulation, and comparative telemetry refresh.
+    trafficDeck.update(delta);
     gridController.renderAll(delta);
   }
   requestAnimationFrame(animate);

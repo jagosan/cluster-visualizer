@@ -66,7 +66,7 @@
 - `testbeds/workloads/`: Sample declarative workload manifests (Prometheus, Postgres HA, Ray cluster, microservices, canary service).
 
 ## Frontend WebGL Client (Vite + TypeScript + Three.js)
-- `index.html`: Entry HTML with dual viewport split-screen canvas, HUD overlay, and timeline scrubber container `#timeline-scrubber-dock`.
+- `index.html`: Entry HTML with dual viewport split-screen canvas, HUD overlay, timeline scrubber container `#timeline-scrubber-dock`, and the SPEC-10 traffic harness control deck dock `#traffic-deck-dock` (`⚡ TRAFFIC HARNESS` topbar button / KeyT).
 - `src/main.ts`: Application bootstrap, event listeners, and viewport layout controller.
 - `src/scene/grid_controller.ts`: `GridController` managing Single, Dual Split, and Quad Grid (2x2) layouts with synchronized orbit cameras and version skew matrix HUD.
 - `src/scene/cluster_viewport.ts`: `ClusterViewport` Three.js scene manager, dynamic mutation animations, camera, and raycaster.
@@ -83,7 +83,7 @@
 - `src/scene/flank_labels.ts`: `FlankLabelManager` typographic billboard sprites floating on tower flanks.
 - `src/scene/conduits.ts`: 3D procedural conduit pipe mesh generator and route splines.
 - `src/scene/camera_sync.ts`: Synchronous dual-orbit camera controller.
-- `src/scene/flow_particles.ts`: GPU / instanced particle system animating traffic and replication streams.
+- `src/scene/flow_particles.ts`: GPU / instanced particle system animating traffic and replication streams; SPEC-10 §6.3 harness modulation (`setModulation` / `clearModulation`) — RPS-scaled stream speed, latency-band tint (cyan `#38bdf8` < 30 ms, amber `#f59e0b` 30–200 ms, crimson `#ef4444` > 200 ms), and congestion surge-particle density.
 - `src/scene/diff_card.ts`: 3D floating billboarding HTML diff card anchored to drifted components.
 - `src/ui/diff_inspector.ts`: Side-by-side comparison drawer, version mismatch highlights, and metric bars.
 - `src/ui/cluster_selector.ts`: Dropdown / file loader for switching active clusters.
@@ -94,5 +94,11 @@
 - `src/ui/cluster_onboarding.ts`: SPEC-10 onboarding modal dialog for live Helm clusters and client-side connect.
 - `src/ui/sample_catalog.ts`: SPEC-10 pre-packaged sample cluster registry for zero-delay instant loading.
 - `src/scene/traffic_simulator.ts`: SPEC-10 discrete-event M/M/c/K queuing, autoscaling, and scheduling latency skew engine.
-- `src/ui/traffic_deck.ts`: SPEC-10 bottom-docked translucent HUD traffic control deck.
+- `src/ui/traffic_deck.ts`: `TrafficControlDeck` SPEC-10 §6 bottom-docked translucent-glass traffic simulation HUD — workload/cluster selectors discovered from loaded viewport cluster graphs, Step/Sine/Ramp/Chaos pattern pills, 50–2500 RPS slider (850 default, 100 baseline), HPA/VPA/provisioning-skew engine toggles, per-viewport comparative telemetry cards (latency + STABLE/ELEVATED/SATURATED badges, replicas `N (+M)`, pending-in-staging, CPU %, sched delay, error rate), Inject/Pause/Reset/Burst actions, dock/undock/close; pumps Engine A each frame and modulates `flowSystem` (§6.3) while engine triggers drive the SPEC-09 viewport pipelines.
 - `src/ingestion/client_extractor.ts`: SPEC-10 in-browser Kubernetes API resource graph extractor.
+
+## Tests & SPEC Verification
+- `tests/test_spec10_onboarding_and_traffic.py`: SPEC-10 / TASK-CV-1106 suite — pydantic ClusterGraph schema conformance for the four `public/data/samples/*.json` catalog fixtures (§3 topologies: upstream baseline, Online Boutique HPA/VPA + vaults, KubeRay accelerator bays + Kueue gang pallet, Compute Class vs Karpenter staging), M/M/c/K queuing math (step/sine/ramp/chaos λ(t) profiles, ρ(t) = λ/(N·μ) readout, Erlang-C cross-check vs independent lgamma-free reference, saturated-regime W_q growth), HPA `ceil(N·cpu/target)` bounds + stabilization, VPA 80 %-sustained trigger with τ_vpa morph, §5.3 scheduling-skew bands (GKE τ_sched 3–6 s vs Karpenter τ_node 60–150 s), and secret-scrubbing/token-hygiene guarantees; engine physics exercised through an esbuild→node bridge.
+- `scripts/verify_spec10_engine.ts`: TASK-CV-1103/1104 harness (run via `node_modules/.bin/esbuild --bundle --platform=node` + `node`) — client extractor graph normalization, pattern shapes, GKE vs Karpenter spike telemetry, lifecycle pause/reset/burst, VPA morph triggers.
+- `scripts/verify_spec10_deck.ts`: TASK-CV-1105 harness — workload discovery/compute-class detection over the real sample fixtures, Engine A physics through deck addressing, FlowParticleSystem §6.3 modulation.
+
