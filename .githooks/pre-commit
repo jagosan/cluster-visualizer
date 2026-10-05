@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# Git pre-commit hook: Auto-refine and validate README.md
+set -e
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
+
+echo "🔍 [cluster-vis hook] Checking and refining README.md..."
+python3 scripts/refine_readme.py --update
+
+# If README.md was touched by the update, re-stage it
+if ! git diff --quiet README.md; then
+  echo "📝 [cluster-vis hook] Staging updated README.md..."
+  git add README.md
+fi
+
+# Run final check
+python3 scripts/refine_readme.py --check

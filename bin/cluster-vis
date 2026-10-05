@@ -18,6 +18,10 @@ def main():
         from src.ingestion.exporter import main as dump_main
         sys.argv.pop(1)
         sys.exit(dump_main())
+    elif len(sys.argv) > 1 and sys.argv[1] == "diff":
+        from src.ingestion.differ import main as diff_main
+        sys.argv.pop(1)
+        sys.exit(diff_main())
     else:
         from src.ingestion.cli import main as ingest_main
         sys.exit(ingest_main())

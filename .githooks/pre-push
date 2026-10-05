@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Git pre-push hook: Enforce README integrity and link validity prior to push
+set -e
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
+
+echo "🚀 [cluster-vis hook] Validating README.md prior to push..."
+python3 scripts/refine_readme.py --check

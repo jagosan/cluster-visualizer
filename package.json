@@ -4,10 +4,15 @@
   "private": true,
   "type": "module",
   "description": "Cluster Visualizer - Kubernetes 3D comparison & dependency engine (SPEC-00)",
+  "license": "Apache-2.0",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "refine:readme": "python3 scripts/refine_readme.py --update",
+    "check:readme": "python3 scripts/refine_readme.py --check",
+    "setup-hooks": "bash scripts/install-hooks.sh",
+    "prepare": "bash scripts/install-hooks.sh"
   },
   "dependencies": {
     "three": "^0.180.0"

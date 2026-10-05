@@ -164,3 +164,49 @@ def diff_clusters(
         nodes=node_matches,
         edges=[]
     )
+
+
+def main():
+    import argparse
+    from pathlib import Path
+
+    parser = argparse.ArgumentParser(
+        prog="cluster-vis diff",
+        description="Compare two ClusterGraph JSON files and compute semantic version/digest skews.",
+    )
+    parser.add_argument("cluster_a", help="Path to Cluster A JSON (source)")
+    parser.add_argument("cluster_b", help="Path to Cluster B JSON (target)")
+    parser.add_argument("-o", "--output", help="Optional path to output diff JSON")
+
+    args = parser.parse_args()
+
+    path_a = Path(args.cluster_a)
+    path_b = Path(args.cluster_b)
+
+    if not path_a.exists():
+        print(f"Error: Cluster A file not found: {path_a}", file=sys.stderr)
+        return 1
+    if not path_b.exists():
+        print(f"Error: Cluster B file not found: {path_b}", file=sys.stderr)
+        return 1
+
+    graph_a = ClusterGraph.model_validate_json(path_a.read_text())
+    graph_b = ClusterGraph.model_validate_json(path_b.read_text())
+
+    report = diff_clusters(graph_a, graph_b)
+    out = report.model_dump_json(indent=2)
+
+    if args.output:
+        out_path = Path(args.output)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(out)
+        print(f"✅ Diff written to {out_path}")
+        print(f"   Identical: {report.summary.identical_nodes} | Skews: {report.summary.version_skew_nodes} | Missing in Target: {report.summary.missing_in_target} | Added: {report.summary.added_in_target}")
+    else:
+        print(out)
+    return 0
+
+
+if __name__ == "__main__":
+    import sys
+    sys.exit(main())
