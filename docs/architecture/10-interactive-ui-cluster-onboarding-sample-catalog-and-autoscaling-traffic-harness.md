@@ -186,3 +186,19 @@
 | **Secret Sanitization** | `sanitize_manifest()` in `src/operator/graph_engine.py` | Eliminates tokens, certificates, and passwords before transmission over SSE. |
 | **Client-Side Mode** | Native browser `fetch()` | Respects browser CORS; credentials stay within browser sandbox. |
 | **Simulated Samples** | Bundled static JSON | Zero network access, zero credentials, zero tracking. |
+
+---
+
+## 6. 💡 Note to Future Self: Hosting Portability
+
+ClusterVis is engineered to operate seamlessly across three execution environments:
+1. **Fully Static Edge / CDN (Cloudflare Pages, Vercel, GitHub Pages):**
+   * The visualizer UI operates in 100% client-side mode with bundled sample catalog fixtures (`public/data/samples/*.json`).
+   * Zero backend services or Node.js runtimes required.
+   * Client-side direct Kubernetes API extraction (`src/ingestion/client_extractor.ts`) allows users to point the web app at any reachable cluster endpoint or `kubectl proxy` without any proxy server intermediation.
+2. **Homelab & Self-Hosted Private Cloud (Tailscale / In-Cluster Helm):**
+   * Deployable via standard Helm charts into K3s, Talos, or bare-metal clusters behind Tailscale ingress or Cloudflare Tunnels.
+   * The in-cluster operator streams real-time SSE topology mutations and latency probes without public cloud dependencies.
+3. **Managed Cloud Multi-Cluster Environments (GKE / EKS / AKS):**
+   * Supports declarative cloud vault mappings (Sub-Level B2) and comparative auto-provisioning simulations (GKE Compute Classes vs Karpenter NodePools) without requiring administrative cloud IAM credentials in the visualizer UI.
+

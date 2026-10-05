@@ -6,6 +6,9 @@ import { TimelinePlayer } from './scene/timeline_player.js';
 import type { ClusterTimelineData } from './scene/timeline_player.js';
 import { TimelineScrubber } from './ui/timeline_scrubber.js';
 import { GridController, type ViewportSlot, type GridMode } from './scene/grid_controller.js';
+// SPEC-10 / TASK-CV-1101 + TASK-CV-1102: interactive cluster onboarding modal
+// and the instant simulated sample catalog registry.
+import { ClusterOnboardingModal, type ViewportSlotId } from './ui/cluster_onboarding.js';
 
 interface DiffReportData {
   source_cluster: string;
@@ -436,6 +439,68 @@ async function bootstrap() {
   const streamParam = new URLSearchParams(window.location.search).get('stream');
   if (streamParam) {
     liveStream.connect(streamParam);
+  }
+
+  // 9b. SPEC-10 / TASK-CV-1101 + 1102: Interactive Cluster Onboarding.
+  // `➕ ADD CLUSTER` opens the two-tab modal: live Helm/client connect and
+  // the instant simulated sample catalog with 1-click viewport slot binding.
+  const viewportBySlot = new Map<ViewportSlotId, ClusterViewport | null>([
+    ['a', viewportA],
+    ['b', viewportB],
+    ['c', viewportC],
+    ['d', viewportD],
+  ]);
+
+  const onboardingModal = new ClusterOnboardingModal({
+    onClusterLoaded: (slotId, clusterData) => {
+      const target = viewportBySlot.get(slotId) ?? viewportA;
+      if (!target) return;
+      target.setClusterData(clusterData);
+      const slot = slots.find((s) => s.id === slotId);
+      if (slot) {
+        slot.clusterName = clusterData.metadata.cluster_name;
+        slot.k8sVersion = clusterData.metadata.kubernetes_version.replace(/^v/, '');
+      }
+    },
+    onLiveConnect: (url, _token, config) => {
+      // Operator Mode streams SSE; derive the stream URL from the probed
+      // API base unless the user pointed straight at a stream endpoint.
+      // (kubeconfig-proxy / client-direct full extraction lands with
+      // TASK-CV-1103's browser extractor; the SSE path works unchanged for
+      // proxies that expose the operator endpoints.)
+      const base = url.replace(/\/+$/, '');
+      const streamUrl = base.endsWith('/api/v1/topology/stream')
+        ? base
+        : `${base}/api/v1/topology/stream`;
+      void config; // config is handed to the caller-side store; stream needs URL only
+      liveStream.connect(streamUrl);
+    },
+    onClientGraphExtracted: (graph) => {
+      // TASK-CV-1103: Tab 1 Mode B parsed the raw Kubernetes API entirely
+      // client-side — hydrate the active viewport with zero server install.
+      const target = viewportA ?? viewportB;
+      if (!target) return;
+      target.setClusterData(graph);
+      const slot = slots.find((s) => s.id === 'a') ?? slots[0];
+      if (slot) {
+        slot.clusterName = graph.metadata.cluster_name;
+        slot.k8sVersion = graph.metadata.kubernetes_version.replace(/^v/, '');
+      }
+    },
+    onError: (message) => {
+      console.warn('Cluster onboarding:', message);
+    },
+  });
+
+  const btnAddCluster = document.getElementById('btn-add-cluster');
+  if (btnAddCluster) {
+    btnAddCluster.addEventListener('click', () => {
+      if (onboardingModal.isOpen) {
+        onboardingModal.close();
+      } else {
+        onboardingModal.open();
+      }
+    });
   }
 
   // 9. Time-Travel Playback & Historical Scrubber Engine (SPEC-05)

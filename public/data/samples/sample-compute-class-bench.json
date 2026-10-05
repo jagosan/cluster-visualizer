@@ -1,0 +1,1088 @@
+{
+  "$schema": "https://cluster-vis.jagosan.com/schemas/cluster-graph-v1.json",
+  "metadata": {
+    "cluster_name": "sample-compute-class-bench",
+    "kubernetes_version": "v1.36.4",
+    "distribution": "gke-vs-karpenter-benchmark",
+    "timestamp": "2026-10-04T09:00:00+00:00",
+    "node_count": 5,
+    "pod_count": 15
+  },
+  "nodes": [
+    {
+      "id": "node/gke-scaleup-pool-a",
+      "layer": "node",
+      "kind": "Node",
+      "name": "gke-scaleup-pool-a",
+      "namespace": "cluster",
+      "version": "v1.36.4",
+      "image": null,
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "cpu_capacity": "8",
+        "memory_capacity": "32768Ki",
+        "cpu_allocatable": "8",
+        "memory_allocatable": "32768Ki",
+        "os_image": "Container-Optimized OS from Google",
+        "unschedulable": false
+      },
+      "spatial": {
+        "x": -9.0,
+        "y": 0.5,
+        "z": 0.0,
+        "asset_type": "LayerTray_Worker"
+      },
+      "raw_labels": {
+        "kubernetes.io/hostname": "gke-scaleup-pool-a",
+        "cloud.google.com/precedence-state": "OBSERVED",
+        "cloud.google.com/compute-class": "Scale-Up",
+        "cloud.google.com/gke-nodepool": "scale-up-pool",
+        "topology.kubernetes.io/zone": "us-central1-a"
+      }
+    },
+    {
+      "id": "node/gke-scaleup-pool-b",
+      "layer": "node",
+      "kind": "Node",
+      "name": "gke-scaleup-pool-b",
+      "namespace": "cluster",
+      "version": "v1.36.4",
+      "image": null,
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "cpu_capacity": "8",
+        "memory_capacity": "32768Ki",
+        "cpu_allocatable": "8",
+        "memory_allocatable": "32768Ki",
+        "os_image": "Container-Optimized OS from Google",
+        "unschedulable": false
+      },
+      "spatial": {
+        "x": -3.0,
+        "y": 0.5,
+        "z": 0.0,
+        "asset_type": "LayerTray_Worker"
+      },
+      "raw_labels": {
+        "kubernetes.io/hostname": "gke-scaleup-pool-b",
+        "cloud.google.com/precedence-state": "OBSERVED",
+        "cloud.google.com/compute-class": "Scale-Up",
+        "cloud.google.com/gke-nodepool": "scale-up-pool",
+        "topology.kubernetes.io/zone": "us-central1-b"
+      }
+    },
+    {
+      "id": "node/gke-performance-pool",
+      "layer": "node",
+      "kind": "Node",
+      "name": "gke-performance-pool",
+      "namespace": "cluster",
+      "version": "v1.36.4",
+      "image": null,
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "cpu_capacity": "16",
+        "memory_capacity": "65536Ki",
+        "cpu_allocatable": "16",
+        "memory_allocatable": "65536Ki",
+        "os_image": "Container-Optimized OS from Google",
+        "unschedulable": false
+      },
+      "spatial": {
+        "x": 3.0,
+        "y": 0.5,
+        "z": 0.0,
+        "asset_type": "LayerTray_Worker"
+      },
+      "raw_labels": {
+        "kubernetes.io/hostname": "gke-performance-pool",
+        "cloud.google.com/compute-class": "Performance",
+        "cloud.google.com/gke-nodepool": "performance-pool",
+        "topology.kubernetes.io/zone": "us-central1-a"
+      }
+    },
+    {
+      "id": "node/static-nodepool-a",
+      "layer": "node",
+      "kind": "Node",
+      "name": "static-nodepool-a",
+      "namespace": "cluster",
+      "version": "v1.36.4",
+      "image": null,
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "cpu_capacity": "8",
+        "memory_capacity": "32768Ki",
+        "cpu_allocatable": "8",
+        "memory_allocatable": "32768Ki",
+        "os_image": "Container-Optimized OS from Google",
+        "unschedulable": false
+      },
+      "spatial": {
+        "x": 9.0,
+        "y": 0.5,
+        "z": 0.0,
+        "asset_type": "LayerTray_Worker"
+      },
+      "raw_labels": {
+        "kubernetes.io/hostname": "static-nodepool-a",
+        "kubernetes.io/node-pool": "static-legacy",
+        "cluster-autoscaler-enabled": "true",
+        "topology.kubernetes.io/zone": "us-east-1a"
+      }
+    },
+    {
+      "id": "node/karpenter-nodepool-a",
+      "layer": "node",
+      "kind": "Node",
+      "name": "karpenter-nodepool-a",
+      "namespace": "cluster",
+      "version": "v1.36.4",
+      "image": null,
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "cpu_capacity": "16",
+        "memory_capacity": "32768Ki",
+        "cpu_allocatable": "16",
+        "memory_allocatable": "32768Ki",
+        "os_image": "Container-Optimized OS from Google",
+        "unschedulable": false
+      },
+      "spatial": {
+        "x": 15.0,
+        "y": 0.5,
+        "z": 0.0,
+        "asset_type": "LayerTray_Worker"
+      },
+      "raw_labels": {
+        "kubernetes.io/hostname": "karpenter-nodepool-a",
+        "karpenter.sh/nodepool": "bench-burst",
+        "karpenter.sh/capacity-type": "spot",
+        "karpenter.k8s.aws/instance-category": "c",
+        "topology.kubernetes.io/zone": "us-east-1b"
+      }
+    },
+    {
+      "id": "control-plane/kube-system/kube-apiserver-bench-cp",
+      "layer": "control-plane",
+      "kind": "Pod",
+      "name": "kube-apiserver-bench-cp",
+      "namespace": "kube-system",
+      "version": "v1.36.4",
+      "image": "registry.k8s.io/kube-apiserver-amd64:v1.36.4",
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "component": "kube-apiserver"
+      },
+      "spatial": {
+        "x": 0.0,
+        "y": 7.0,
+        "z": 0.0,
+        "asset_type": "Cuboid_APIServer"
+      },
+      "raw_labels": {
+        "component": "kube-apiserver",
+        "tier": "control-plane"
+      }
+    },
+    {
+      "id": "control-plane/kube-system/kube-scheduler-bench-cp",
+      "layer": "control-plane",
+      "kind": "Pod",
+      "name": "kube-scheduler-bench-cp",
+      "namespace": "kube-system",
+      "version": "v1.36.4",
+      "image": "registry.k8s.io/kube-scheduler-amd64:v1.36.4",
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "component": "kube-scheduler"
+      },
+      "spatial": {
+        "x": -2.8,
+        "y": 4.5,
+        "z": 0.8,
+        "asset_type": "Cuboid_Supervisor"
+      },
+      "raw_labels": {
+        "component": "kube-scheduler",
+        "tier": "control-plane"
+      }
+    },
+    {
+      "id": "control-plane/kube-system/kube-controller-manager-bench-cp",
+      "layer": "control-plane",
+      "kind": "Pod",
+      "name": "kube-controller-manager-bench-cp",
+      "namespace": "kube-system",
+      "version": "v1.36.4",
+      "image": "registry.k8s.io/kube-controller-manager-amd64:v1.36.4",
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "component": "kube-controller-manager"
+      },
+      "spatial": {
+        "x": 2.8,
+        "y": 4.5,
+        "z": 0.8,
+        "asset_type": "Cuboid_Supervisor"
+      },
+      "raw_labels": {
+        "component": "kube-controller-manager",
+        "tier": "control-plane"
+      }
+    },
+    {
+      "id": "control-plane/kube-system/etcd-bench-cp",
+      "layer": "control-plane",
+      "kind": "Pod",
+      "name": "etcd-bench-cp",
+      "namespace": "kube-system",
+      "version": "3.6.8-0",
+      "image": "registry.k8s.io/etcd:3.6.8-0",
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "component": "etcd"
+      },
+      "spatial": {
+        "x": 0.0,
+        "y": 5.5,
+        "z": -3.5,
+        "asset_type": "Cuboid_etcd"
+      },
+      "raw_labels": {
+        "component": "etcd",
+        "tier": "control-plane"
+      }
+    },
+    {
+      "id": "node/gke-scaleup-pool-a/kubelet",
+      "layer": "node",
+      "kind": "Kubelet",
+      "name": "kubelet-gke-scaleup-pool-a",
+      "namespace": "kube-system",
+      "version": "v1.36.4",
+      "image": null,
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "component": "kubelet",
+        "node": "gke-scaleup-pool-a"
+      },
+      "spatial": {
+        "x": -10.8,
+        "y": 0.7,
+        "z": -1.5,
+        "asset_type": "Cuboid_Kubelet"
+      },
+      "raw_labels": {}
+    },
+    {
+      "id": "node/gke-scaleup-pool-a/containerd",
+      "layer": "node",
+      "kind": "Containerd",
+      "name": "containerd-gke-scaleup-pool-a",
+      "namespace": "kube-system",
+      "version": "v1.7.20",
+      "image": null,
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "runtime": "containerd",
+        "node": "gke-scaleup-pool-a"
+      },
+      "spatial": {
+        "x": -9.8,
+        "y": 0.7,
+        "z": -1.5,
+        "asset_type": "Cuboid_Containerd"
+      },
+      "raw_labels": {}
+    },
+    {
+      "id": "node/gke-scaleup-pool-b/kubelet",
+      "layer": "node",
+      "kind": "Kubelet",
+      "name": "kubelet-gke-scaleup-pool-b",
+      "namespace": "kube-system",
+      "version": "v1.36.4",
+      "image": null,
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "component": "kubelet",
+        "node": "gke-scaleup-pool-b"
+      },
+      "spatial": {
+        "x": -4.8,
+        "y": 0.7,
+        "z": -1.5,
+        "asset_type": "Cuboid_Kubelet"
+      },
+      "raw_labels": {}
+    },
+    {
+      "id": "node/gke-scaleup-pool-b/containerd",
+      "layer": "node",
+      "kind": "Containerd",
+      "name": "containerd-gke-scaleup-pool-b",
+      "namespace": "kube-system",
+      "version": "v1.7.20",
+      "image": null,
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "runtime": "containerd",
+        "node": "gke-scaleup-pool-b"
+      },
+      "spatial": {
+        "x": -3.8,
+        "y": 0.7,
+        "z": -1.5,
+        "asset_type": "Cuboid_Containerd"
+      },
+      "raw_labels": {}
+    },
+    {
+      "id": "node/gke-performance-pool/kubelet",
+      "layer": "node",
+      "kind": "Kubelet",
+      "name": "kubelet-gke-performance-pool",
+      "namespace": "kube-system",
+      "version": "v1.36.4",
+      "image": null,
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "component": "kubelet",
+        "node": "gke-performance-pool"
+      },
+      "spatial": {
+        "x": 1.2,
+        "y": 0.7,
+        "z": -1.5,
+        "asset_type": "Cuboid_Kubelet"
+      },
+      "raw_labels": {}
+    },
+    {
+      "id": "node/gke-performance-pool/containerd",
+      "layer": "node",
+      "kind": "Containerd",
+      "name": "containerd-gke-performance-pool",
+      "namespace": "kube-system",
+      "version": "v1.7.20",
+      "image": null,
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "runtime": "containerd",
+        "node": "gke-performance-pool"
+      },
+      "spatial": {
+        "x": 2.2,
+        "y": 0.7,
+        "z": -1.5,
+        "asset_type": "Cuboid_Containerd"
+      },
+      "raw_labels": {}
+    },
+    {
+      "id": "node/static-nodepool-a/kubelet",
+      "layer": "node",
+      "kind": "Kubelet",
+      "name": "kubelet-static-nodepool-a",
+      "namespace": "kube-system",
+      "version": "v1.36.4",
+      "image": null,
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "component": "kubelet",
+        "node": "static-nodepool-a"
+      },
+      "spatial": {
+        "x": 7.2,
+        "y": 0.7,
+        "z": -1.5,
+        "asset_type": "Cuboid_Kubelet"
+      },
+      "raw_labels": {}
+    },
+    {
+      "id": "node/static-nodepool-a/containerd",
+      "layer": "node",
+      "kind": "Containerd",
+      "name": "containerd-static-nodepool-a",
+      "namespace": "kube-system",
+      "version": "v1.7.20",
+      "image": null,
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "runtime": "containerd",
+        "node": "static-nodepool-a"
+      },
+      "spatial": {
+        "x": 8.2,
+        "y": 0.7,
+        "z": -1.5,
+        "asset_type": "Cuboid_Containerd"
+      },
+      "raw_labels": {}
+    },
+    {
+      "id": "node/karpenter-nodepool-a/kubelet",
+      "layer": "node",
+      "kind": "Kubelet",
+      "name": "kubelet-karpenter-nodepool-a",
+      "namespace": "kube-system",
+      "version": "v1.36.4",
+      "image": null,
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "component": "kubelet",
+        "node": "karpenter-nodepool-a"
+      },
+      "spatial": {
+        "x": 13.2,
+        "y": 0.7,
+        "z": -1.5,
+        "asset_type": "Cuboid_Kubelet"
+      },
+      "raw_labels": {}
+    },
+    {
+      "id": "node/karpenter-nodepool-a/containerd",
+      "layer": "node",
+      "kind": "Containerd",
+      "name": "containerd-karpenter-nodepool-a",
+      "namespace": "kube-system",
+      "version": "v1.7.20",
+      "image": null,
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "runtime": "containerd",
+        "node": "karpenter-nodepool-a"
+      },
+      "spatial": {
+        "x": 14.2,
+        "y": 0.7,
+        "z": -1.5,
+        "asset_type": "Cuboid_Containerd"
+      },
+      "raw_labels": {}
+    },
+    {
+      "id": "pod/karpenter/karpenter-controller-5d9c8b7f7b-kp2mq",
+      "layer": "control-plane",
+      "kind": "Pod",
+      "name": "karpenter-controller-5d9c8b7f7b-kp2mq",
+      "namespace": "karpenter",
+      "version": "v0.37.0",
+      "image": "public.ecr.aws/karpenter/karpenter:v0.37.0",
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "cpu_request_cores": 0.1,
+        "memory_request_gib": 0.5
+      },
+      "spatial": {
+        "x": -4.3,
+        "y": 4.5,
+        "z": 0.8,
+        "asset_type": "Cuboid_Supervisor"
+      },
+      "raw_labels": {
+        "app.kubernetes.io/name": "karpenter"
+      },
+      "pod_geometry": {
+        "height": 0.511,
+        "radius": 0.2
+      }
+    },
+    {
+      "id": "pod/kube-system/cluster-autoscaler-7c6d5f8f9b-ac9zt",
+      "layer": "control-plane",
+      "kind": "Pod",
+      "name": "cluster-autoscaler-7c6d5f8f9b-ac9zt",
+      "namespace": "kube-system",
+      "version": "v1.30.0",
+      "image": "registry.k8s.io/autoscaling/cluster-autoscaler:v1.30.0",
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "cpu_request_cores": 0.1,
+        "memory_request_gib": 0.4
+      },
+      "spatial": {
+        "x": 4.3,
+        "y": 4.5,
+        "z": 0.8,
+        "asset_type": "Cuboid_Supervisor"
+      },
+      "raw_labels": {
+        "app.kubernetes.io/name": "cluster-autoscaler"
+      },
+      "pod_geometry": {
+        "height": 0.511,
+        "radius": 0.2
+      }
+    },
+    {
+      "id": "pod/bench-scaleup/bench-frontend-scaleup-6d7c8f9a-a1x",
+      "layer": "workload",
+      "kind": "Pod",
+      "name": "bench-frontend-scaleup-6d7c8f9a-a1x",
+      "namespace": "bench-scaleup",
+      "version": "v1.0.0",
+      "image": "ghcr.io/jagosan/bench-frontend:v1.0.0",
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "cpu_request_cores": 1,
+        "memory_request_gib": 2,
+        "scheduling_delay_s": 3.2
+      },
+      "spatial": {
+        "x": -9.6,
+        "y": 0.75,
+        "z": 0.2,
+        "asset_type": "Cuboid_Pod"
+      },
+      "raw_labels": {
+        "app": "bench-frontend",
+        "lane": "gke-compute-class",
+        "cloud.google.com/compute-class": "Scale-Up"
+      },
+      "pod_geometry": {
+        "height": 0.75,
+        "radius": 0.32
+      },
+      "autoscaling": {
+        "has_hpa": true,
+        "current_replicas": 4,
+        "desired_replicas": 6,
+        "target_metric": "cpu:60",
+        "has_vpa": true,
+        "vpa_target_cpu": "1.5",
+        "vpa_target_memory": "3Gi",
+        "is_resizing_in_place": true
+      }
+    },
+    {
+      "id": "pod/bench-scaleup/bench-frontend-scaleup-6d7c8f9a-b2y",
+      "layer": "workload",
+      "kind": "Pod",
+      "name": "bench-frontend-scaleup-6d7c8f9a-b2y",
+      "namespace": "bench-scaleup",
+      "version": "v1.0.0",
+      "image": "ghcr.io/jagosan/bench-frontend:v1.0.0",
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "cpu_request_cores": 1,
+        "memory_request_gib": 2,
+        "scheduling_delay_s": 3.6
+      },
+      "spatial": {
+        "x": -8.4,
+        "y": 0.75,
+        "z": 0.2,
+        "asset_type": "Cuboid_Pod"
+      },
+      "raw_labels": {
+        "app": "bench-frontend",
+        "lane": "gke-compute-class",
+        "cloud.google.com/compute-class": "Scale-Up"
+      },
+      "pod_geometry": {
+        "height": 0.75,
+        "radius": 0.32
+      },
+      "autoscaling": {
+        "has_hpa": true,
+        "current_replicas": 4,
+        "desired_replicas": 6,
+        "target_metric": "cpu:60",
+        "has_vpa": true,
+        "vpa_target_cpu": "1.5",
+        "vpa_target_memory": "3Gi",
+        "is_resizing_in_place": true
+      }
+    },
+    {
+      "id": "pod/bench-scaleup/bench-frontend-scaleup-6d7c8f9a-c3z",
+      "layer": "workload",
+      "kind": "Pod",
+      "name": "bench-frontend-scaleup-6d7c8f9a-c3z",
+      "namespace": "bench-scaleup",
+      "version": "v1.0.0",
+      "image": "ghcr.io/jagosan/bench-frontend:v1.0.0",
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "cpu_request_cores": 1,
+        "memory_request_gib": 2,
+        "scheduling_delay_s": 4.0
+      },
+      "spatial": {
+        "x": -3.6,
+        "y": 0.75,
+        "z": 0.2,
+        "asset_type": "Cuboid_Pod"
+      },
+      "raw_labels": {
+        "app": "bench-frontend",
+        "lane": "gke-compute-class",
+        "cloud.google.com/compute-class": "Scale-Up"
+      },
+      "pod_geometry": {
+        "height": 0.75,
+        "radius": 0.32
+      },
+      "autoscaling": {
+        "has_hpa": true,
+        "current_replicas": 4,
+        "desired_replicas": 6,
+        "target_metric": "cpu:60",
+        "has_vpa": true,
+        "vpa_target_cpu": "1.5",
+        "vpa_target_memory": "3Gi",
+        "is_resizing_in_place": true
+      }
+    },
+    {
+      "id": "pod/bench-scaleup/bench-frontend-scaleup-6d7c8f9a-d4w",
+      "layer": "workload",
+      "kind": "Pod",
+      "name": "bench-frontend-scaleup-6d7c8f9a-d4w",
+      "namespace": "bench-scaleup",
+      "version": "v1.0.0",
+      "image": "ghcr.io/jagosan/bench-frontend:v1.0.0",
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "cpu_request_cores": 1,
+        "memory_request_gib": 2,
+        "scheduling_delay_s": 4.4
+      },
+      "spatial": {
+        "x": -2.4,
+        "y": 0.75,
+        "z": 0.2,
+        "asset_type": "Cuboid_Pod"
+      },
+      "raw_labels": {
+        "app": "bench-frontend",
+        "lane": "gke-compute-class",
+        "cloud.google.com/compute-class": "Scale-Up"
+      },
+      "pod_geometry": {
+        "height": 0.75,
+        "radius": 0.32
+      },
+      "autoscaling": {
+        "has_hpa": true,
+        "current_replicas": 4,
+        "desired_replicas": 6,
+        "target_metric": "cpu:60",
+        "has_vpa": true,
+        "vpa_target_cpu": "1.5",
+        "vpa_target_memory": "3Gi",
+        "is_resizing_in_place": true
+      }
+    },
+    {
+      "id": "pod/bench-scaleup/bench-inference-perf-8b8d9f7c-pe4rf",
+      "layer": "workload",
+      "kind": "Pod",
+      "name": "bench-inference-perf-8b8d9f7c-pe4rf",
+      "namespace": "bench-scaleup",
+      "version": "v1.0.0",
+      "image": "ghcr.io/jagosan/bench-inference:v1.0.0",
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "cpu_request_cores": 4,
+        "memory_request_gib": 8,
+        "scheduling_delay_s": 4.1,
+        "vpa_morph_delay_s": 1.2
+      },
+      "spatial": {
+        "x": 3.6,
+        "y": 0.75,
+        "z": 0.2,
+        "asset_type": "Cuboid_Pod"
+      },
+      "raw_labels": {
+        "app": "bench-inference",
+        "lane": "gke-compute-class",
+        "cloud.google.com/compute-class": "Performance"
+      },
+      "pod_geometry": {
+        "height": 1.1,
+        "radius": 0.56
+      },
+      "autoscaling": {
+        "has_vpa": true,
+        "vpa_target_cpu": "8",
+        "vpa_target_memory": "16Gi",
+        "is_resizing_in_place": true
+      }
+    },
+    {
+      "id": "pod/bench-static/bench-frontend-static-abcdb123-e5p",
+      "layer": "workload",
+      "kind": "Pod",
+      "name": "bench-frontend-static-abcdb123-e5p",
+      "namespace": "bench-static",
+      "version": "v1.0.0",
+      "image": "ghcr.io/jagosan/bench-frontend:v1.0.0",
+      "digest": null,
+      "status": "Pending",
+      "metrics": {
+        "cpu_request_cores": 1,
+        "memory_request_gib": 2,
+        "pending": true,
+        "scheduled": false,
+        "queue_wait_s": 42
+      },
+      "spatial": {
+        "x": -22.0,
+        "y": 1.0,
+        "z": -6.0,
+        "asset_type": "Cuboid_Pod"
+      },
+      "raw_labels": {
+        "app": "bench-frontend",
+        "lane": "static-nodepool"
+      },
+      "pod_geometry": {
+        "height": 0.75,
+        "radius": 0.32,
+        "is_pending": true,
+        "staging_track_x": -22.0,
+        "karpenter_target_node_claim": "bench-burst-jqb4x"
+      }
+    },
+    {
+      "id": "pod/bench-static/bench-frontend-static-abcdb123-f6q",
+      "layer": "workload",
+      "kind": "Pod",
+      "name": "bench-frontend-static-abcdb123-f6q",
+      "namespace": "bench-static",
+      "version": "v1.0.0",
+      "image": "ghcr.io/jagosan/bench-frontend:v1.0.0",
+      "digest": null,
+      "status": "Pending",
+      "metrics": {
+        "cpu_request_cores": 1,
+        "memory_request_gib": 2,
+        "pending": true,
+        "scheduled": false,
+        "queue_wait_s": 60
+      },
+      "spatial": {
+        "x": -20.0,
+        "y": 1.0,
+        "z": -6.0,
+        "asset_type": "Cuboid_Pod"
+      },
+      "raw_labels": {
+        "app": "bench-frontend",
+        "lane": "static-nodepool"
+      },
+      "pod_geometry": {
+        "height": 0.75,
+        "radius": 0.32,
+        "is_pending": true,
+        "staging_track_x": -20.0,
+        "karpenter_target_node_claim": "bench-burst-jqb4x"
+      }
+    },
+    {
+      "id": "pod/bench-static/bench-frontend-static-abcdb123-g7r",
+      "layer": "workload",
+      "kind": "Pod",
+      "name": "bench-frontend-static-abcdb123-g7r",
+      "namespace": "bench-static",
+      "version": "v1.0.0",
+      "image": "ghcr.io/jagosan/bench-frontend:v1.0.0",
+      "digest": null,
+      "status": "Pending",
+      "metrics": {
+        "cpu_request_cores": 1,
+        "memory_request_gib": 2,
+        "pending": true,
+        "scheduled": false,
+        "queue_wait_s": 78
+      },
+      "spatial": {
+        "x": -18.0,
+        "y": 1.0,
+        "z": -6.0,
+        "asset_type": "Cuboid_Pod"
+      },
+      "raw_labels": {
+        "app": "bench-frontend",
+        "lane": "static-nodepool"
+      },
+      "pod_geometry": {
+        "height": 0.75,
+        "radius": 0.32,
+        "is_pending": true,
+        "staging_track_x": -18.0,
+        "karpenter_target_node_claim": "bench-burst-jqb4x"
+      }
+    },
+    {
+      "id": "pod/bench-static/bench-frontend-static-abcdb123-h8s",
+      "layer": "workload",
+      "kind": "Pod",
+      "name": "bench-frontend-static-abcdb123-h8s",
+      "namespace": "bench-static",
+      "version": "v1.0.0",
+      "image": "ghcr.io/jagosan/bench-frontend:v1.0.0",
+      "digest": null,
+      "status": "Pending",
+      "metrics": {
+        "cpu_request_cores": 1,
+        "memory_request_gib": 2,
+        "pending": true,
+        "scheduled": false,
+        "queue_wait_s": 96
+      },
+      "spatial": {
+        "x": -16.0,
+        "y": 1.0,
+        "z": -6.0,
+        "asset_type": "Cuboid_Pod"
+      },
+      "raw_labels": {
+        "app": "bench-frontend",
+        "lane": "static-nodepool"
+      },
+      "pod_geometry": {
+        "height": 0.75,
+        "radius": 0.32,
+        "is_pending": true,
+        "staging_track_x": -16.0,
+        "karpenter_target_node_claim": "bench-burst-jqb4x"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "source": "control-plane/kube-system/kube-apiserver-bench-cp",
+      "target": "control-plane/kube-system/etcd-bench-cp",
+      "flow_type": "control_plane",
+      "protocol": "gRPC/2379",
+      "direction": "bidirectional",
+      "animated": true,
+      "volume_label": "raft KV"
+    },
+    {
+      "source": "node/gke-scaleup-pool-a/kubelet",
+      "target": "control-plane/kube-system/kube-apiserver-bench-cp",
+      "flow_type": "control_plane",
+      "protocol": "HTTPS/6443/Heartbeat",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "lease heartbeat"
+    },
+    {
+      "source": "node/gke-scaleup-pool-b/kubelet",
+      "target": "control-plane/kube-system/kube-apiserver-bench-cp",
+      "flow_type": "control_plane",
+      "protocol": "HTTPS/6443/Heartbeat",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "lease heartbeat"
+    },
+    {
+      "source": "node/gke-performance-pool/kubelet",
+      "target": "control-plane/kube-system/kube-apiserver-bench-cp",
+      "flow_type": "control_plane",
+      "protocol": "HTTPS/6443/Heartbeat",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "lease heartbeat"
+    },
+    {
+      "source": "node/static-nodepool-a/kubelet",
+      "target": "control-plane/kube-system/kube-apiserver-bench-cp",
+      "flow_type": "control_plane",
+      "protocol": "HTTPS/6443/Heartbeat",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "lease heartbeat"
+    },
+    {
+      "source": "node/karpenter-nodepool-a/kubelet",
+      "target": "control-plane/kube-system/kube-apiserver-bench-cp",
+      "flow_type": "control_plane",
+      "protocol": "HTTPS/6443/Heartbeat",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "lease heartbeat"
+    },
+    {
+      "source": "pod/bench-scaleup/bench-frontend-scaleup-6d7c8f9a-a1x",
+      "target": "control-plane/kube-system/kube-apiserver-bench-cp",
+      "flow_type": "traffic",
+      "protocol": "HTTPS/6443",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "informer watch"
+    },
+    {
+      "source": "pod/bench-scaleup/bench-frontend-scaleup-6d7c8f9a-b2y",
+      "target": "control-plane/kube-system/kube-apiserver-bench-cp",
+      "flow_type": "traffic",
+      "protocol": "HTTPS/6443",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "informer watch"
+    },
+    {
+      "source": "pod/bench-scaleup/bench-frontend-scaleup-6d7c8f9a-c3z",
+      "target": "control-plane/kube-system/kube-apiserver-bench-cp",
+      "flow_type": "traffic",
+      "protocol": "HTTPS/6443",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "informer watch"
+    },
+    {
+      "source": "pod/bench-scaleup/bench-frontend-scaleup-6d7c8f9a-d4w",
+      "target": "control-plane/kube-system/kube-apiserver-bench-cp",
+      "flow_type": "traffic",
+      "protocol": "HTTPS/6443",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "informer watch"
+    },
+    {
+      "source": "pod/bench-scaleup/bench-inference-perf-8b8d9f7c-pe4rf",
+      "target": "control-plane/kube-system/kube-apiserver-bench-cp",
+      "flow_type": "traffic",
+      "protocol": "HTTPS/6443",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "informer watch"
+    },
+    {
+      "source": "pod/karpenter/karpenter-controller-5d9c8b7f7b-kp2mq",
+      "target": "control-plane/kube-system/kube-apiserver-bench-cp",
+      "flow_type": "control_plane",
+      "protocol": "HTTPS/6443",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "NodeClaim watch"
+    },
+    {
+      "source": "pod/kube-system/cluster-autoscaler-7c6d5f8f9b-ac9zt",
+      "target": "control-plane/kube-system/kube-apiserver-bench-cp",
+      "flow_type": "control_plane",
+      "protocol": "HTTPS/6443",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "scale-up watch"
+    }
+  ],
+  "machine_shapes": [
+    {
+      "node_name": "gke-scaleup-pool-a",
+      "instance_type": "c3-standard-8",
+      "compute_class": "Scale-Up",
+      "vcpus": 8,
+      "memory_gib": 32,
+      "capacity_type": "on-demand",
+      "zone": "us-central1-a",
+      "accelerator_count": 0
+    },
+    {
+      "node_name": "gke-scaleup-pool-b",
+      "instance_type": "c3-standard-8",
+      "compute_class": "Scale-Up",
+      "vcpus": 8,
+      "memory_gib": 32,
+      "capacity_type": "on-demand",
+      "zone": "us-central1-b",
+      "accelerator_count": 0
+    },
+    {
+      "node_name": "gke-performance-pool",
+      "instance_type": "c3d-standard-16",
+      "compute_class": "Performance",
+      "vcpus": 16,
+      "memory_gib": 64,
+      "capacity_type": "on-demand",
+      "zone": "us-central1-a",
+      "accelerator_count": 0
+    },
+    {
+      "node_name": "static-nodepool-a",
+      "instance_type": "m5a.2xlarge",
+      "vcpus": 8,
+      "memory_gib": 32,
+      "capacity_type": "on-demand",
+      "zone": "us-east-1a",
+      "accelerator_count": 0
+    },
+    {
+      "node_name": "karpenter-nodepool-a",
+      "instance_type": "c6g.4xlarge",
+      "vcpus": 16,
+      "memory_gib": 32,
+      "capacity_type": "spot",
+      "zone": "us-east-1b",
+      "accelerator_count": 0
+    }
+  ],
+  "karpenter_node_claims": [
+    {
+      "claim_name": "bench-burst-jqb4x",
+      "namespace": "karpenter",
+      "nodepool": "bench-burst",
+      "instance_type": "c6g.4xlarge",
+      "capacity_type": "spot",
+      "requested_cpu_cores": 16,
+      "requested_memory_gib": 32,
+      "requested_gpu_count": 0,
+      "pending_pod_uids": [
+        "pod/bench-static/bench-frontend-static-abcdb123-e5p",
+        "pod/bench-static/bench-frontend-static-abcdb123-f6q"
+      ],
+      "is_provisioned": false,
+      "created_at": "2026-10-04T09:00:00+00:00"
+    },
+    {
+      "claim_name": "bench-burst-k5c9m",
+      "namespace": "karpenter",
+      "nodepool": "bench-burst",
+      "instance_type": "c6g.4xlarge",
+      "capacity_type": "spot",
+      "requested_cpu_cores": 16,
+      "requested_memory_gib": 32,
+      "requested_gpu_count": 0,
+      "pending_pod_uids": [
+        "pod/bench-static/bench-frontend-static-abcdb123-g7r",
+        "pod/bench-static/bench-frontend-static-abcdb123-h8s"
+      ],
+      "is_provisioned": false,
+      "created_at": "2026-10-04T09:00:00+00:00"
+    }
+  ]
+}

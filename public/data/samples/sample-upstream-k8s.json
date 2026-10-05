@@ -1,0 +1,770 @@
+{
+  "$schema": "https://cluster-vis.jagosan.com/schemas/cluster-graph-v1.json",
+  "metadata": {
+    "cluster_name": "sample-upstream-k8s",
+    "kubernetes_version": "v1.36.4",
+    "distribution": "upstream-oss",
+    "timestamp": "2026-10-04T09:00:00+00:00",
+    "node_count": 3,
+    "pod_count": 15
+  },
+  "nodes": [
+    {
+      "id": "node/upstream-cp",
+      "layer": "node",
+      "kind": "Node",
+      "name": "upstream-cp",
+      "namespace": "cluster",
+      "version": "v1.36.4",
+      "image": null,
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "cpu_capacity": "8",
+        "memory_capacity": "32768Ki",
+        "cpu_allocatable": "8",
+        "memory_allocatable": "32768Ki",
+        "os_image": "Container-Optimized OS from Google",
+        "unschedulable": false
+      },
+      "spatial": {
+        "x": -6.0,
+        "y": 0.5,
+        "z": 0.0,
+        "asset_type": "LayerTray_Worker"
+      },
+      "raw_labels": {
+        "kubernetes.io/hostname": "upstream-cp",
+        "node-role.kubernetes.io/control-plane": "",
+        "kubernetes.io/os": "linux",
+        "kubernetes.io/arch": "amd64"
+      }
+    },
+    {
+      "id": "node/upstream-worker-01",
+      "layer": "node",
+      "kind": "Node",
+      "name": "upstream-worker-01",
+      "namespace": "cluster",
+      "version": "v1.36.4",
+      "image": null,
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "cpu_capacity": "16",
+        "memory_capacity": "65536Ki",
+        "cpu_allocatable": "16",
+        "memory_allocatable": "65536Ki",
+        "os_image": "Container-Optimized OS from Google",
+        "unschedulable": false
+      },
+      "spatial": {
+        "x": 0.0,
+        "y": 0.5,
+        "z": 0.0,
+        "asset_type": "LayerTray_Worker"
+      },
+      "raw_labels": {
+        "kubernetes.io/hostname": "upstream-worker-01",
+        "kubernetes.io/os": "linux",
+        "kubernetes.io/arch": "amd64"
+      }
+    },
+    {
+      "id": "node/upstream-worker-02",
+      "layer": "node",
+      "kind": "Node",
+      "name": "upstream-worker-02",
+      "namespace": "cluster",
+      "version": "v1.36.4",
+      "image": null,
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "cpu_capacity": "16",
+        "memory_capacity": "65536Ki",
+        "cpu_allocatable": "16",
+        "memory_allocatable": "65536Ki",
+        "os_image": "Container-Optimized OS from Google",
+        "unschedulable": false
+      },
+      "spatial": {
+        "x": 6.0,
+        "y": 0.5,
+        "z": 0.0,
+        "asset_type": "LayerTray_Worker"
+      },
+      "raw_labels": {
+        "kubernetes.io/hostname": "upstream-worker-02",
+        "kubernetes.io/os": "linux",
+        "kubernetes.io/arch": "amd64"
+      }
+    },
+    {
+      "id": "control-plane/kube-system/kube-apiserver-upstream-cp",
+      "layer": "control-plane",
+      "kind": "Pod",
+      "name": "kube-apiserver-upstream-cp",
+      "namespace": "kube-system",
+      "version": "v1.36.4",
+      "image": "registry.k8s.io/kube-apiserver-amd64:v1.36.4",
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "component": "kube-apiserver"
+      },
+      "spatial": {
+        "x": 0.0,
+        "y": 7.0,
+        "z": 0.0,
+        "asset_type": "Cuboid_APIServer"
+      },
+      "raw_labels": {
+        "component": "kube-apiserver",
+        "tier": "control-plane"
+      }
+    },
+    {
+      "id": "control-plane/kube-system/kube-scheduler-upstream-cp",
+      "layer": "control-plane",
+      "kind": "Pod",
+      "name": "kube-scheduler-upstream-cp",
+      "namespace": "kube-system",
+      "version": "v1.36.4",
+      "image": "registry.k8s.io/kube-scheduler-amd64:v1.36.4",
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "component": "kube-scheduler"
+      },
+      "spatial": {
+        "x": -2.8,
+        "y": 4.5,
+        "z": 0.8,
+        "asset_type": "Cuboid_Supervisor"
+      },
+      "raw_labels": {
+        "component": "kube-scheduler",
+        "tier": "control-plane"
+      }
+    },
+    {
+      "id": "control-plane/kube-system/kube-controller-manager-upstream-cp",
+      "layer": "control-plane",
+      "kind": "Pod",
+      "name": "kube-controller-manager-upstream-cp",
+      "namespace": "kube-system",
+      "version": "v1.36.4",
+      "image": "registry.k8s.io/kube-controller-manager-amd64:v1.36.4",
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "component": "kube-controller-manager"
+      },
+      "spatial": {
+        "x": 2.8,
+        "y": 4.5,
+        "z": 0.8,
+        "asset_type": "Cuboid_Supervisor"
+      },
+      "raw_labels": {
+        "component": "kube-controller-manager",
+        "tier": "control-plane"
+      }
+    },
+    {
+      "id": "control-plane/kube-system/etcd-upstream-cp",
+      "layer": "control-plane",
+      "kind": "Pod",
+      "name": "etcd-upstream-cp",
+      "namespace": "kube-system",
+      "version": "3.6.8-0",
+      "image": "registry.k8s.io/etcd:3.6.8-0",
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "component": "etcd"
+      },
+      "spatial": {
+        "x": 0.0,
+        "y": 5.5,
+        "z": -3.5,
+        "asset_type": "Cuboid_etcd"
+      },
+      "raw_labels": {
+        "component": "etcd",
+        "tier": "control-plane"
+      }
+    },
+    {
+      "id": "node/upstream-cp/kubelet",
+      "layer": "node",
+      "kind": "Kubelet",
+      "name": "kubelet-upstream-cp",
+      "namespace": "kube-system",
+      "version": "v1.36.4",
+      "image": null,
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "component": "kubelet",
+        "node": "upstream-cp"
+      },
+      "spatial": {
+        "x": -7.8,
+        "y": 0.7,
+        "z": -1.5,
+        "asset_type": "Cuboid_Kubelet"
+      },
+      "raw_labels": {}
+    },
+    {
+      "id": "node/upstream-cp/containerd",
+      "layer": "node",
+      "kind": "Containerd",
+      "name": "containerd-upstream-cp",
+      "namespace": "kube-system",
+      "version": "v1.7.20",
+      "image": null,
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "runtime": "containerd",
+        "node": "upstream-cp"
+      },
+      "spatial": {
+        "x": -6.8,
+        "y": 0.7,
+        "z": -1.5,
+        "asset_type": "Cuboid_Containerd"
+      },
+      "raw_labels": {}
+    },
+    {
+      "id": "node/upstream-worker-01/kubelet",
+      "layer": "node",
+      "kind": "Kubelet",
+      "name": "kubelet-upstream-worker-01",
+      "namespace": "kube-system",
+      "version": "v1.36.4",
+      "image": null,
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "component": "kubelet",
+        "node": "upstream-worker-01"
+      },
+      "spatial": {
+        "x": -1.8,
+        "y": 0.7,
+        "z": -1.5,
+        "asset_type": "Cuboid_Kubelet"
+      },
+      "raw_labels": {}
+    },
+    {
+      "id": "node/upstream-worker-01/containerd",
+      "layer": "node",
+      "kind": "Containerd",
+      "name": "containerd-upstream-worker-01",
+      "namespace": "kube-system",
+      "version": "v1.7.20",
+      "image": null,
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "runtime": "containerd",
+        "node": "upstream-worker-01"
+      },
+      "spatial": {
+        "x": -0.8,
+        "y": 0.7,
+        "z": -1.5,
+        "asset_type": "Cuboid_Containerd"
+      },
+      "raw_labels": {}
+    },
+    {
+      "id": "node/upstream-worker-02/kubelet",
+      "layer": "node",
+      "kind": "Kubelet",
+      "name": "kubelet-upstream-worker-02",
+      "namespace": "kube-system",
+      "version": "v1.36.4",
+      "image": null,
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "component": "kubelet",
+        "node": "upstream-worker-02"
+      },
+      "spatial": {
+        "x": 4.2,
+        "y": 0.7,
+        "z": -1.5,
+        "asset_type": "Cuboid_Kubelet"
+      },
+      "raw_labels": {}
+    },
+    {
+      "id": "node/upstream-worker-02/containerd",
+      "layer": "node",
+      "kind": "Containerd",
+      "name": "containerd-upstream-worker-02",
+      "namespace": "kube-system",
+      "version": "v1.7.20",
+      "image": null,
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "runtime": "containerd",
+        "node": "upstream-worker-02"
+      },
+      "spatial": {
+        "x": 5.2,
+        "y": 0.7,
+        "z": -1.5,
+        "asset_type": "Cuboid_Containerd"
+      },
+      "raw_labels": {}
+    },
+    {
+      "id": "pod/kube-system/kube-proxy-upstream-cp",
+      "layer": "workload",
+      "kind": "Pod",
+      "name": "kube-proxy-upstream-cp",
+      "namespace": "kube-system",
+      "version": "v1.36.4",
+      "image": "registry.k8s.io/kube-proxy:v1.36.4",
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "component": "kube-proxy",
+        "kind": "DaemonSet",
+        "cpu_request_cores": 0.1,
+        "memory_request_gib": 0.2
+      },
+      "spatial": {
+        "x": -4.8,
+        "y": 0.65,
+        "z": -1.5,
+        "asset_type": "Cuboid_DaemonSet"
+      },
+      "raw_labels": {
+        "k8s-app": "kube-proxy"
+      },
+      "pod_geometry": {
+        "height": 0.511,
+        "radius": 0.2
+      }
+    },
+    {
+      "id": "pod/kube-system/cilium-upstream-cp",
+      "layer": "workload",
+      "kind": "Pod",
+      "name": "cilium-upstream-cp",
+      "namespace": "kube-system",
+      "version": "v1.16.3",
+      "image": "quay.io/cilium/cilium:v1.16.3",
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "component": "cilium",
+        "kind": "DaemonSet",
+        "cpu_request_cores": 0.25,
+        "memory_request_gib": 0.5
+      },
+      "spatial": {
+        "x": -4.0,
+        "y": 0.65,
+        "z": -1.5,
+        "asset_type": "Cuboid_DaemonSet"
+      },
+      "raw_labels": {
+        "k8s-app": "cilium"
+      },
+      "pod_geometry": {
+        "height": 0.575,
+        "radius": 0.2
+      }
+    },
+    {
+      "id": "pod/kube-system/kube-proxy-upstream-worker-01",
+      "layer": "workload",
+      "kind": "Pod",
+      "name": "kube-proxy-upstream-worker-01",
+      "namespace": "kube-system",
+      "version": "v1.36.4",
+      "image": "registry.k8s.io/kube-proxy:v1.36.4",
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "component": "kube-proxy",
+        "kind": "DaemonSet",
+        "cpu_request_cores": 0.1,
+        "memory_request_gib": 0.2
+      },
+      "spatial": {
+        "x": 1.2,
+        "y": 0.65,
+        "z": -1.5,
+        "asset_type": "Cuboid_DaemonSet"
+      },
+      "raw_labels": {
+        "k8s-app": "kube-proxy"
+      },
+      "pod_geometry": {
+        "height": 0.511,
+        "radius": 0.2
+      }
+    },
+    {
+      "id": "pod/kube-system/cilium-upstream-worker-01",
+      "layer": "workload",
+      "kind": "Pod",
+      "name": "cilium-upstream-worker-01",
+      "namespace": "kube-system",
+      "version": "v1.16.3",
+      "image": "quay.io/cilium/cilium:v1.16.3",
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "component": "cilium",
+        "kind": "DaemonSet",
+        "cpu_request_cores": 0.25,
+        "memory_request_gib": 0.5
+      },
+      "spatial": {
+        "x": 2.0,
+        "y": 0.65,
+        "z": -1.5,
+        "asset_type": "Cuboid_DaemonSet"
+      },
+      "raw_labels": {
+        "k8s-app": "cilium"
+      },
+      "pod_geometry": {
+        "height": 0.575,
+        "radius": 0.2
+      }
+    },
+    {
+      "id": "pod/kube-system/kube-proxy-upstream-worker-02",
+      "layer": "workload",
+      "kind": "Pod",
+      "name": "kube-proxy-upstream-worker-02",
+      "namespace": "kube-system",
+      "version": "v1.36.4",
+      "image": "registry.k8s.io/kube-proxy:v1.36.4",
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "component": "kube-proxy",
+        "kind": "DaemonSet",
+        "cpu_request_cores": 0.1,
+        "memory_request_gib": 0.2
+      },
+      "spatial": {
+        "x": 7.2,
+        "y": 0.65,
+        "z": -1.5,
+        "asset_type": "Cuboid_DaemonSet"
+      },
+      "raw_labels": {
+        "k8s-app": "kube-proxy"
+      },
+      "pod_geometry": {
+        "height": 0.511,
+        "radius": 0.2
+      }
+    },
+    {
+      "id": "pod/kube-system/cilium-upstream-worker-02",
+      "layer": "workload",
+      "kind": "Pod",
+      "name": "cilium-upstream-worker-02",
+      "namespace": "kube-system",
+      "version": "v1.16.3",
+      "image": "quay.io/cilium/cilium:v1.16.3",
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "component": "cilium",
+        "kind": "DaemonSet",
+        "cpu_request_cores": 0.25,
+        "memory_request_gib": 0.5
+      },
+      "spatial": {
+        "x": 8.0,
+        "y": 0.65,
+        "z": -1.5,
+        "asset_type": "Cuboid_DaemonSet"
+      },
+      "raw_labels": {
+        "k8s-app": "cilium"
+      },
+      "pod_geometry": {
+        "height": 0.575,
+        "radius": 0.2
+      }
+    },
+    {
+      "id": "control-plane/kube-system/coredns-589f44dc88-6vkv7",
+      "layer": "control-plane",
+      "kind": "Pod",
+      "name": "coredns-589f44dc88-6vkv7",
+      "namespace": "kube-system",
+      "version": "v1.14.2",
+      "image": "registry.k8s.io/coredns/coredns:v1.14.2",
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "component": "coredns",
+        "cpu_request_cores": 0.25,
+        "memory_request_gib": 0.5
+      },
+      "spatial": {
+        "x": -0.6,
+        "y": 0.75,
+        "z": 0.2,
+        "asset_type": "Cuboid_Pod"
+      },
+      "raw_labels": {
+        "k8s-app": "kube-dns",
+        "pod-template-hash": "589f44dc88"
+      },
+      "pod_geometry": {
+        "height": 0.575,
+        "radius": 0.2
+      }
+    },
+    {
+      "id": "control-plane/kube-system/coredns-589f44dc88-tn4zj",
+      "layer": "control-plane",
+      "kind": "Pod",
+      "name": "coredns-589f44dc88-tn4zj",
+      "namespace": "kube-system",
+      "version": "v1.14.2",
+      "image": "registry.k8s.io/coredns/coredns:v1.14.2",
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "component": "coredns",
+        "cpu_request_cores": 0.25,
+        "memory_request_gib": 0.5
+      },
+      "spatial": {
+        "x": 0.6,
+        "y": 0.75,
+        "z": 0.2,
+        "asset_type": "Cuboid_Pod"
+      },
+      "raw_labels": {
+        "k8s-app": "kube-dns",
+        "pod-template-hash": "589f44dc88"
+      },
+      "pod_geometry": {
+        "height": 0.575,
+        "radius": 0.2
+      }
+    },
+    {
+      "id": "pod/ingress-nginx/nginx-ingress-controller-7d5c8b9f4d-k2x2v",
+      "layer": "workload",
+      "kind": "Pod",
+      "name": "nginx-ingress-controller-7d5c8b9f4d-k2x2v",
+      "namespace": "ingress-nginx",
+      "version": "v1.11.2",
+      "image": "registry.k8s.io/ingress-nginx/controller:v1.11.2",
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "cpu_request_cores": 0.5,
+        "memory_request_gib": 0.5
+      },
+      "spatial": {
+        "x": -0.6,
+        "y": 0.75,
+        "z": 0.2,
+        "asset_type": "Cuboid_Pod"
+      },
+      "raw_labels": {
+        "app.kubernetes.io/name": "ingress-nginx"
+      },
+      "pod_geometry": {
+        "height": 0.647,
+        "radius": 0.2
+      }
+    },
+    {
+      "id": "pod/ingress-nginx/nginx-ingress-controller-7d5c8b9f4d-m9q1a",
+      "layer": "workload",
+      "kind": "Pod",
+      "name": "nginx-ingress-controller-7d5c8b9f4d-m9q1a",
+      "namespace": "ingress-nginx",
+      "version": "v1.11.2",
+      "image": "registry.k8s.io/ingress-nginx/controller:v1.11.2",
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "cpu_request_cores": 0.5,
+        "memory_request_gib": 0.5
+      },
+      "spatial": {
+        "x": 6.6,
+        "y": 0.75,
+        "z": 0.2,
+        "asset_type": "Cuboid_Pod"
+      },
+      "raw_labels": {
+        "app.kubernetes.io/name": "ingress-nginx"
+      },
+      "pod_geometry": {
+        "height": 0.647,
+        "radius": 0.2
+      }
+    },
+    {
+      "id": "pod/cert-manager/cert-manager-6c8d7f9b5d-zz3t1",
+      "layer": "workload",
+      "kind": "Pod",
+      "name": "cert-manager-6c8d7f9b5d-zz3t1",
+      "namespace": "cert-manager",
+      "version": "v1.15.3",
+      "image": "quay.io/jetstack/cert-manager-controller:v1.15.3",
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "cpu_request_cores": 0.2,
+        "memory_request_gib": 0.5
+      },
+      "spatial": {
+        "x": 5.4,
+        "y": 0.75,
+        "z": 1.2,
+        "asset_type": "Cuboid_Pod"
+      },
+      "raw_labels": {
+        "app.kubernetes.io/name": "cert-manager"
+      },
+      "pod_geometry": {
+        "height": 0.557,
+        "radius": 0.2
+      }
+    },
+    {
+      "id": "sample-upstream-k8s/client-kubectl",
+      "layer": "ingress",
+      "kind": "Client",
+      "name": "kubectl-cli",
+      "namespace": "external",
+      "version": "v1.36.4",
+      "image": null,
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "tool": "kubectl",
+        "command": "get nodes"
+      },
+      "spatial": {
+        "x": 0.0,
+        "y": 12.0,
+        "z": 6.0,
+        "asset_type": "Client_Slab"
+      },
+      "raw_labels": {}
+    }
+  ],
+  "edges": [
+    {
+      "source": "control-plane/kube-system/kube-apiserver-upstream-cp",
+      "target": "control-plane/kube-system/etcd-upstream-cp",
+      "flow_type": "control_plane",
+      "protocol": "gRPC/2379",
+      "direction": "bidirectional",
+      "animated": true,
+      "volume_label": "raft KV"
+    },
+    {
+      "source": "node/upstream-cp/kubelet",
+      "target": "control-plane/kube-system/kube-apiserver-upstream-cp",
+      "flow_type": "control_plane",
+      "protocol": "HTTPS/6443/Heartbeat",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "lease heartbeat"
+    },
+    {
+      "source": "node/upstream-worker-01/kubelet",
+      "target": "control-plane/kube-system/kube-apiserver-upstream-cp",
+      "flow_type": "control_plane",
+      "protocol": "HTTPS/6443/Heartbeat",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "lease heartbeat"
+    },
+    {
+      "source": "node/upstream-worker-02/kubelet",
+      "target": "control-plane/kube-system/kube-apiserver-upstream-cp",
+      "flow_type": "control_plane",
+      "protocol": "HTTPS/6443/Heartbeat",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "lease heartbeat"
+    },
+    {
+      "source": "control-plane/kube-system/kube-apiserver-upstream-cp",
+      "target": "control-plane/kube-system/coredns-589f44dc88-6vkv7",
+      "flow_type": "control_plane",
+      "protocol": "TCP",
+      "direction": "unidirectional",
+      "animated": false,
+      "volume_label": null
+    },
+    {
+      "source": "control-plane/kube-system/kube-apiserver-upstream-cp",
+      "target": "control-plane/kube-system/coredns-589f44dc88-tn4zj",
+      "flow_type": "control_plane",
+      "protocol": "TCP",
+      "direction": "unidirectional",
+      "animated": false,
+      "volume_label": null
+    },
+    {
+      "source": "pod/ingress-nginx/nginx-ingress-controller-7d5c8b9f4d-k2x2v",
+      "target": "control-plane/kube-system/kube-apiserver-upstream-cp",
+      "flow_type": "traffic",
+      "protocol": "HTTPS/6443",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "informer watch"
+    },
+    {
+      "source": "pod/ingress-nginx/nginx-ingress-controller-7d5c8b9f4d-m9q1a",
+      "target": "control-plane/kube-system/kube-apiserver-upstream-cp",
+      "flow_type": "traffic",
+      "protocol": "HTTPS/6443",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "informer watch"
+    },
+    {
+      "source": "pod/cert-manager/cert-manager-6c8d7f9b5d-zz3t1",
+      "target": "control-plane/kube-system/kube-apiserver-upstream-cp",
+      "flow_type": "control_plane",
+      "protocol": "HTTPS/6443",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "crd reconcile"
+    },
+    {
+      "source": "sample-upstream-k8s/client-kubectl",
+      "target": "control-plane/kube-system/kube-apiserver-upstream-cp",
+      "flow_type": "traffic",
+      "protocol": "HTTPS/443",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "list nodes"
+    }
+  ]
+}

@@ -1,0 +1,1128 @@
+{
+  "$schema": "https://cluster-vis.jagosan.com/schemas/cluster-graph-v1.json",
+  "metadata": {
+    "cluster_name": "sample-ray-kuberay",
+    "kubernetes_version": "v1.36.4",
+    "distribution": "gke-kuberay-kueue",
+    "timestamp": "2026-10-04T09:00:00+00:00",
+    "node_count": 5,
+    "pod_count": 17
+  },
+  "nodes": [
+    {
+      "id": "node/ray-head-pool",
+      "layer": "node",
+      "kind": "Node",
+      "name": "ray-head-pool",
+      "namespace": "cluster",
+      "version": "v1.36.4",
+      "image": null,
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "cpu_capacity": "8",
+        "memory_capacity": "32768Ki",
+        "cpu_allocatable": "8",
+        "memory_allocatable": "32768Ki",
+        "os_image": "Container-Optimized OS from Google",
+        "unschedulable": false
+      },
+      "spatial": {
+        "x": -9.0,
+        "y": 0.5,
+        "z": 0.0,
+        "asset_type": "LayerTray_Worker"
+      },
+      "raw_labels": {
+        "kubernetes.io/hostname": "ray-head-pool",
+        "cloud.google.com/gke-nodepool": "ray-head-n2-standard-8"
+      }
+    },
+    {
+      "id": "node/ray-cpu-worker-a",
+      "layer": "node",
+      "kind": "Node",
+      "name": "ray-cpu-worker-a",
+      "namespace": "cluster",
+      "version": "v1.36.4",
+      "image": null,
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "cpu_capacity": "16",
+        "memory_capacity": "65536Ki",
+        "cpu_allocatable": "16",
+        "memory_allocatable": "65536Ki",
+        "os_image": "Container-Optimized OS from Google",
+        "unschedulable": false
+      },
+      "spatial": {
+        "x": -3.0,
+        "y": 0.5,
+        "z": 0.0,
+        "asset_type": "LayerTray_Worker"
+      },
+      "raw_labels": {
+        "kubernetes.io/hostname": "ray-cpu-worker-a",
+        "cloud.google.com/gke-nodepool": "ray-cpu-n2-standard-16"
+      }
+    },
+    {
+      "id": "node/ray-cpu-worker-b",
+      "layer": "node",
+      "kind": "Node",
+      "name": "ray-cpu-worker-b",
+      "namespace": "cluster",
+      "version": "v1.36.4",
+      "image": null,
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "cpu_capacity": "16",
+        "memory_capacity": "65536Ki",
+        "cpu_allocatable": "16",
+        "memory_allocatable": "65536Ki",
+        "os_image": "Container-Optimized OS from Google",
+        "unschedulable": false
+      },
+      "spatial": {
+        "x": 3.0,
+        "y": 0.5,
+        "z": 0.0,
+        "asset_type": "LayerTray_Worker"
+      },
+      "raw_labels": {
+        "kubernetes.io/hostname": "ray-cpu-worker-b",
+        "cloud.google.com/gke-nodepool": "ray-cpu-n2-standard-16"
+      }
+    },
+    {
+      "id": "node/ray-gpu-worker-l4",
+      "layer": "node",
+      "kind": "Node",
+      "name": "ray-gpu-worker-l4",
+      "namespace": "cluster",
+      "version": "v1.36.4",
+      "image": null,
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "cpu_capacity": "16",
+        "memory_capacity": "65536Ki",
+        "cpu_allocatable": "16",
+        "memory_allocatable": "65536Ki",
+        "os_image": "Container-Optimized OS from Google",
+        "unschedulable": false
+      },
+      "spatial": {
+        "x": 9.0,
+        "y": 0.5,
+        "z": 0.0,
+        "asset_type": "LayerTray_Worker"
+      },
+      "raw_labels": {
+        "kubernetes.io/hostname": "ray-gpu-worker-l4",
+        "cloud.google.com/gke-nodepool": "ray-gpu-g2-standard-16",
+        "cloud.google.com/gke-accelerator": "nvidia-l4",
+        "accelerator-count": "2"
+      }
+    },
+    {
+      "id": "node/ray-gpu-worker-a100",
+      "layer": "node",
+      "kind": "Node",
+      "name": "ray-gpu-worker-a100",
+      "namespace": "cluster",
+      "version": "v1.36.4",
+      "image": null,
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "cpu_capacity": "32",
+        "memory_capacity": "131072Ki",
+        "cpu_allocatable": "32",
+        "memory_allocatable": "131072Ki",
+        "os_image": "Container-Optimized OS from Google",
+        "unschedulable": false
+      },
+      "spatial": {
+        "x": 15.0,
+        "y": 0.5,
+        "z": 0.0,
+        "asset_type": "LayerTray_Worker"
+      },
+      "raw_labels": {
+        "kubernetes.io/hostname": "ray-gpu-worker-a100",
+        "cloud.google.com/gke-nodepool": "ray-gpu-a2-highgpu-1g",
+        "cloud.google.com/gke-accelerator": "nvidia-a100-80gb",
+        "accelerator-count": "1"
+      }
+    },
+    {
+      "id": "control-plane/kube-system/kube-apiserver-ray-cp",
+      "layer": "control-plane",
+      "kind": "Pod",
+      "name": "kube-apiserver-ray-cp",
+      "namespace": "kube-system",
+      "version": "v1.36.4",
+      "image": "registry.k8s.io/kube-apiserver-amd64:v1.36.4",
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "component": "kube-apiserver"
+      },
+      "spatial": {
+        "x": 0.0,
+        "y": 7.0,
+        "z": 0.0,
+        "asset_type": "Cuboid_APIServer"
+      },
+      "raw_labels": {
+        "component": "kube-apiserver",
+        "tier": "control-plane"
+      }
+    },
+    {
+      "id": "control-plane/kube-system/kube-scheduler-ray-cp",
+      "layer": "control-plane",
+      "kind": "Pod",
+      "name": "kube-scheduler-ray-cp",
+      "namespace": "kube-system",
+      "version": "v1.36.4",
+      "image": "registry.k8s.io/kube-scheduler-amd64:v1.36.4",
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "component": "kube-scheduler"
+      },
+      "spatial": {
+        "x": -2.8,
+        "y": 4.5,
+        "z": 0.8,
+        "asset_type": "Cuboid_Supervisor"
+      },
+      "raw_labels": {
+        "component": "kube-scheduler",
+        "tier": "control-plane"
+      }
+    },
+    {
+      "id": "control-plane/kube-system/kube-controller-manager-ray-cp",
+      "layer": "control-plane",
+      "kind": "Pod",
+      "name": "kube-controller-manager-ray-cp",
+      "namespace": "kube-system",
+      "version": "v1.36.4",
+      "image": "registry.k8s.io/kube-controller-manager-amd64:v1.36.4",
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "component": "kube-controller-manager"
+      },
+      "spatial": {
+        "x": 2.8,
+        "y": 4.5,
+        "z": 0.8,
+        "asset_type": "Cuboid_Supervisor"
+      },
+      "raw_labels": {
+        "component": "kube-controller-manager",
+        "tier": "control-plane"
+      }
+    },
+    {
+      "id": "control-plane/kube-system/etcd-ray-cp",
+      "layer": "control-plane",
+      "kind": "Pod",
+      "name": "etcd-ray-cp",
+      "namespace": "kube-system",
+      "version": "3.6.8-0",
+      "image": "registry.k8s.io/etcd:3.6.8-0",
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "component": "etcd"
+      },
+      "spatial": {
+        "x": 0.0,
+        "y": 5.5,
+        "z": -3.5,
+        "asset_type": "Cuboid_etcd"
+      },
+      "raw_labels": {
+        "component": "etcd",
+        "tier": "control-plane"
+      }
+    },
+    {
+      "id": "node/ray-head-pool/kubelet",
+      "layer": "node",
+      "kind": "Kubelet",
+      "name": "kubelet-ray-head-pool",
+      "namespace": "kube-system",
+      "version": "v1.36.4",
+      "image": null,
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "component": "kubelet",
+        "node": "ray-head-pool"
+      },
+      "spatial": {
+        "x": -10.8,
+        "y": 0.7,
+        "z": -1.5,
+        "asset_type": "Cuboid_Kubelet"
+      },
+      "raw_labels": {}
+    },
+    {
+      "id": "node/ray-head-pool/containerd",
+      "layer": "node",
+      "kind": "Containerd",
+      "name": "containerd-ray-head-pool",
+      "namespace": "kube-system",
+      "version": "v1.7.20",
+      "image": null,
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "runtime": "containerd",
+        "node": "ray-head-pool"
+      },
+      "spatial": {
+        "x": -9.8,
+        "y": 0.7,
+        "z": -1.5,
+        "asset_type": "Cuboid_Containerd"
+      },
+      "raw_labels": {}
+    },
+    {
+      "id": "node/ray-cpu-worker-a/kubelet",
+      "layer": "node",
+      "kind": "Kubelet",
+      "name": "kubelet-ray-cpu-worker-a",
+      "namespace": "kube-system",
+      "version": "v1.36.4",
+      "image": null,
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "component": "kubelet",
+        "node": "ray-cpu-worker-a"
+      },
+      "spatial": {
+        "x": -4.8,
+        "y": 0.7,
+        "z": -1.5,
+        "asset_type": "Cuboid_Kubelet"
+      },
+      "raw_labels": {}
+    },
+    {
+      "id": "node/ray-cpu-worker-a/containerd",
+      "layer": "node",
+      "kind": "Containerd",
+      "name": "containerd-ray-cpu-worker-a",
+      "namespace": "kube-system",
+      "version": "v1.7.20",
+      "image": null,
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "runtime": "containerd",
+        "node": "ray-cpu-worker-a"
+      },
+      "spatial": {
+        "x": -3.8,
+        "y": 0.7,
+        "z": -1.5,
+        "asset_type": "Cuboid_Containerd"
+      },
+      "raw_labels": {}
+    },
+    {
+      "id": "node/ray-cpu-worker-b/kubelet",
+      "layer": "node",
+      "kind": "Kubelet",
+      "name": "kubelet-ray-cpu-worker-b",
+      "namespace": "kube-system",
+      "version": "v1.36.4",
+      "image": null,
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "component": "kubelet",
+        "node": "ray-cpu-worker-b"
+      },
+      "spatial": {
+        "x": 1.2,
+        "y": 0.7,
+        "z": -1.5,
+        "asset_type": "Cuboid_Kubelet"
+      },
+      "raw_labels": {}
+    },
+    {
+      "id": "node/ray-cpu-worker-b/containerd",
+      "layer": "node",
+      "kind": "Containerd",
+      "name": "containerd-ray-cpu-worker-b",
+      "namespace": "kube-system",
+      "version": "v1.7.20",
+      "image": null,
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "runtime": "containerd",
+        "node": "ray-cpu-worker-b"
+      },
+      "spatial": {
+        "x": 2.2,
+        "y": 0.7,
+        "z": -1.5,
+        "asset_type": "Cuboid_Containerd"
+      },
+      "raw_labels": {}
+    },
+    {
+      "id": "node/ray-gpu-worker-l4/kubelet",
+      "layer": "node",
+      "kind": "Kubelet",
+      "name": "kubelet-ray-gpu-worker-l4",
+      "namespace": "kube-system",
+      "version": "v1.36.4",
+      "image": null,
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "component": "kubelet",
+        "node": "ray-gpu-worker-l4"
+      },
+      "spatial": {
+        "x": 7.2,
+        "y": 0.7,
+        "z": -1.5,
+        "asset_type": "Cuboid_Kubelet"
+      },
+      "raw_labels": {}
+    },
+    {
+      "id": "node/ray-gpu-worker-l4/containerd",
+      "layer": "node",
+      "kind": "Containerd",
+      "name": "containerd-ray-gpu-worker-l4",
+      "namespace": "kube-system",
+      "version": "v1.7.20",
+      "image": null,
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "runtime": "containerd",
+        "node": "ray-gpu-worker-l4"
+      },
+      "spatial": {
+        "x": 8.2,
+        "y": 0.7,
+        "z": -1.5,
+        "asset_type": "Cuboid_Containerd"
+      },
+      "raw_labels": {}
+    },
+    {
+      "id": "node/ray-gpu-worker-a100/kubelet",
+      "layer": "node",
+      "kind": "Kubelet",
+      "name": "kubelet-ray-gpu-worker-a100",
+      "namespace": "kube-system",
+      "version": "v1.36.4",
+      "image": null,
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "component": "kubelet",
+        "node": "ray-gpu-worker-a100"
+      },
+      "spatial": {
+        "x": 13.2,
+        "y": 0.7,
+        "z": -1.5,
+        "asset_type": "Cuboid_Kubelet"
+      },
+      "raw_labels": {}
+    },
+    {
+      "id": "node/ray-gpu-worker-a100/containerd",
+      "layer": "node",
+      "kind": "Containerd",
+      "name": "containerd-ray-gpu-worker-a100",
+      "namespace": "kube-system",
+      "version": "v1.7.20",
+      "image": null,
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "runtime": "containerd",
+        "node": "ray-gpu-worker-a100"
+      },
+      "spatial": {
+        "x": 14.2,
+        "y": 0.7,
+        "z": -1.5,
+        "asset_type": "Cuboid_Containerd"
+      },
+      "raw_labels": {}
+    },
+    {
+      "id": "pod/ray-system/kuberay-operator-6b8c9f7d5d-qq2kq",
+      "layer": "framework",
+      "kind": "Pod",
+      "name": "kuberay-operator-6b8c9f7d5d-qq2kq",
+      "namespace": "ray-system",
+      "version": "v1.2.0",
+      "image": "quay.io/kuberay/operator:v1.2.0",
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "cpu_request_cores": 0.1,
+        "memory_request_gib": 0.5
+      },
+      "spatial": {
+        "x": -5.2,
+        "y": 2.5,
+        "z": 0.0,
+        "asset_type": "Cuboid_Pod"
+      },
+      "raw_labels": {
+        "app.kubernetes.io/name": "kuberay-operator"
+      },
+      "pod_geometry": {
+        "height": 0.511,
+        "radius": 0.2
+      }
+    },
+    {
+      "id": "pod/kueue-system/kueue-controller-manager-7c9d8d6f6b-ww1x2",
+      "layer": "framework",
+      "kind": "Pod",
+      "name": "kueue-controller-manager-7c9d8d6f6b-ww1x2",
+      "namespace": "kueue-system",
+      "version": "v0.9.0",
+      "image": "registry.k8s.io/kueue/kueue:v0.9.0",
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "cpu_request_cores": 0.2,
+        "memory_request_gib": 0.5
+      },
+      "spatial": {
+        "x": -3.6,
+        "y": 2.5,
+        "z": 0.0,
+        "asset_type": "Cuboid_Pod"
+      },
+      "raw_labels": {
+        "app.kubernetes.io/name": "kueue"
+      },
+      "pod_geometry": {
+        "height": 0.557,
+        "radius": 0.2
+      }
+    },
+    {
+      "id": "pod/ai/raycluster-prod-head-vlv9d",
+      "layer": "framework",
+      "kind": "RayHead",
+      "name": "raycluster-prod-head-vlv9d",
+      "namespace": "ai",
+      "version": "ray-py312-cpu-2.35.0",
+      "image": "rayproject/ray-ml:2.35.0-py312",
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "cpu_request_cores": 2,
+        "memory_request_gib": 8,
+        "component": "gcs-server,dashboard,autoscaler,prom-metrics-exporter"
+      },
+      "spatial": {
+        "x": -2.0,
+        "y": 2.5,
+        "z": 0.0,
+        "asset_type": "Cuboid_Ray"
+      },
+      "raw_labels": {
+        "ray.io/cluster": "raycluster-prod",
+        "ray.io/node-type": "head"
+      },
+      "pod_geometry": {
+        "height": 0.895,
+        "radius": 0.56
+      }
+    },
+    {
+      "id": "pod/ai/raycluster-prod-cpu-workers-a1xq",
+      "layer": "framework",
+      "kind": "RayWorker",
+      "name": "raycluster-prod-cpu-workers-a1xq",
+      "namespace": "ai",
+      "version": "ray-py312-cpu-2.35.0",
+      "image": "rayproject/ray-ml:2.35.0-py312",
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "cpu_request_cores": 4,
+        "memory_request_gib": 8,
+        "ray_group": "cpu-workers",
+        "role": "feature-preprocessing"
+      },
+      "spatial": {
+        "x": 0.2,
+        "y": 2.5,
+        "z": 0.0,
+        "asset_type": "Cuboid_Ray"
+      },
+      "raw_labels": {
+        "ray.io/cluster": "raycluster-prod",
+        "ray.io/node-type": "worker",
+        "ray.io/group": "cpu-workers"
+      },
+      "pod_geometry": {
+        "height": 1.1,
+        "radius": 0.56
+      }
+    },
+    {
+      "id": "pod/ai/raycluster-prod-cpu-workers-b2xq",
+      "layer": "framework",
+      "kind": "RayWorker",
+      "name": "raycluster-prod-cpu-workers-b2xq",
+      "namespace": "ai",
+      "version": "ray-py312-cpu-2.35.0",
+      "image": "rayproject/ray-ml:2.35.0-py312",
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "cpu_request_cores": 4,
+        "memory_request_gib": 8,
+        "ray_group": "cpu-workers",
+        "role": "feature-preprocessing"
+      },
+      "spatial": {
+        "x": 1.8,
+        "y": 2.5,
+        "z": 0.0,
+        "asset_type": "Cuboid_Ray"
+      },
+      "raw_labels": {
+        "ray.io/cluster": "raycluster-prod",
+        "ray.io/node-type": "worker",
+        "ray.io/group": "cpu-workers"
+      },
+      "pod_geometry": {
+        "height": 1.1,
+        "radius": 0.56
+      }
+    },
+    {
+      "id": "pod/ai/raycluster-prod-cpu-workers-c3xq",
+      "layer": "framework",
+      "kind": "RayWorker",
+      "name": "raycluster-prod-cpu-workers-c3xq",
+      "namespace": "ai",
+      "version": "ray-py312-cpu-2.35.0",
+      "image": "rayproject/ray-ml:2.35.0-py312",
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "cpu_request_cores": 4,
+        "memory_request_gib": 8,
+        "ray_group": "cpu-workers",
+        "role": "feature-preprocessing"
+      },
+      "spatial": {
+        "x": 3.4,
+        "y": 2.5,
+        "z": 0.0,
+        "asset_type": "Cuboid_Ray"
+      },
+      "raw_labels": {
+        "ray.io/cluster": "raycluster-prod",
+        "ray.io/node-type": "worker",
+        "ray.io/group": "cpu-workers"
+      },
+      "pod_geometry": {
+        "height": 1.1,
+        "radius": 0.56
+      }
+    },
+    {
+      "id": "pod/ai/raycluster-prod-cpu-workers-d4xq",
+      "layer": "framework",
+      "kind": "RayWorker",
+      "name": "raycluster-prod-cpu-workers-d4xq",
+      "namespace": "ai",
+      "version": "ray-py312-cpu-2.35.0",
+      "image": "rayproject/ray-ml:2.35.0-py312",
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "cpu_request_cores": 4,
+        "memory_request_gib": 8,
+        "ray_group": "cpu-workers",
+        "role": "feature-preprocessing"
+      },
+      "spatial": {
+        "x": 5.0,
+        "y": 2.5,
+        "z": 0.0,
+        "asset_type": "Cuboid_Ray"
+      },
+      "raw_labels": {
+        "ray.io/cluster": "raycluster-prod",
+        "ray.io/node-type": "worker",
+        "ray.io/group": "cpu-workers"
+      },
+      "pod_geometry": {
+        "height": 1.1,
+        "radius": 0.56
+      }
+    },
+    {
+      "id": "pod/ai/raycluster-prod-gpu-workers-l4x2-a7g",
+      "layer": "framework",
+      "kind": "RayWorker",
+      "name": "raycluster-prod-gpu-workers-l4x2-a7g",
+      "namespace": "ai",
+      "version": "ray-py312-cu121-2.35.0",
+      "image": "rayproject/ray-ml:2.35.0-py312-gpu",
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "cpu_request_cores": 16,
+        "memory_request_gib": 64,
+        "gpu_count": 2,
+        "accelerator_type": "nvidia-l4",
+        "ray_group": "gpu-workers",
+        "role": "tensor-parallel-vllm"
+      },
+      "spatial": {
+        "x": 3.4,
+        "y": 2.5,
+        "z": 0.0,
+        "asset_type": "Cuboid_Ray"
+      },
+      "raw_labels": {
+        "ray.io/cluster": "raycluster-prod",
+        "ray.io/node-type": "worker",
+        "ray.io/group": "gpu-workers",
+        "cloud.google.com/gke-accelerator": "nvidia-l4"
+      },
+      "pod_geometry": {
+        "height": 1.8,
+        "radius": 0.9
+      }
+    },
+    {
+      "id": "pod/ai/raycluster-prod-gpu-workers-a100x1-b8h",
+      "layer": "framework",
+      "kind": "RayWorker",
+      "name": "raycluster-prod-gpu-workers-a100x1-b8h",
+      "namespace": "ai",
+      "version": "ray-py312-cu121-2.35.0",
+      "image": "rayproject/ray-ml:2.35.0-py312-gpu",
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "cpu_request_cores": 32,
+        "memory_request_gib": 128,
+        "gpu_count": 1,
+        "accelerator_type": "nvidia-a100-80gb",
+        "ray_group": "gpu-workers",
+        "role": "tensor-parallel-vllm"
+      },
+      "spatial": {
+        "x": 5.0,
+        "y": 2.5,
+        "z": 0.0,
+        "asset_type": "Cuboid_Ray"
+      },
+      "raw_labels": {
+        "ray.io/cluster": "raycluster-prod",
+        "ray.io/node-type": "worker",
+        "ray.io/group": "gpu-workers",
+        "cloud.google.com/gke-accelerator": "nvidia-a100-80gb"
+      },
+      "pod_geometry": {
+        "height": 2.38,
+        "radius": 0.9
+      }
+    },
+    {
+      "id": "pod/ai/pytorch-distill-gang-a0xq",
+      "layer": "workload",
+      "kind": "Pod",
+      "name": "pytorch-distill-gang-a0xq",
+      "namespace": "ai",
+      "version": "pytorch-2.5.1-cu121",
+      "image": "nvcr.io/nvidia/pytorch:24.06-py3",
+      "digest": null,
+      "status": "Pending",
+      "metrics": {
+        "cpu_request_cores": 8,
+        "memory_request_gib": 32,
+        "gpu_count": 1,
+        "pending": true,
+        "scheduled": false
+      },
+      "spatial": {
+        "x": -19.95,
+        "y": 1.0,
+        "z": 3.2,
+        "asset_type": ""
+      },
+      "raw_labels": {
+        "kueue.x-k8s.io/queue-name": "team-training-lq",
+        "kueue.x-k8s.io/workload": "pytorch-distill-gang"
+      },
+      "pod_geometry": {
+        "height": 1.39,
+        "radius": 0.8,
+        "is_pending": true,
+        "staging_track_x": -19.95,
+        "kueue_workload": "wk-9f3c7d2a-4e5b-4a1c-b8d0-vllmfinetune"
+      }
+    },
+    {
+      "id": "pod/ai/pytorch-distill-gang-b1xq",
+      "layer": "workload",
+      "kind": "Pod",
+      "name": "pytorch-distill-gang-b1xq",
+      "namespace": "ai",
+      "version": "pytorch-2.5.1-cu121",
+      "image": "nvcr.io/nvidia/pytorch:24.06-py3",
+      "digest": null,
+      "status": "Pending",
+      "metrics": {
+        "cpu_request_cores": 8,
+        "memory_request_gib": 32,
+        "gpu_count": 1,
+        "pending": true,
+        "scheduled": false
+      },
+      "spatial": {
+        "x": -18.65,
+        "y": 1.0,
+        "z": 3.2,
+        "asset_type": ""
+      },
+      "raw_labels": {
+        "kueue.x-k8s.io/queue-name": "team-training-lq",
+        "kueue.x-k8s.io/workload": "pytorch-distill-gang"
+      },
+      "pod_geometry": {
+        "height": 1.39,
+        "radius": 0.8,
+        "is_pending": true,
+        "staging_track_x": -18.65,
+        "kueue_workload": "wk-9f3c7d2a-4e5b-4a1c-b8d0-vllmfinetune"
+      }
+    },
+    {
+      "id": "pod/ai/pytorch-distill-gang-c2xq",
+      "layer": "workload",
+      "kind": "Pod",
+      "name": "pytorch-distill-gang-c2xq",
+      "namespace": "ai",
+      "version": "pytorch-2.5.1-cu121",
+      "image": "nvcr.io/nvidia/pytorch:24.06-py3",
+      "digest": null,
+      "status": "Pending",
+      "metrics": {
+        "cpu_request_cores": 8,
+        "memory_request_gib": 32,
+        "gpu_count": 1,
+        "pending": true,
+        "scheduled": false
+      },
+      "spatial": {
+        "x": -17.35,
+        "y": 1.0,
+        "z": 3.2,
+        "asset_type": ""
+      },
+      "raw_labels": {
+        "kueue.x-k8s.io/queue-name": "team-training-lq",
+        "kueue.x-k8s.io/workload": "pytorch-distill-gang"
+      },
+      "pod_geometry": {
+        "height": 1.39,
+        "radius": 0.8,
+        "is_pending": true,
+        "staging_track_x": -17.35,
+        "kueue_workload": "wk-9f3c7d2a-4e5b-4a1c-b8d0-vllmfinetune"
+      }
+    },
+    {
+      "id": "pod/ai/pytorch-distill-gang-c3xq",
+      "layer": "workload",
+      "kind": "Pod",
+      "name": "pytorch-distill-gang-c3xq",
+      "namespace": "ai",
+      "version": "pytorch-2.5.1-cu121",
+      "image": "nvcr.io/nvidia/pytorch:24.06-py3",
+      "digest": null,
+      "status": "Pending",
+      "metrics": {
+        "cpu_request_cores": 8,
+        "memory_request_gib": 32,
+        "gpu_count": 1,
+        "pending": true,
+        "scheduled": false
+      },
+      "spatial": {
+        "x": -16.05,
+        "y": 1.0,
+        "z": 3.2,
+        "asset_type": ""
+      },
+      "raw_labels": {
+        "kueue.x-k8s.io/queue-name": "team-training-lq",
+        "kueue.x-k8s.io/workload": "pytorch-distill-gang"
+      },
+      "pod_geometry": {
+        "height": 1.39,
+        "radius": 0.8,
+        "is_pending": true,
+        "staging_track_x": -16.05,
+        "kueue_workload": "wk-9f3c7d2a-4e5b-4a1c-b8d0-vllmfinetune"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "source": "control-plane/kube-system/kube-apiserver-ray-cp",
+      "target": "control-plane/kube-system/etcd-ray-cp",
+      "flow_type": "control_plane",
+      "protocol": "gRPC/2379",
+      "direction": "bidirectional",
+      "animated": true,
+      "volume_label": "raft KV"
+    },
+    {
+      "source": "node/ray-head-pool/kubelet",
+      "target": "control-plane/kube-system/kube-apiserver-ray-cp",
+      "flow_type": "control_plane",
+      "protocol": "HTTPS/6443/Heartbeat",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "lease heartbeat"
+    },
+    {
+      "source": "node/ray-cpu-worker-a/kubelet",
+      "target": "control-plane/kube-system/kube-apiserver-ray-cp",
+      "flow_type": "control_plane",
+      "protocol": "HTTPS/6443/Heartbeat",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "lease heartbeat"
+    },
+    {
+      "source": "node/ray-cpu-worker-b/kubelet",
+      "target": "control-plane/kube-system/kube-apiserver-ray-cp",
+      "flow_type": "control_plane",
+      "protocol": "HTTPS/6443/Heartbeat",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "lease heartbeat"
+    },
+    {
+      "source": "node/ray-gpu-worker-l4/kubelet",
+      "target": "control-plane/kube-system/kube-apiserver-ray-cp",
+      "flow_type": "control_plane",
+      "protocol": "HTTPS/6443/Heartbeat",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "lease heartbeat"
+    },
+    {
+      "source": "node/ray-gpu-worker-a100/kubelet",
+      "target": "control-plane/kube-system/kube-apiserver-ray-cp",
+      "flow_type": "control_plane",
+      "protocol": "HTTPS/6443/Heartbeat",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "lease heartbeat"
+    },
+    {
+      "source": "pod/ai/raycluster-prod-cpu-workers-a1xq",
+      "target": "pod/ai/raycluster-prod-head-vlv9d",
+      "flow_type": "framework_control",
+      "protocol": "gRPC/6379",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "ray heartbeat"
+    },
+    {
+      "source": "pod/ai/raycluster-prod-cpu-workers-b2xq",
+      "target": "pod/ai/raycluster-prod-head-vlv9d",
+      "flow_type": "framework_control",
+      "protocol": "gRPC/6379",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "ray heartbeat"
+    },
+    {
+      "source": "pod/ai/raycluster-prod-cpu-workers-c3xq",
+      "target": "pod/ai/raycluster-prod-head-vlv9d",
+      "flow_type": "framework_control",
+      "protocol": "gRPC/6379",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "ray heartbeat"
+    },
+    {
+      "source": "pod/ai/raycluster-prod-cpu-workers-d4xq",
+      "target": "pod/ai/raycluster-prod-head-vlv9d",
+      "flow_type": "framework_control",
+      "protocol": "gRPC/6379",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "ray heartbeat"
+    },
+    {
+      "source": "pod/ai/raycluster-prod-gpu-workers-l4x2-a7g",
+      "target": "pod/ai/raycluster-prod-head-vlv9d",
+      "flow_type": "framework_control",
+      "protocol": "gRPC/6379",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "ray heartbeat"
+    },
+    {
+      "source": "pod/ai/raycluster-prod-gpu-workers-l4x2-a7g",
+      "target": "node/ray-gpu-worker-l4/kubelet",
+      "flow_type": "control_plane",
+      "protocol": "CNI/cni0",
+      "direction": "unidirectional",
+      "animated": false,
+      "volume_label": "tensor parallel RDMA"
+    },
+    {
+      "source": "pod/ai/raycluster-prod-gpu-workers-a100x1-b8h",
+      "target": "pod/ai/raycluster-prod-head-vlv9d",
+      "flow_type": "framework_control",
+      "protocol": "gRPC/6379",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "ray heartbeat"
+    },
+    {
+      "source": "pod/ai/raycluster-prod-gpu-workers-a100x1-b8h",
+      "target": "node/ray-gpu-worker-a100/kubelet",
+      "flow_type": "control_plane",
+      "protocol": "CNI/cni0",
+      "direction": "unidirectional",
+      "animated": false,
+      "volume_label": "tensor parallel RDMA"
+    },
+    {
+      "source": "pod/ai/raycluster-prod-cpu-workers-a1xq",
+      "target": "pod/ai/raycluster-prod-head-vlv9d",
+      "flow_type": "traffic",
+      "protocol": "gRPC/8080",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "object spillover"
+    },
+    {
+      "source": "pod/ai/raycluster-prod-cpu-workers-b2xq",
+      "target": "pod/ai/raycluster-prod-head-vlv9d",
+      "flow_type": "traffic",
+      "protocol": "gRPC/8080",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "object spillover"
+    }
+  ],
+  "machine_shapes": [
+    {
+      "node_name": "ray-head-pool",
+      "instance_type": "n2-standard-8",
+      "compute_class": "General-Purpose",
+      "vcpus": 8,
+      "memory_gib": 32,
+      "capacity_type": "on-demand",
+      "zone": "us-central1-a",
+      "accelerator_count": 0
+    },
+    {
+      "node_name": "ray-cpu-worker-a",
+      "instance_type": "n2-standard-16",
+      "compute_class": "General-Purpose",
+      "vcpus": 16,
+      "memory_gib": 64,
+      "capacity_type": "on-demand",
+      "zone": "us-central1-b",
+      "accelerator_count": 0
+    },
+    {
+      "node_name": "ray-cpu-worker-b",
+      "instance_type": "n2-standard-16",
+      "compute_class": "Scale-Up",
+      "vcpus": 16,
+      "memory_gib": 64,
+      "capacity_type": "spot",
+      "zone": "us-central1-c",
+      "accelerator_count": 0
+    },
+    {
+      "node_name": "ray-gpu-worker-l4",
+      "instance_type": "g2-standard-16",
+      "compute_class": "Accelerator-Optimized",
+      "vcpus": 16,
+      "memory_gib": 64,
+      "capacity_type": "on-demand",
+      "zone": "us-central1-a",
+      "accelerator_type": "nvidia-l4",
+      "accelerator_count": 2
+    },
+    {
+      "node_name": "ray-gpu-worker-a100",
+      "instance_type": "a2-highgpu-1g",
+      "compute_class": "Accelerator-Optimized",
+      "vcpus": 32,
+      "memory_gib": 128,
+      "capacity_type": "on-demand",
+      "zone": "us-central1-c",
+      "accelerator_type": "nvidia-a100-80gb",
+      "accelerator_count": 1
+    }
+  ],
+  "kueue_workloads": [
+    {
+      "workload_uid": "wk-9f3c7d2a-4e5b-4a1c-b8d0-vllmfinetune",
+      "workload_name": "pytorch-distill-gang",
+      "namespace": "ai",
+      "local_queue": "team-training-lq",
+      "cluster_queue": "gpu-cluster-queue",
+      "is_admitted": false,
+      "admission_checks": [
+        {
+          "name": "Quota",
+          "reason": "insufficient nvidia.com/gpu quota: want 4, fair share 2"
+        }
+      ],
+      "pod_uids": [
+        "pod/ai/pytorch-distill-gang-a0xq",
+        "pod/ai/pytorch-distill-gang-b1xq",
+        "pod/ai/pytorch-distill-gang-c2xq",
+        "pod/ai/pytorch-distill-gang-c3xq"
+      ],
+      "total_cpu_requested": 32,
+      "total_memory_gib_requested": 128,
+      "total_gpu_requested": 4,
+      "phase": "Inadmissible"
+    }
+  ]
+}

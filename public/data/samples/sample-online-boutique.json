@@ -1,0 +1,1261 @@
+{
+  "$schema": "https://cluster-vis.jagosan.com/schemas/cluster-graph-v1.json",
+  "metadata": {
+    "cluster_name": "sample-online-boutique",
+    "kubernetes_version": "v1.36.4",
+    "distribution": "gke-online-boutique",
+    "timestamp": "2026-10-04T09:00:00+00:00",
+    "node_count": 4,
+    "pod_count": 19
+  },
+  "nodes": [
+    {
+      "id": "node/boutique-pool-c3-a",
+      "layer": "node",
+      "kind": "Node",
+      "name": "boutique-pool-c3-a",
+      "namespace": "cluster",
+      "version": "v1.36.4",
+      "image": null,
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "cpu_capacity": "4",
+        "memory_capacity": "16384Ki",
+        "cpu_allocatable": "4",
+        "memory_allocatable": "16384Ki",
+        "os_image": "Container-Optimized OS from Google",
+        "unschedulable": false
+      },
+      "spatial": {
+        "x": -9.0,
+        "y": 0.5,
+        "z": 0.0,
+        "asset_type": "LayerTray_Worker"
+      },
+      "raw_labels": {
+        "kubernetes.io/hostname": "boutique-pool-c3-a",
+        "cloud.google.com/gke-nodepool": "c3-standard-4",
+        "cloud.google.com/gke-compute-class": "Performance",
+        "topology.kubernetes.io/zone": "us-central1-a"
+      }
+    },
+    {
+      "id": "node/boutique-pool-c3-b",
+      "layer": "node",
+      "kind": "Node",
+      "name": "boutique-pool-c3-b",
+      "namespace": "cluster",
+      "version": "v1.36.4",
+      "image": null,
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "cpu_capacity": "4",
+        "memory_capacity": "16384Ki",
+        "cpu_allocatable": "4",
+        "memory_allocatable": "16384Ki",
+        "os_image": "Container-Optimized OS from Google",
+        "unschedulable": false
+      },
+      "spatial": {
+        "x": -3.0,
+        "y": 0.5,
+        "z": 0.0,
+        "asset_type": "LayerTray_Worker"
+      },
+      "raw_labels": {
+        "kubernetes.io/hostname": "boutique-pool-c3-b",
+        "cloud.google.com/gke-nodepool": "c3-standard-4",
+        "cloud.google.com/gke-compute-class": "Performance",
+        "topology.kubernetes.io/zone": "us-central1-b"
+      }
+    },
+    {
+      "id": "node/boutique-pool-e2-a",
+      "layer": "node",
+      "kind": "Node",
+      "name": "boutique-pool-e2-a",
+      "namespace": "cluster",
+      "version": "v1.36.4",
+      "image": null,
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "cpu_capacity": "4",
+        "memory_capacity": "16384Ki",
+        "cpu_allocatable": "4",
+        "memory_allocatable": "16384Ki",
+        "os_image": "Container-Optimized OS from Google",
+        "unschedulable": false
+      },
+      "spatial": {
+        "x": 3.0,
+        "y": 0.5,
+        "z": 0.0,
+        "asset_type": "LayerTray_Worker"
+      },
+      "raw_labels": {
+        "kubernetes.io/hostname": "boutique-pool-e2-a",
+        "cloud.google.com/gke-nodepool": "e2-standard-4",
+        "cloud.google.com/gke-compute-class": "General-Purpose",
+        "topology.kubernetes.io/zone": "us-central1-a"
+      }
+    },
+    {
+      "id": "node/boutique-pool-e2-b",
+      "layer": "node",
+      "kind": "Node",
+      "name": "boutique-pool-e2-b",
+      "namespace": "cluster",
+      "version": "v1.36.4",
+      "image": null,
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "cpu_capacity": "4",
+        "memory_capacity": "16384Ki",
+        "cpu_allocatable": "4",
+        "memory_allocatable": "16384Ki",
+        "os_image": "Container-Optimized OS from Google",
+        "unschedulable": false
+      },
+      "spatial": {
+        "x": 9.0,
+        "y": 0.5,
+        "z": 0.0,
+        "asset_type": "LayerTray_Worker"
+      },
+      "raw_labels": {
+        "kubernetes.io/hostname": "boutique-pool-e2-b",
+        "cloud.google.com/gke-nodepool": "e2-standard-4",
+        "cloud.google.com/gke-compute-class": "General-Purpose",
+        "topology.kubernetes.io/zone": "us-central1-b"
+      }
+    },
+    {
+      "id": "control-plane/kube-system/kube-apiserver-boutique-cp",
+      "layer": "control-plane",
+      "kind": "Pod",
+      "name": "kube-apiserver-boutique-cp",
+      "namespace": "kube-system",
+      "version": "v1.36.4",
+      "image": "registry.k8s.io/kube-apiserver-amd64:v1.36.4",
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "component": "kube-apiserver"
+      },
+      "spatial": {
+        "x": 0.0,
+        "y": 7.0,
+        "z": 0.0,
+        "asset_type": "Cuboid_APIServer"
+      },
+      "raw_labels": {
+        "component": "kube-apiserver",
+        "tier": "control-plane"
+      }
+    },
+    {
+      "id": "control-plane/kube-system/kube-scheduler-boutique-cp",
+      "layer": "control-plane",
+      "kind": "Pod",
+      "name": "kube-scheduler-boutique-cp",
+      "namespace": "kube-system",
+      "version": "v1.36.4",
+      "image": "registry.k8s.io/kube-scheduler-amd64:v1.36.4",
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "component": "kube-scheduler"
+      },
+      "spatial": {
+        "x": -2.8,
+        "y": 4.5,
+        "z": 0.8,
+        "asset_type": "Cuboid_Supervisor"
+      },
+      "raw_labels": {
+        "component": "kube-scheduler",
+        "tier": "control-plane"
+      }
+    },
+    {
+      "id": "control-plane/kube-system/kube-controller-manager-boutique-cp",
+      "layer": "control-plane",
+      "kind": "Pod",
+      "name": "kube-controller-manager-boutique-cp",
+      "namespace": "kube-system",
+      "version": "v1.36.4",
+      "image": "registry.k8s.io/kube-controller-manager-amd64:v1.36.4",
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "component": "kube-controller-manager"
+      },
+      "spatial": {
+        "x": 2.8,
+        "y": 4.5,
+        "z": 0.8,
+        "asset_type": "Cuboid_Supervisor"
+      },
+      "raw_labels": {
+        "component": "kube-controller-manager",
+        "tier": "control-plane"
+      }
+    },
+    {
+      "id": "control-plane/kube-system/etcd-boutique-cp",
+      "layer": "control-plane",
+      "kind": "Pod",
+      "name": "etcd-boutique-cp",
+      "namespace": "kube-system",
+      "version": "3.6.8-0",
+      "image": "registry.k8s.io/etcd:3.6.8-0",
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "component": "etcd"
+      },
+      "spatial": {
+        "x": 0.0,
+        "y": 5.5,
+        "z": -3.5,
+        "asset_type": "Cuboid_etcd"
+      },
+      "raw_labels": {
+        "component": "etcd",
+        "tier": "control-plane"
+      }
+    },
+    {
+      "id": "node/boutique-pool-c3-a/kubelet",
+      "layer": "node",
+      "kind": "Kubelet",
+      "name": "kubelet-boutique-pool-c3-a",
+      "namespace": "kube-system",
+      "version": "v1.36.4",
+      "image": null,
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "component": "kubelet",
+        "node": "boutique-pool-c3-a"
+      },
+      "spatial": {
+        "x": -10.8,
+        "y": 0.7,
+        "z": -1.5,
+        "asset_type": "Cuboid_Kubelet"
+      },
+      "raw_labels": {}
+    },
+    {
+      "id": "node/boutique-pool-c3-a/containerd",
+      "layer": "node",
+      "kind": "Containerd",
+      "name": "containerd-boutique-pool-c3-a",
+      "namespace": "kube-system",
+      "version": "v1.7.20",
+      "image": null,
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "runtime": "containerd",
+        "node": "boutique-pool-c3-a"
+      },
+      "spatial": {
+        "x": -9.8,
+        "y": 0.7,
+        "z": -1.5,
+        "asset_type": "Cuboid_Containerd"
+      },
+      "raw_labels": {}
+    },
+    {
+      "id": "node/boutique-pool-c3-b/kubelet",
+      "layer": "node",
+      "kind": "Kubelet",
+      "name": "kubelet-boutique-pool-c3-b",
+      "namespace": "kube-system",
+      "version": "v1.36.4",
+      "image": null,
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "component": "kubelet",
+        "node": "boutique-pool-c3-b"
+      },
+      "spatial": {
+        "x": -4.8,
+        "y": 0.7,
+        "z": -1.5,
+        "asset_type": "Cuboid_Kubelet"
+      },
+      "raw_labels": {}
+    },
+    {
+      "id": "node/boutique-pool-c3-b/containerd",
+      "layer": "node",
+      "kind": "Containerd",
+      "name": "containerd-boutique-pool-c3-b",
+      "namespace": "kube-system",
+      "version": "v1.7.20",
+      "image": null,
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "runtime": "containerd",
+        "node": "boutique-pool-c3-b"
+      },
+      "spatial": {
+        "x": -3.8,
+        "y": 0.7,
+        "z": -1.5,
+        "asset_type": "Cuboid_Containerd"
+      },
+      "raw_labels": {}
+    },
+    {
+      "id": "node/boutique-pool-e2-a/kubelet",
+      "layer": "node",
+      "kind": "Kubelet",
+      "name": "kubelet-boutique-pool-e2-a",
+      "namespace": "kube-system",
+      "version": "v1.36.4",
+      "image": null,
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "component": "kubelet",
+        "node": "boutique-pool-e2-a"
+      },
+      "spatial": {
+        "x": 1.2,
+        "y": 0.7,
+        "z": -1.5,
+        "asset_type": "Cuboid_Kubelet"
+      },
+      "raw_labels": {}
+    },
+    {
+      "id": "node/boutique-pool-e2-a/containerd",
+      "layer": "node",
+      "kind": "Containerd",
+      "name": "containerd-boutique-pool-e2-a",
+      "namespace": "kube-system",
+      "version": "v1.7.20",
+      "image": null,
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "runtime": "containerd",
+        "node": "boutique-pool-e2-a"
+      },
+      "spatial": {
+        "x": 2.2,
+        "y": 0.7,
+        "z": -1.5,
+        "asset_type": "Cuboid_Containerd"
+      },
+      "raw_labels": {}
+    },
+    {
+      "id": "node/boutique-pool-e2-b/kubelet",
+      "layer": "node",
+      "kind": "Kubelet",
+      "name": "kubelet-boutique-pool-e2-b",
+      "namespace": "kube-system",
+      "version": "v1.36.4",
+      "image": null,
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "component": "kubelet",
+        "node": "boutique-pool-e2-b"
+      },
+      "spatial": {
+        "x": 7.2,
+        "y": 0.7,
+        "z": -1.5,
+        "asset_type": "Cuboid_Kubelet"
+      },
+      "raw_labels": {}
+    },
+    {
+      "id": "node/boutique-pool-e2-b/containerd",
+      "layer": "node",
+      "kind": "Containerd",
+      "name": "containerd-boutique-pool-e2-b",
+      "namespace": "kube-system",
+      "version": "v1.7.20",
+      "image": null,
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "runtime": "containerd",
+        "node": "boutique-pool-e2-b"
+      },
+      "spatial": {
+        "x": 8.2,
+        "y": 0.7,
+        "z": -1.5,
+        "asset_type": "Cuboid_Containerd"
+      },
+      "raw_labels": {}
+    },
+    {
+      "id": "pod/boutique/frontend-bc4d8f7f9-xq7qk",
+      "layer": "workload",
+      "kind": "Pod",
+      "name": "frontend-bc4d8f7f9-xq7qk",
+      "namespace": "boutique",
+      "version": "v0.11.0",
+      "image": "ghcr.io/google-containers/microservices-demo/frontend:v0.11.0",
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "cpu_request_cores": 0.2,
+        "memory_request_gib": 0.25
+      },
+      "spatial": {
+        "x": -9.6,
+        "y": 0.75,
+        "z": 0.2,
+        "asset_type": "Cuboid_Pod"
+      },
+      "raw_labels": {
+        "app": "frontend",
+        "app.kubernetes.io/name": "frontend",
+        "cloud.google.com/compute-class": "Scale-Up"
+      },
+      "pod_geometry": {
+        "height": 0.557,
+        "radius": 0.2
+      },
+      "autoscaling": {
+        "has_hpa": true,
+        "current_replicas": 2,
+        "desired_replicas": 3,
+        "target_metric": "cpu:65",
+        "has_vpa": false
+      }
+    },
+    {
+      "id": "pod/boutique/frontend-f89c6d5d2-z2w4t",
+      "layer": "workload",
+      "kind": "Pod",
+      "name": "frontend-f89c6d5d2-z2w4t",
+      "namespace": "boutique",
+      "version": "v0.11.0",
+      "image": "ghcr.io/google-containers/microservices-demo/frontend:v0.11.0",
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "cpu_request_cores": 0.2,
+        "memory_request_gib": 0.25
+      },
+      "spatial": {
+        "x": -2.4,
+        "y": 0.75,
+        "z": 0.2,
+        "asset_type": "Cuboid_Pod"
+      },
+      "raw_labels": {
+        "app": "frontend",
+        "app.kubernetes.io/name": "frontend",
+        "cloud.google.com/compute-class": "Scale-Up"
+      },
+      "pod_geometry": {
+        "height": 0.557,
+        "radius": 0.2
+      },
+      "autoscaling": {
+        "has_hpa": true,
+        "current_replicas": 2,
+        "desired_replicas": 3,
+        "target_metric": "cpu:65",
+        "has_vpa": false
+      }
+    },
+    {
+      "id": "pod/boutique/cartservice-bc4d8f7f9-xq7qk",
+      "layer": "workload",
+      "kind": "Pod",
+      "name": "cartservice-bc4d8f7f9-xq7qk",
+      "namespace": "boutique",
+      "version": "v0.11.0",
+      "image": "ghcr.io/google-containers/microservices-demo/cartservice:v0.11.0",
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "cpu_request_cores": 0.2,
+        "memory_request_gib": 0.6
+      },
+      "spatial": {
+        "x": -3.6,
+        "y": 0.75,
+        "z": 0.2,
+        "asset_type": "Cuboid_Pod"
+      },
+      "raw_labels": {
+        "app": "cartservice",
+        "app.kubernetes.io/name": "cartservice"
+      },
+      "pod_geometry": {
+        "height": 0.557,
+        "radius": 0.2
+      },
+      "autoscaling": {
+        "has_vpa": true,
+        "vpa_target_cpu": "0.4",
+        "vpa_target_memory": "800Mi",
+        "is_resizing_in_place": true,
+        "has_hpa": false
+      }
+    },
+    {
+      "id": "pod/boutique/cartservice-f89c6d5d2-z2w4t",
+      "layer": "workload",
+      "kind": "Pod",
+      "name": "cartservice-f89c6d5d2-z2w4t",
+      "namespace": "boutique",
+      "version": "v0.11.0",
+      "image": "ghcr.io/google-containers/microservices-demo/cartservice:v0.11.0",
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "cpu_request_cores": 0.2,
+        "memory_request_gib": 0.6
+      },
+      "spatial": {
+        "x": 3.6,
+        "y": 0.75,
+        "z": 0.2,
+        "asset_type": "Cuboid_Pod"
+      },
+      "raw_labels": {
+        "app": "cartservice",
+        "app.kubernetes.io/name": "cartservice"
+      },
+      "pod_geometry": {
+        "height": 0.557,
+        "radius": 0.2
+      },
+      "autoscaling": {
+        "has_vpa": true,
+        "vpa_target_cpu": "0.4",
+        "vpa_target_memory": "800Mi",
+        "is_resizing_in_place": true,
+        "has_hpa": false
+      }
+    },
+    {
+      "id": "pod/boutique/productcatalogservice-bc4d8f7f9-xq7qk",
+      "layer": "workload",
+      "kind": "Pod",
+      "name": "productcatalogservice-bc4d8f7f9-xq7qk",
+      "namespace": "boutique",
+      "version": "v0.11.0",
+      "image": "ghcr.io/google-containers/microservices-demo/productcatalogservice:v0.11.0",
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "cpu_request_cores": 0.35,
+        "memory_request_gib": 0.5
+      },
+      "spatial": {
+        "x": 2.4,
+        "y": 0.75,
+        "z": 0.2,
+        "asset_type": "Cuboid_Pod"
+      },
+      "raw_labels": {
+        "app": "productcatalogservice",
+        "app.kubernetes.io/name": "productcatalogservice"
+      },
+      "pod_geometry": {
+        "height": 0.607,
+        "radius": 0.2
+      }
+    },
+    {
+      "id": "pod/boutique/currencyservice-bc4d8f7f9-xq7qk",
+      "layer": "workload",
+      "kind": "Pod",
+      "name": "currencyservice-bc4d8f7f9-xq7qk",
+      "namespace": "boutique",
+      "version": "v0.11.0",
+      "image": "ghcr.io/google-containers/microservices-demo/currencyservice:v0.11.0",
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "cpu_request_cores": 0.15,
+        "memory_request_gib": 0.3
+      },
+      "spatial": {
+        "x": 2.4,
+        "y": 0.75,
+        "z": 0.2,
+        "asset_type": "Cuboid_Pod"
+      },
+      "raw_labels": {
+        "app": "currencyservice",
+        "app.kubernetes.io/name": "currencyservice"
+      },
+      "pod_geometry": {
+        "height": 0.536,
+        "radius": 0.2
+      }
+    },
+    {
+      "id": "pod/boutique/paymentservice-bc4d8f7f9-xq7qk",
+      "layer": "workload",
+      "kind": "Pod",
+      "name": "paymentservice-bc4d8f7f9-xq7qk",
+      "namespace": "boutique",
+      "version": "v0.11.0",
+      "image": "ghcr.io/google-containers/microservices-demo/paymentservice:v0.11.0",
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "cpu_request_cores": 0.15,
+        "memory_request_gib": 0.3
+      },
+      "spatial": {
+        "x": 8.4,
+        "y": 0.75,
+        "z": 0.2,
+        "asset_type": "Cuboid_Pod"
+      },
+      "raw_labels": {
+        "app": "paymentservice",
+        "app.kubernetes.io/name": "paymentservice"
+      },
+      "pod_geometry": {
+        "height": 0.536,
+        "radius": 0.2
+      }
+    },
+    {
+      "id": "pod/boutique/shippingservice-bc4d8f7f9-xq7qk",
+      "layer": "workload",
+      "kind": "Pod",
+      "name": "shippingservice-bc4d8f7f9-xq7qk",
+      "namespace": "boutique",
+      "version": "v0.11.0",
+      "image": "ghcr.io/google-containers/microservices-demo/shippingservice:v0.11.0",
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "cpu_request_cores": 0.15,
+        "memory_request_gib": 0.3
+      },
+      "spatial": {
+        "x": 8.4,
+        "y": 0.75,
+        "z": 0.2,
+        "asset_type": "Cuboid_Pod"
+      },
+      "raw_labels": {
+        "app": "shippingservice",
+        "app.kubernetes.io/name": "shippingservice"
+      },
+      "pod_geometry": {
+        "height": 0.536,
+        "radius": 0.2
+      }
+    },
+    {
+      "id": "pod/boutique/emailservice-bc4d8f7f9-xq7qk",
+      "layer": "workload",
+      "kind": "Pod",
+      "name": "emailservice-bc4d8f7f9-xq7qk",
+      "namespace": "boutique",
+      "version": "v0.11.0",
+      "image": "ghcr.io/google-containers/microservices-demo/emailservice:v0.11.0",
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "cpu_request_cores": 0.1,
+        "memory_request_gib": 0.4
+      },
+      "spatial": {
+        "x": -9.6,
+        "y": 0.75,
+        "z": 0.2,
+        "asset_type": "Cuboid_Pod"
+      },
+      "raw_labels": {
+        "app": "emailservice",
+        "app.kubernetes.io/name": "emailservice"
+      },
+      "pod_geometry": {
+        "height": 0.511,
+        "radius": 0.2
+      }
+    },
+    {
+      "id": "pod/boutique/checkoutservice-bc4d8f7f9-xq7qk",
+      "layer": "workload",
+      "kind": "Pod",
+      "name": "checkoutservice-bc4d8f7f9-xq7qk",
+      "namespace": "boutique",
+      "version": "v0.11.0",
+      "image": "ghcr.io/google-containers/microservices-demo/checkoutservice:v0.11.0",
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "cpu_request_cores": 0.2,
+        "memory_request_gib": 0.4
+      },
+      "spatial": {
+        "x": -3.6,
+        "y": 0.75,
+        "z": 0.2,
+        "asset_type": "Cuboid_Pod"
+      },
+      "raw_labels": {
+        "app": "checkoutservice",
+        "app.kubernetes.io/name": "checkoutservice"
+      },
+      "pod_geometry": {
+        "height": 0.557,
+        "radius": 0.2
+      }
+    },
+    {
+      "id": "pod/boutique/recommendationservice-bc4d8f7f9-xq7qk",
+      "layer": "workload",
+      "kind": "Pod",
+      "name": "recommendationservice-bc4d8f7f9-xq7qk",
+      "namespace": "boutique",
+      "version": "v0.11.0",
+      "image": "ghcr.io/google-containers/microservices-demo/recommendationservice:v0.11.0",
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "cpu_request_cores": 0.12,
+        "memory_request_gib": 0.4
+      },
+      "spatial": {
+        "x": 2.4,
+        "y": 0.75,
+        "z": 0.2,
+        "asset_type": "Cuboid_Pod"
+      },
+      "raw_labels": {
+        "app": "recommendationservice",
+        "app.kubernetes.io/name": "recommendationservice"
+      },
+      "pod_geometry": {
+        "height": 0.521,
+        "radius": 0.2
+      },
+      "autoscaling": {
+        "has_hpa": true,
+        "current_replicas": 2,
+        "desired_replicas": 2,
+        "target_metric": "cpu:60",
+        "has_vpa": true,
+        "vpa_target_cpu": "0.2",
+        "vpa_target_memory": "512Mi",
+        "is_resizing_in_place": false
+      }
+    },
+    {
+      "id": "pod/boutique/recommendationservice-f89c6d5d2-z2w4t",
+      "layer": "workload",
+      "kind": "Pod",
+      "name": "recommendationservice-f89c6d5d2-z2w4t",
+      "namespace": "boutique",
+      "version": "v0.11.0",
+      "image": "ghcr.io/google-containers/microservices-demo/recommendationservice:v0.11.0",
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "cpu_request_cores": 0.12,
+        "memory_request_gib": 0.4
+      },
+      "spatial": {
+        "x": 9.6,
+        "y": 0.75,
+        "z": 0.2,
+        "asset_type": "Cuboid_Pod"
+      },
+      "raw_labels": {
+        "app": "recommendationservice",
+        "app.kubernetes.io/name": "recommendationservice"
+      },
+      "pod_geometry": {
+        "height": 0.521,
+        "radius": 0.2
+      },
+      "autoscaling": {
+        "has_hpa": true,
+        "current_replicas": 2,
+        "desired_replicas": 2,
+        "target_metric": "cpu:60",
+        "has_vpa": true,
+        "vpa_target_cpu": "0.2",
+        "vpa_target_memory": "512Mi",
+        "is_resizing_in_place": false
+      }
+    },
+    {
+      "id": "pod/boutique/adservice-bc4d8f7f9-xq7qk",
+      "layer": "workload",
+      "kind": "Pod",
+      "name": "adservice-bc4d8f7f9-xq7qk",
+      "namespace": "boutique",
+      "version": "v0.11.0",
+      "image": "ghcr.io/google-containers/microservices-demo/adservice:v0.11.0",
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "cpu_request_cores": 0.3,
+        "memory_request_gib": 0.6
+      },
+      "spatial": {
+        "x": 8.4,
+        "y": 0.75,
+        "z": 0.2,
+        "asset_type": "Cuboid_Pod"
+      },
+      "raw_labels": {
+        "app": "adservice",
+        "app.kubernetes.io/name": "adservice"
+      },
+      "pod_geometry": {
+        "height": 0.592,
+        "radius": 0.2
+      }
+    },
+    {
+      "id": "pod/boutique/loadgenerator-bc4d8f7f9-xq7qk",
+      "layer": "workload",
+      "kind": "Pod",
+      "name": "loadgenerator-bc4d8f7f9-xq7qk",
+      "namespace": "boutique",
+      "version": "v0.11.0",
+      "image": "ghcr.io/google-containers/microservices-demo/loadgenerator:v0.11.0",
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "cpu_request_cores": 0.1,
+        "memory_request_gib": 0.2
+      },
+      "spatial": {
+        "x": -9.6,
+        "y": 0.75,
+        "z": 0.2,
+        "asset_type": "Cuboid_Pod"
+      },
+      "raw_labels": {
+        "app": "loadgenerator",
+        "app.kubernetes.io/name": "loadgenerator"
+      },
+      "pod_geometry": {
+        "height": 0.511,
+        "radius": 0.2
+      }
+    },
+    {
+      "id": "pod/boutique/redis-cart-5f5d6c8c8b-h9klm",
+      "layer": "workload",
+      "kind": "RedisNode",
+      "name": "redis-cart-5f5d6c8c8b-h9klm",
+      "namespace": "boutique",
+      "version": "7.2.7",
+      "image": "docker.io/redis:7.2.7",
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "cpu_request_cores": 0.2,
+        "memory_request_gib": 2.0
+      },
+      "spatial": {
+        "x": -3.6,
+        "y": 0.75,
+        "z": 1.2,
+        "asset_type": "Cache_Redis"
+      },
+      "raw_labels": {
+        "app": "redis-cart"
+      },
+      "pod_geometry": {
+        "height": 0.557,
+        "radius": 0.32
+      }
+    }
+  ],
+  "edges": [
+    {
+      "source": "control-plane/kube-system/kube-apiserver-boutique-cp",
+      "target": "control-plane/kube-system/etcd-boutique-cp",
+      "flow_type": "control_plane",
+      "protocol": "gRPC/2379",
+      "direction": "bidirectional",
+      "animated": true,
+      "volume_label": "raft KV"
+    },
+    {
+      "source": "node/boutique-pool-c3-a/kubelet",
+      "target": "control-plane/kube-system/kube-apiserver-boutique-cp",
+      "flow_type": "control_plane",
+      "protocol": "HTTPS/6443/Heartbeat",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "lease heartbeat"
+    },
+    {
+      "source": "node/boutique-pool-c3-b/kubelet",
+      "target": "control-plane/kube-system/kube-apiserver-boutique-cp",
+      "flow_type": "control_plane",
+      "protocol": "HTTPS/6443/Heartbeat",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "lease heartbeat"
+    },
+    {
+      "source": "node/boutique-pool-e2-a/kubelet",
+      "target": "control-plane/kube-system/kube-apiserver-boutique-cp",
+      "flow_type": "control_plane",
+      "protocol": "HTTPS/6443/Heartbeat",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "lease heartbeat"
+    },
+    {
+      "source": "node/boutique-pool-e2-b/kubelet",
+      "target": "control-plane/kube-system/kube-apiserver-boutique-cp",
+      "flow_type": "control_plane",
+      "protocol": "HTTPS/6443/Heartbeat",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "lease heartbeat"
+    },
+    {
+      "source": "pod/boutique/frontend-bc4d8f7f9-xq7qk",
+      "target": "control-plane/kube-system/kube-apiserver-boutique-cp",
+      "flow_type": "traffic",
+      "protocol": "HTTPS/6443",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "informer watch"
+    },
+    {
+      "source": "pod/boutique/frontend-f89c6d5d2-z2w4t",
+      "target": "control-plane/kube-system/kube-apiserver-boutique-cp",
+      "flow_type": "traffic",
+      "protocol": "HTTPS/6443",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "informer watch"
+    },
+    {
+      "source": "pod/boutique/cartservice-bc4d8f7f9-xq7qk",
+      "target": "control-plane/kube-system/kube-apiserver-boutique-cp",
+      "flow_type": "traffic",
+      "protocol": "HTTPS/6443",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "informer watch"
+    },
+    {
+      "source": "pod/boutique/cartservice-f89c6d5d2-z2w4t",
+      "target": "control-plane/kube-system/kube-apiserver-boutique-cp",
+      "flow_type": "traffic",
+      "protocol": "HTTPS/6443",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "informer watch"
+    },
+    {
+      "source": "pod/boutique/productcatalogservice-bc4d8f7f9-xq7qk",
+      "target": "control-plane/kube-system/kube-apiserver-boutique-cp",
+      "flow_type": "traffic",
+      "protocol": "HTTPS/6443",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "informer watch"
+    },
+    {
+      "source": "pod/boutique/currencyservice-bc4d8f7f9-xq7qk",
+      "target": "control-plane/kube-system/kube-apiserver-boutique-cp",
+      "flow_type": "traffic",
+      "protocol": "HTTPS/6443",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "informer watch"
+    },
+    {
+      "source": "pod/boutique/paymentservice-bc4d8f7f9-xq7qk",
+      "target": "control-plane/kube-system/kube-apiserver-boutique-cp",
+      "flow_type": "traffic",
+      "protocol": "HTTPS/6443",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "informer watch"
+    },
+    {
+      "source": "pod/boutique/shippingservice-bc4d8f7f9-xq7qk",
+      "target": "control-plane/kube-system/kube-apiserver-boutique-cp",
+      "flow_type": "traffic",
+      "protocol": "HTTPS/6443",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "informer watch"
+    },
+    {
+      "source": "pod/boutique/emailservice-bc4d8f7f9-xq7qk",
+      "target": "control-plane/kube-system/kube-apiserver-boutique-cp",
+      "flow_type": "traffic",
+      "protocol": "HTTPS/6443",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "informer watch"
+    },
+    {
+      "source": "pod/boutique/checkoutservice-bc4d8f7f9-xq7qk",
+      "target": "control-plane/kube-system/kube-apiserver-boutique-cp",
+      "flow_type": "traffic",
+      "protocol": "HTTPS/6443",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "informer watch"
+    },
+    {
+      "source": "pod/boutique/recommendationservice-bc4d8f7f9-xq7qk",
+      "target": "control-plane/kube-system/kube-apiserver-boutique-cp",
+      "flow_type": "traffic",
+      "protocol": "HTTPS/6443",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "informer watch"
+    },
+    {
+      "source": "pod/boutique/recommendationservice-f89c6d5d2-z2w4t",
+      "target": "control-plane/kube-system/kube-apiserver-boutique-cp",
+      "flow_type": "traffic",
+      "protocol": "HTTPS/6443",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "informer watch"
+    },
+    {
+      "source": "pod/boutique/adservice-bc4d8f7f9-xq7qk",
+      "target": "control-plane/kube-system/kube-apiserver-boutique-cp",
+      "flow_type": "traffic",
+      "protocol": "HTTPS/6443",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "informer watch"
+    },
+    {
+      "source": "pod/boutique/loadgenerator-bc4d8f7f9-xq7qk",
+      "target": "control-plane/kube-system/kube-apiserver-boutique-cp",
+      "flow_type": "traffic",
+      "protocol": "HTTPS/6443",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "informer watch"
+    },
+    {
+      "source": "pod/boutique/loadgenerator-bc4d8f7f9-xq7qk",
+      "target": "pod/boutique/frontend-bc4d8f7f9-xq7qk",
+      "flow_type": "traffic",
+      "protocol": "HTTP/8080",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "locust traffic"
+    },
+    {
+      "source": "pod/boutique/frontend-bc4d8f7f9-xq7qk",
+      "target": "pod/boutique/currencyservice-bc4d8f7f9-xq7qk",
+      "flow_type": "traffic",
+      "protocol": "gRPC/7000",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "exchange rates"
+    },
+    {
+      "source": "pod/boutique/frontend-bc4d8f7f9-xq7qk",
+      "target": "pod/boutique/productcatalogservice-bc4d8f7f9-xq7qk",
+      "flow_type": "traffic",
+      "protocol": "gRPC/3550",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "catalog browse"
+    },
+    {
+      "source": "pod/boutique/frontend-bc4d8f7f9-xq7qk",
+      "target": "pod/boutique/cartservice-bc4d8f7f9-xq7qk",
+      "flow_type": "traffic",
+      "protocol": "gRPC/7015",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "cart state"
+    },
+    {
+      "source": "pod/boutique/frontend-bc4d8f7f9-xq7qk",
+      "target": "pod/boutique/recommendationservice-bc4d8f7f9-xq7qk",
+      "flow_type": "traffic",
+      "protocol": "gRPC/8080",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "recommendations"
+    },
+    {
+      "source": "pod/boutique/frontend-bc4d8f7f9-xq7qk",
+      "target": "pod/boutique/adservice-bc4d8f7f9-xq7qk",
+      "flow_type": "traffic",
+      "protocol": "gRPC/9555",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "contextual ads"
+    },
+    {
+      "source": "pod/boutique/frontend-bc4d8f7f9-xq7qk",
+      "target": "pod/boutique/checkoutservice-bc4d8f7f9-xq7qk",
+      "flow_type": "traffic",
+      "protocol": "gRPC/5000",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "checkout flow"
+    },
+    {
+      "source": "pod/boutique/checkoutservice-bc4d8f7f9-xq7qk",
+      "target": "pod/boutique/paymentservice-bc4d8f7f9-xq7qk",
+      "flow_type": "traffic",
+      "protocol": "gRPC/50052",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "card charge"
+    },
+    {
+      "source": "pod/boutique/checkoutservice-bc4d8f7f9-xq7qk",
+      "target": "pod/boutique/shippingservice-bc4d8f7f9-xq7qk",
+      "flow_type": "traffic",
+      "protocol": "gRPC/5000",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "shipping quote"
+    },
+    {
+      "source": "pod/boutique/checkoutservice-bc4d8f7f9-xq7qk",
+      "target": "pod/boutique/emailservice-bc4d8f7f9-xq7qk",
+      "flow_type": "traffic",
+      "protocol": "gRPC/8080",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "order confirmation"
+    },
+    {
+      "source": "pod/boutique/cartservice-bc4d8f7f9-xq7qk",
+      "target": "pod/boutique/redis-cart-5f5d6c8c8b-h9klm",
+      "flow_type": "traffic",
+      "protocol": "RESP/6379",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "cart KV"
+    },
+    {
+      "source": "pod/boutique/redis-cart-5f5d6c8c8b-h9klm",
+      "target": "kcc/memstore/boutique-redis-backplane",
+      "flow_type": "data_replication",
+      "protocol": "RESP/6379",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "AOF persistence replay"
+    },
+    {
+      "source": "pod/boutique/productcatalogservice-bc4d8f7f9-xq7qk",
+      "target": "kcc/gcs/boutique-product-images",
+      "flow_type": "traffic",
+      "protocol": "HTTPS/443",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "image asset fetch"
+    }
+  ],
+  "machine_shapes": [
+    {
+      "node_name": "boutique-pool-c3-a",
+      "instance_type": "c3-standard-4",
+      "compute_class": "Performance",
+      "vcpus": 4,
+      "memory_gib": 16,
+      "capacity_type": "on-demand",
+      "zone": "us-central1-a",
+      "accelerator_count": 0
+    },
+    {
+      "node_name": "boutique-pool-c3-b",
+      "instance_type": "c3-standard-4",
+      "compute_class": "Performance",
+      "vcpus": 4,
+      "memory_gib": 16,
+      "capacity_type": "on-demand",
+      "zone": "us-central1-b",
+      "accelerator_count": 0
+    },
+    {
+      "node_name": "boutique-pool-e2-a",
+      "instance_type": "e2-standard-4",
+      "compute_class": "General-Purpose",
+      "vcpus": 4,
+      "memory_gib": 16,
+      "capacity_type": "on-demand",
+      "zone": "us-central1-a",
+      "accelerator_count": 0
+    },
+    {
+      "node_name": "boutique-pool-e2-b",
+      "instance_type": "e2-standard-4",
+      "compute_class": "General-Purpose",
+      "vcpus": 4,
+      "memory_gib": 16,
+      "capacity_type": "on-demand",
+      "zone": "us-central1-b",
+      "accelerator_count": 0
+    }
+  ],
+  "subterranean_resources": [
+    {
+      "id": "kcc/memstore/boutique-redis-backplane",
+      "provider": "gcp",
+      "category": "cache_in_memory",
+      "cr_kind": "MemorystoreInstance",
+      "name": "boutique-redis-backplane",
+      "namespace": "gcp-managed",
+      "display_name": "Memorystore Redis Backplane",
+      "status_phase": "Ready",
+      "endpoint": "redis-backplane.cache.internal:6379",
+      "managed_by": "kcc",
+      "spatial": {
+        "x": -9.0,
+        "y": -6.5,
+        "z": -3.5
+      }
+    },
+    {
+      "id": "kcc/gcs/boutique-product-images",
+      "provider": "gcp",
+      "category": "object_storage",
+      "cr_kind": "StorageBucket",
+      "name": "boutique-product-images",
+      "namespace": "gcp-managed",
+      "display_name": "Product Image Bucket",
+      "status_phase": "Ready",
+      "endpoint": "boutique-product-images.storage.googleapis.com",
+      "managed_by": "kcc",
+      "spatial": {
+        "x": 3.0,
+        "y": -6.5,
+        "z": -3.5
+      }
+    }
+  ]
+}
