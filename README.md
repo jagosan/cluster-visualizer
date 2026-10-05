@@ -19,6 +19,8 @@ Below is a live rendering of Cluster Visualizer performing a side-by-side compar
 
 ### Key UI Capabilities
 - **Dual & Quad Viewport Split-Screen:** Compare clusters side-by-side (`⚏ 2`) or monitor 4-cluster fleet matrices (`⊞ 4`) simultaneously.
+- **Interactive UI Cluster Onboarding (`➕ ADD CLUSTER`):** Modal dialog supporting copyable Helm installation commands, `TokenReview` bearer authentication (stored in `sessionStorage`), client-side direct Kubernetes API extraction with zero cluster footprint, and instant sample loading.
+- **Autoscaling Traffic Simulation Test Harness (`⚡ TRAFFIC HARNESS` / `KeyT`):** Dockable bottom HUD running discrete-event $M/M/c/K$ queuing physics, testing real-time autoscaling, conduit flow speed/color modulation, and comparative auto-provisioning latency (GKE Autopilot Compute Class vs Karpenter / Static NodePools).
 - **Synchronized Camera Navigation:** `🔗 Link Cameras` locks OrbitControls pitch, yaw, and zoom across viewports for synchronized multi-angle architectural reviews.
 - **Visual Git-Style Diff Badges:** Real-time summary counters in the top HUD highlight `Identical` components, `Version Skews`, `Missing` workloads, and `Added` resources.
 - **Layered 3D Elevation:** Clear vertical stratification separating External Ingress, API Gateways, Control Plane Supervisors, Worker Node Decks, and Subterranean Cloud Vaults.
@@ -30,6 +32,9 @@ Below is a live rendering of Cluster Visualizer performing a side-by-side compar
 ## Core Features
 
 - **Semantic Version & Digest Diffing:** Compares Kubernetes resource graphs, detecting API deprecations, container image tag drift, and silent SHA256 image digest discrepancies.
+- **Instant Simulated Sample Catalog (<100ms Hydration):** Pre-packaged reference topologies bundled with the client: Vanilla OSS v1.36.4, 11-microservice Google Online Boutique with Redis cart and Sub-Level B2 vaults, KubeRay AI cluster with GPU accelerator bays and Kueue staging pallets, and GKE Compute Class vs Karpenter auto-provisioning benchmark.
+- **Client-Side Direct Kubernetes API Extractor:** In-browser manifest parser (`src/ingestion/client_extractor.ts`) transforming raw Kubernetes API responses (`/api/v1/pods`, `/nodes`, `/services`, `/apis/autoscaling/v2/horizontalpodautoscalers`) directly into 3D Skyscraper topology graphs without server-side agents.
+- **Comparative Scheduling Latency Benchmark:** Real-time side-by-side demonstration contrasting sub-second scheduling and in-place VPA morphing on pre-warmed compute slices against cold VM provisioning delays in traditional or Karpenter clusters where pending pods accumulate in the exterior staging yard.
 - **Dual Layout Engines:**
   - **Skyscraper Architecture Mode:** Hierarchical spatial elevation separating control plane components, worker trays, and subterranean storage.
   - **Latency Force Field Mode:** Force-directed spring-mass topology where 3D spatial distances between nodes reflect physical network latency.
@@ -57,10 +62,18 @@ Open **`http://localhost:5173/`** in your browser. The UI immediately loads pre-
 
 ### 2. Exploring Built-in Sample Clusters
 Click **`➕ ADD CLUSTER`** or explore the built-in catalog fixtures:
-- `sample-ray-kuberay.json`: Distributed Ray AI training cluster with head/worker nodes and object store.
-- `sample-online-boutique.json`: 11-tier microservice architecture with canary deployments.
-- `sample-upstream-k8s.json`: Upstream Kubernetes 1.36 control plane baseline.
-- `sample-compute-class-bench.json`: Heterogeneous Karpenter compute classes and machine shapes.
+- `sample-ray-kuberay.json`: Distributed Ray AI training cluster with head/worker nodes, GPU accelerator bays, and Kueue gang pallets.
+- `sample-online-boutique.json`: 11-tier microservice architecture with Redis cart, HPA, and Sub-Level B2 cloud vaults.
+- `sample-upstream-k8s.json`: Upstream Kubernetes 1.36 control plane baseline with CoreDNS, kube-proxy, and CNI.
+- `sample-compute-class-bench.json`: GKE Autopilot Compute Class vs. Karpenter and traditional node pool benchmark.
+
+### 3. Simulating Traffic & Autoscaling Spikes (`KeyT`)
+1. Press **`KeyT`** or click **`⚡ TRAFFIC HARNESS`** in the topbar to dock the traffic control deck.
+2. Select target workload (e.g. `frontend`), pattern (`Step Spike`), and load (e.g. `850 RPS`).
+3. Click **`▶ INJECT TRAFFIC`** or **`⚡ BURST 2000 RPS`**:
+   - In **GKE Autopilot Compute Class** mode, pods schedule onto pre-warmed slices in seconds ($\tau_{\text{sched}} \approx 3.5\text{s}$) with 0% error rate and transient peak latency $\le 48\text{ms}$.
+   - In **Karpenter / Static NodePool** mode, observe cold VM provisioning delays ($\tau_{\text{node}} \approx 60 - 150\text{s}$) where pending pods hover in the **Exterior Staging Yard ($X < -12.0$)** with amber tractor beams, and queuing latency spikes past $700\text{ms}$.
+   - Flow conduit particles dynamically scale speed and modulate color from cyan ($<30\text{ms}$) to amber ($30-200\text{ms}$) to blazing crimson ($>200\text{ms}$).
 
 ---
 
