@@ -25,6 +25,8 @@
 - `docs/architecture/10-interactive-ui-cluster-onboarding-sample-catalog-and-autoscaling-traffic-harness.md`: Architectural blueprint for UI onboarding modals, sample catalog fixtures, discrete-event queuing simulation, and comparative scheduling latency dynamics.
 - `specs/11-quad-layout-diff-tour-and-latency-springs.md`: Master specification for Quad-Pane layout alignment, diff & delta inspection sequence, and load-driven latency spring dynamics.
 - `docs/architecture/11-quad-layout-diff-tour-and-latency-springs.md`: Architectural blueprint for deterministic quad grid layout, diff sequence tour engine, docked media controller deck, and logarithmic damped harmonic latency spring physics.
+- `specs/12-viewport-pane-zoom-and-restore.md`: Master specification for single-pane zoom-in focus, magnifying glass in-pane trigger, and previous view restoration.
+- `docs/architecture/12-viewport-pane-zoom-and-restore.md`: Architectural blueprint for GridController zoom state machine, contextual pane controls, and layout restoration mechanics.
 - `docs/MAP.md`: This symbol and directory reference map.
 
 ## 3D Asset Pipeline (Blender `bpy`)
@@ -103,6 +105,7 @@
 - `src/scene/latency_spring_engine.ts`: SPEC-11 §3.3 Load-driven logarithmic damped harmonic spring engine expanding floor tray clearance $\Delta Y$ under latency spikes.
 
 ## Tests & SPEC Verification
+- `tests/test_spec12_pane_zoom_and_restore.py`: SPEC-12 test suite verifying dynamic slot zoom targeting, restore previous mode state machine, in-pane zoom/restore buttons, and keyboard shortcuts.
 - `tests/test_spec11_layout_diff_and_springs.py`: SPEC-11 test suite verifying quad grid slot isolation, diff sequence generation and ordering, media deck state transitions, and logarithmic harmonic spring physics.
 - `tests/test_spec10_onboarding_and_traffic.py`: SPEC-10 / TASK-CV-1106 suite — pydantic ClusterGraph schema conformance for the four `public/data/samples/*.json` catalog fixtures (§3 topologies: upstream baseline, Online Boutique HPA/VPA + vaults, KubeRay accelerator bays + Kueue gang pallet, Compute Class vs Karpenter staging), M/M/c/K queuing math (step/sine/ramp/chaos λ(t) profiles, ρ(t) = λ/(N·μ) readout, Erlang-C cross-check vs independent lgamma-free reference, saturated-regime W_q growth), HPA `ceil(N·cpu/target)` bounds + stabilization, VPA 80 %-sustained trigger with τ_vpa morph, §5.3 scheduling-skew bands (GKE τ_sched 3–6 s vs Karpenter τ_node 60–150 s), and secret-scrubbing/token-hygiene guarantees; engine physics exercised through an esbuild→node bridge.
 - `scripts/verify_spec10_engine.ts`: TASK-CV-1103/1104 harness (run via `node_modules/.bin/esbuild --bundle --platform=node` + `node`) — client extractor graph normalization, pattern shapes, GKE vs Karpenter spike telemetry, lifecycle pause/reset/burst, VPA morph triggers.

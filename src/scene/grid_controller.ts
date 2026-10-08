@@ -12,28 +12,35 @@ export interface ViewportSlot {
   k8sVersion?: string;
   channel?: string;
   streamUrl?: string;
+  zoomButton?: HTMLButtonElement;
 }
 
 export interface GridControllerOptions {
   wrapperElement: HTMLElement;
   hudContainer?: HTMLElement | null;
   onModeChange?: (mode: GridMode) => void;
+  onZoomChange?: (isZoomed: boolean, focusedSlotId: string, previousMode: GridMode | null) => void;
 }
 
 export class GridController {
   public mode: GridMode = 'dual';
   public syncCameras: boolean = true;
+  public focusedSlotId: string = 'a';
+  public previousMode: GridMode | null = null;
+  public isZoomed: boolean = false;
   private wrapper: HTMLElement;
   private slots: ViewportSlot[] = [];
   private isSyncing: boolean = false;
   private hudContainer: HTMLElement | null = null;
   private onModeChangeCb?: (mode: GridMode) => void;
+  private onZoomChangeCb?: (isZoomed: boolean, focusedSlotId: string, previousMode: GridMode | null) => void;
   private boundKeyHandler: (event: KeyboardEvent) => void;
 
   constructor(options: GridControllerOptions, initialSlots: ViewportSlot[] = []) {
     this.wrapper = options.wrapperElement;
     this.hudContainer = options.hudContainer ?? null;
     this.onModeChangeCb = options.onModeChange;
+    this.onZoomChangeCb = options.onZoomChange;
 
     this.boundKeyHandler = this.handleKeyDown.bind(this);
     window.addEventListener('keydown', this.boundKeyHandler);
@@ -57,23 +64,34 @@ export class GridController {
 
   public getActiveSlots(): ViewportSlot[] {
     if (this.mode === 'single') {
-      return this.slots.slice(0, 1);
-    }
-    if (this.mode === 'dual') {
+      const found = this.slots.find(s => s.id === this.focusedSlotId);
+      if (found) {
+        return [found];
+      }
+      return [this.slots[0]] as ViewportSlot[];
+    } else if (this.mode === 'dual') {
       return this.slots.slice(0, 2);
+    } else if (this.mode === 'quad') {
+      return this.slots.slice(0, 4);
     }
-    // quad
-    return this.slots.slice(0, 4);
+    return this.slots;
   }
 
   public setMode(mode: GridMode): void {
     this.mode = mode;
+    // SPEC-12: leaving single mode always clears the zoomed flag.
+    if (mode !== 'single') {
+      this.isZoomed = false;
+    }
     this.applyGridStyles();
 
     const activeSlots = this.getActiveSlots();
     for (const slot of activeSlots) {
       slot.viewport.onResize();
     }
+
+    // SPEC-12: buttons must always reflect the current mode and focus.
+    this.updateZoomButtons();
 
     this.updateSkewMatrixHUD();
     this.onModeChangeCb?.(mode);
@@ -237,7 +255,10 @@ export class GridController {
       for (let i = 0; i < allSlots.length; i++) {
         const slot = allSlots[i];
         if (!slot) continue;
-        if (i === 0) {
+        // SPEC-12: dynamically target the focused slot (fallback to slot 0 if
+        // focusedSlotId does not resolve to any registered slot).
+        const focusedSlot = this.slots.find(s => s.id === this.focusedSlotId) ?? this.slots[0];
+        if (slot === focusedSlot) {
           slot.container.style.display = 'block';
           slot.container.style.width = '100%';
           slot.container.style.height = '100%';
@@ -311,6 +332,72 @@ export class GridController {
     }
   }
 
+
+  public zoomSlot(slotId: string): void {
+    // SPEC-12: toggling the already-focused, zoomed pane exits the zoom instead
+    // of re-entering single mode.
+    if (this.isZoomActive() && this.focusedSlotId === slotId) {
+      this.restorePreviousMode();
+      return;
+    }
+    // Record previous mode (preserve if already in single mode)
+    this.previousMode = (this.mode === 'single') ? (this.previousMode ?? 'dual') : this.mode;
+    this.focusedSlotId = slotId;
+    this.isZoomed = true;
+    this.setMode('single');
+    this.updateZoomButtons();
+    this.onZoomChangeCb?.(true, this.focusedSlotId, this.previousMode);
+  }
+
+  public restorePreviousMode(): void {
+    const target = this.previousMode ?? 'dual';
+    this.isZoomed = false;
+    this.setMode(target);
+    this.updateZoomButtons();
+    this.onZoomChangeCb?.(false, this.focusedSlotId, this.previousMode);
+  }
+
+  public isZoomActive(): boolean {
+    return this.mode === 'single' && this.isZoomed;
+  }
+
+  public getFocusedSlotId(): string {
+    return this.focusedSlotId;
+  }
+
+  public getPreviousMode(): GridMode | null {
+    return this.previousMode;
+  }
+
+  private updateZoomButtons(): void {
+    for (const slot of this.slots) {
+      if (slot.zoomButton) {
+        const isFocused = slot.id === this.focusedSlotId;
+        const isSingleMode = this.mode === 'single';
+
+        if (isSingleMode && isFocused) {
+          // Show return/exit icon on focused slot in single mode
+          slot.zoomButton.innerHTML = `
+            <svg class="icon-zoom" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="9 14 4 9 9 4"></polyline>
+              <path d="M20 20v-7a4 4 0 0 0-4-4H4"></path>
+            </svg>
+          `;
+          slot.zoomButton.title = `Return to ${this.previousMode ?? 'Dual'} View (Exit Zoom)`;
+        } else {
+          // Show magnifying glass icon for all other cases
+          slot.zoomButton.innerHTML = `
+            <svg class="icon-zoom" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+          `;
+          slot.zoomButton.title = `Maximize ${slot.title} (Zoom In)`;
+        }
+      }
+    }
+  }
+
   private handleKeyDown(event: KeyboardEvent): void {
     if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
       return;
@@ -325,6 +412,21 @@ export class GridController {
         break;
       case '4':
         this.setMode('quad');
+        break;
+      case 'Escape':
+        if (this.isZoomActive()) {
+          this.restorePreviousMode();
+        }
+        break;
+      case 'z':
+      case 'Z':
+        // Toggle zoom on focused slot
+        if (this.isZoomActive()) {
+          this.restorePreviousMode();
+        } else {
+          const slot = this.slots.find(s => s.id === this.focusedSlotId) ?? this.slots[0];
+          if (slot) this.zoomSlot(slot.id);
+        }
         break;
       default:
         break;

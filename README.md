@@ -235,6 +235,7 @@ Every capability in Cluster Visualizer is engineered according to formal archite
 | [`specs/09-pod-autoscaling-morphing-and-kueue-staging.md`](specs/09-pod-autoscaling-morphing-and-kueue-staging.md) | **Workload Lifecycle — Proportional Pod Sizing, VPA/HPA Morphing & The Pre-Admission Staging Yard (Kueue Gang Scheduling)** | `Implemented` |
 | [`specs/10-interactive-ui-cluster-onboarding-sample-catalog-and-autoscaling-traffic-harness.md`](specs/10-interactive-ui-cluster-onboarding-sample-catalog-and-autoscaling-traffic-harness.md) | **Interactive UI Cluster Onboarding, Simulated Sample Catalog & Autoscaling Traffic Simulation Harness** | `Implemented` |
 | [`specs/11-quad-layout-diff-tour-and-latency-springs.md`](specs/11-quad-layout-diff-tour-and-latency-springs.md) | **Quad-Pane Layout Alignment, Diff & Delta Inspection Sequence, and Load-Driven Latency Spring Dynamics** | `Implemented` |
+| [`specs/12-viewport-pane-zoom-and-restore.md`](specs/12-viewport-pane-zoom-and-restore.md) | **Viewport Pane Zoom-In Focus and Previous View Restoration** | `Implemented` |
 <!-- SPECS_TABLE_END -->
 
 - **Symbol & File Map:** [`docs/MAP.md`](docs/MAP.md) provides a comprehensive map of all modules, source files, and architectural relationships.
