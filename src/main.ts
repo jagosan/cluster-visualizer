@@ -169,50 +169,54 @@ async function bootstrap() {
     }
   });
 
+  // SPEC-12: Viewport Pane Zoom-In Focus and Previous View Restoration
   // 4. Viewport Slots & Grid Controller (SPEC-06)
-  const slots: ViewportSlot[] = [
-    {
-      id: 'a',
-      viewport: viewportA,
-      container: containerA,
-      title: 'Cluster Alpha',
-      clusterName: 'stage-regular',
-      k8sVersion: '1.36.4',
-      channel: 'Regular',
-    },
-    {
-      id: 'b',
-      viewport: viewportB,
-      container: containerB,
-      title: 'Cluster Beta',
-      clusterName: 'prod-regular',
-      k8sVersion: '1.36.4',
-      channel: 'Regular',
-    },
-  ];
+  const slots: ViewportSlot[] = [];
+
+  // Helper function to create a slot with zoom button
+  function createSlot(id: string, viewport: ClusterViewport, container: HTMLElement, title: string, clusterName: string, k8sVersion?: string, channel?: string): ViewportSlot {
+    // Create zoom button
+    const zoomBtn = document.createElement('button');
+    zoomBtn.className = 'viewport-zoom-btn';
+    zoomBtn.innerHTML = `
+      <svg class="icon-zoom" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="8"></circle>
+        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+      </svg>
+    `;
+    zoomBtn.title = `Maximize ${title} (Zoom In)`;
+    // SPEC-12: toggle semantics — clicking the return icon on the already
+    // zoomed, focused pane restores the previous grid mode.
+    zoomBtn.addEventListener('click', () => {
+      if (gridController.isZoomActive() && gridController.getFocusedSlotId() === id) {
+        gridController.restorePreviousMode();
+      } else {
+        gridController.zoomSlot(id);
+      }
+    });
+    container.appendChild(zoomBtn);
+
+    return {
+      id,
+      viewport,
+      container,
+      title,
+      clusterName,
+      k8sVersion,
+      channel,
+      zoomButton: zoomBtn,
+    };
+  }
+
+  slots.push(createSlot('a', viewportA, containerA, 'Cluster Alpha', 'stage-regular', '1.36.4', 'Regular'));
+  slots.push(createSlot('b', viewportB, containerB, 'Cluster Beta', 'prod-regular', '1.36.4', 'Regular'));
 
   if (viewportC && containerC) {
-    slots.push({
-      id: 'c',
-      viewport: viewportC,
-      container: containerC,
-      title: 'Cluster Gamma',
-      clusterName: 'edge-rapid',
-      k8sVersion: '1.37.0',
-      channel: 'Rapid',
-    });
+    slots.push(createSlot('c', viewportC, containerC, 'Cluster Gamma', 'edge-rapid', '1.37.0', 'Rapid'));
   }
 
   if (viewportD && containerD) {
-    slots.push({
-      id: 'd',
-      viewport: viewportD,
-      container: containerD,
-      title: 'Cluster Delta',
-      clusterName: 'canary-eval',
-      k8sVersion: '1.36.4',
-      channel: 'Regular',
-    });
+    slots.push(createSlot('d', viewportD, containerD, 'Cluster Delta', 'canary-eval', '1.36.4', 'Regular'));
   }
 
   const btnGridSingle = document.getElementById('btn-grid-single');
@@ -227,6 +231,25 @@ async function bootstrap() {
         btnGridSingle?.classList.toggle('active', mode === 'single');
         btnGridDual?.classList.toggle('active', mode === 'dual');
         btnGridQuad?.classList.toggle('active', mode === 'quad');
+      },
+      onZoomChange: (isZoomed: boolean, _focusedSlotId: string, previousMode: GridMode | null) => {
+        // Update topbar buttons based on zoom state
+        if (isZoomed) {
+          btnGridSingle?.classList.add('active');
+          btnGridDual?.classList.remove('active');
+          btnGridQuad?.classList.remove('active');
+        } else {
+          // Restore previous mode's button
+          if (previousMode === 'dual') {
+            btnGridSingle?.classList.remove('active');
+            btnGridDual?.classList.add('active');
+            btnGridQuad?.classList.remove('active');
+          } else if (previousMode === 'quad') {
+            btnGridSingle?.classList.remove('active');
+            btnGridDual?.classList.remove('active');
+            btnGridQuad?.classList.add('active');
+          }
+        }
       },
     },
     slots

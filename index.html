@@ -134,6 +134,35 @@
         position: relative;
         z-index: 10;
       }
+      /* SPEC-12: Viewport Pane Zoom-In Focus and Previous View Restoration */
+      .viewport-zoom-btn {
+        position: absolute;
+        top: 12px;
+        right: 14px;
+        z-index: 50;
+        background: rgba(17, 24, 39, 0.85);
+        backdrop-filter: blur(8px);
+        border: 1px solid var(--border-subtle);
+        border-radius: 6px;
+        color: var(--text-secondary);
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.15s ease;
+      }
+      .viewport-zoom-btn:hover {
+        background: #1f2937;
+        color: var(--accent-blue);
+        border-color: var(--accent-blue);
+        transform: scale(1.05);
+      }
+      .icon-zoom {
+        width: 16px;
+        height: 16px;
+      }
       .viewport-title {
         position: absolute;
         top: 14px;
