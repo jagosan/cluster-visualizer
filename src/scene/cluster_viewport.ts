@@ -1016,11 +1016,27 @@ export class ClusterViewport {
 
     if (this.clusterData?.nodes) {
       this.clusterData.nodes.push(node);
-      const hasRayCluster = this.clusterData.nodes.some(
-        (n) => n.kind === 'RayHead' || n.kind === 'RayWorker',
-      );
-      this.flankLabelManager.setRaySubLabelsVisible(hasRayCluster);
+      this.refreshFlankLabels();
     }
+  }
+
+  private refreshFlankLabels(): void {
+    const nodes = this.clusterData?.nodes ?? [];
+    const workerCount =
+      nodes.filter((n) => n.layer === 'node' || n.kind.toLowerCase() === 'node').length || 3;
+    const hasRay = nodes.some(
+      (n) => n.name.toLowerCase().includes('ray') || n.kind.toLowerCase().includes('ray'),
+    );
+    const hasRayCluster = nodes.some((n) => {
+      const nm = n.name.toLowerCase();
+      const kd = n.kind.toLowerCase();
+      return (
+        (nm.includes('ray') || kd.includes('ray')) &&
+        !nm.includes('operator') &&
+        kd !== 'kuberayoperator'
+      );
+    });
+    this.flankLabelManager.buildLabels(workerCount, hasRay, hasRayCluster);
   }
 
   public removeNode(nodeId: string): void {
@@ -1069,10 +1085,7 @@ export class ClusterViewport {
       if (idx !== -1) {
         this.clusterData.nodes.splice(idx, 1);
       }
-      const hasRayCluster = this.clusterData.nodes.some(
-        (n) => n.kind === 'RayHead' || n.kind === 'RayWorker',
-      );
-      this.flankLabelManager.setRaySubLabelsVisible(hasRayCluster);
+      this.refreshFlankLabels();
     }
   }
 
