@@ -1016,6 +1016,10 @@ export class ClusterViewport {
 
     if (this.clusterData?.nodes) {
       this.clusterData.nodes.push(node);
+      const hasRayCluster = this.clusterData.nodes.some(
+        (n) => n.kind === 'RayHead' || n.kind === 'RayWorker',
+      );
+      this.flankLabelSystem.setRaySubLabelsVisible(hasRayCluster);
     }
   }
 
@@ -1065,6 +1069,10 @@ export class ClusterViewport {
       if (idx !== -1) {
         this.clusterData.nodes.splice(idx, 1);
       }
+      const hasRayCluster = this.clusterData.nodes.some(
+        (n) => n.kind === 'RayHead' || n.kind === 'RayWorker',
+      );
+      this.flankLabelSystem.setRaySubLabelsVisible(hasRayCluster);
     }
   }
 
