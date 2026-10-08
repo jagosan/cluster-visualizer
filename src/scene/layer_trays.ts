@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import type { LatencySpringEngine } from './latency_spring_engine.js';
 
 /**
  * TASK-CV-903: Physical machine / Karpenter compute-class chassis data.
@@ -75,6 +76,26 @@ export class LayerTrayManager {
   private groundTargetOpacity = 1.0;
   private coreMaterials: THREE.MeshStandardMaterial[] = [];
   private static readonly GROUND_GRID_BASE_OPACITY = 0.6;
+
+  // TASK-CV-1205: SPEC-11 load-driven vertical spring displacement state.
+  // Per-tray structural datum Y0 captured at build time; per-tray dynamic
+  // offsets applied on top so component elevations stay consistent with
+  // their floor (spec §3.3: Y_floor(t) = Y0 + Σ ΔY_ij(t)).
+  private trayBaseElevations: number[] = [];
+  private trayOffsets: number[] = [];
+  /** Optional tier id per tray index for `updateElevations(springEngine)`. */
+  private trayTierIds: (string | undefined)[] = [];
+  /**
+   * Trays whose offset mirrors another tray's offset (chassis plates ride
+   * the worker deck). Index -> source tray index.
+   */
+  private trayFollowSources: (number | undefined)[] = [];
+  /** Index of the worker deck tray created in the last buildTowerTrays(). */
+  private workerDeckTrayIndex: number | null = null;
+  /** Structural datum center Y of the tower cage (spring-stretch anchor). */
+  private cageBaseCenterY: number | null = null;
+  /** Highest |offset| currently applied — drives cage stretch FX. */
+  private maxAppliedOffset = 0;
 
   constructor(scene: THREE.Scene, machineShapes?: MachineShapeData[]) {
     this.scene = scene;
@@ -192,6 +213,11 @@ export class LayerTrayManager {
 
       this.scene.add(group);
       this.trays.push(group);
+      // TASK-CV-1205: capture the structural datum Y0 for spring offsets
+      this.trayBaseElevations.push(y);
+      this.trayOffsets.push(0);
+      this.trayTierIds.push(undefined);
+      this.trayFollowSources.push(undefined);
       return group;
     };
 
@@ -224,6 +250,8 @@ export class LayerTrayManager {
     
     // Create the main wide deck
     createTray(deckWidth, deckDepth, deckHeight, 0x047857, 0x34d399, 0.5, 0.0);
+    // TASK-CV-1205: chassis plates on this deck must ride its spring offset
+    this.workerDeckTrayIndex = this.trays.length - 1;
 
     // Create individual chassis plates on top of the wide deck.
     // TASK-CV-903: when machineShapes are provided, dimension each node chassis
@@ -356,6 +384,11 @@ export class LayerTrayManager {
 
       this.scene.add(chassisGroup);
       this.trays.push(chassisGroup);
+      // TASK-CV-1205: chassis plates follow the worker deck's spring offset
+      this.trayBaseElevations.push(chassisY);
+      this.trayOffsets.push(0);
+      this.trayTierIds.push(undefined);
+      this.trayFollowSources.push(this.workerDeckTrayIndex ?? undefined);
     }
 
     // ── TowerCage: Structural Corner Columns and Nx Bracket Frame ──
@@ -452,6 +485,9 @@ export class LayerTrayManager {
 
     this.scene.add(cageGroup);
     this.cage = cageGroup;
+    // TASK-CV-1205: remember the cage datum for spring-driven stretch FX
+    this.cageBaseCenterY = centerY;
+    cageGroup.userData['cageBaseHeight'] = cageHeight;
   }
 
   /**
@@ -639,6 +675,111 @@ export class LayerTrayManager {
     return this.groundTargetOpacity <= 0.5;
   }
 
+  // ─── TASK-CV-1205: SPEC-11 load-driven vertical spring displacement ─────
+
+  /**
+   * SPEC-11 §3.3: apply a dynamic vertical offset ΔY to a single tray.
+   * The tray is translated to `Y0 + deltaY` where Y0 is the structural
+   * datum captured at build time, so rim lips, chassis plates, and edge
+   * contours ride the floor rigidly and relative component elevations
+   * stay consistent. Trays registered as followers of this tray (worker
+   * chassis plates on the worker deck) mirror the same offset.
+   *
+   * Values are applied directly — smoothing is the spring engine's job
+   * (LatencySpringEngine.update() integrates the damped harmonic response).
+   * Out-of-range indices are ignored.
+   */
+  public setVerticalOffset(trayIndex: number, deltaY: number): void {
+    if (!Number.isInteger(trayIndex)) return;
+    const tray = this.trays[trayIndex];
+    const base = this.trayBaseElevations[trayIndex];
+    if (!tray || base === undefined) return;
+
+    const offset = Number.isFinite(deltaY) ? deltaY : 0;
+    this.trayOffsets[trayIndex] = offset;
+    tray.position.y = base + offset;
+
+    // Mirror followers (chassis plates riding this deck)
+    for (let i = 0; i < this.trayFollowSources.length; i++) {
+      if (this.trayFollowSources[i] !== trayIndex) continue;
+      const follower = this.trays[i];
+      const followerBase = this.trayBaseElevations[i];
+      if (!follower || followerBase === undefined) continue;
+      this.trayOffsets[i] = offset;
+      follower.position.y = followerBase + offset;
+    }
+
+    this.applyCageStretch();
+  }
+
+  /**
+   * Associate a tray index with an architectural tier id so that
+   * `updateElevations(springEngine)` can drive it from the spring model.
+   */
+  public assignTrayTier(trayIndex: number, tierId: string | undefined): void {
+    if (trayIndex >= 0 && trayIndex < this.trayTierIds.length) {
+      this.trayTierIds[trayIndex] = tierId;
+    }
+  }
+
+  /** Current applied vertical offset of a tray (0 when out of range). */
+  public getVerticalOffset(trayIndex: number): number {
+    return this.trayOffsets[trayIndex] ?? 0;
+  }
+
+  /** Number of tracked trays (deck trays + chassis plates). */
+  public get trayCount(): number {
+    return this.trays.length;
+  }
+
+  /**
+   * Pull every tier-assigned tray's displacement from the spring engine and
+   * re-apply it, keeping the tower's floors distended in lockstep with the
+   * integrated damped-spring state (call once per frame after
+   * `springEngine.update(dt)`).
+   *
+   * Trays with no assigned tier keep whatever offset was last set via
+   * `setVerticalOffset` (e.g. manually wired floors), and chassis followers
+   * continue mirroring their source deck.
+   */
+  public updateElevations(springEngine: LatencySpringEngine): void {
+    for (let i = 0; i < this.trays.length; i++) {
+      if (this.trayFollowSources[i] !== undefined) continue; // followers mirror below
+      const tierId = this.trayTierIds[i];
+      if (tierId === undefined) continue;
+      this.setVerticalOffset(i, springEngine.getDisplacement(tierId));
+    }
+    this.applyCageStretch();
+  }
+
+  /**
+   * Stretch the outer structural cage so it keeps enclosing the floors as
+   * they distend upward: bottom rail pinned at the foundation datum, top
+   * rising with the largest applied floor offset (spec §3.3 "physically
+   * expanding the distance between architectural floors").
+   */
+  private applyCageStretch(): void {
+    let maxOffset = 0;
+    for (const offset of this.trayOffsets) {
+      if (Number.isFinite(offset)) maxOffset = Math.max(maxOffset, offset);
+    }
+    this.maxAppliedOffset = maxOffset;
+
+    if (!this.cage || this.cageBaseCenterY === null) return;
+    const baseHeight = this.cage.userData['cageBaseHeight'] as number | undefined;
+    if (baseHeight === undefined || baseHeight <= 0) return;
+
+    const stretch = 1 + maxOffset / baseHeight;
+    this.cage.scale.y = stretch;
+    // Pin foundation bottom, lift penthouse top by maxOffset
+    this.cage.position.y = this.cageBaseCenterY + maxOffset / 2;
+  }
+
+  /** Largest |floor offset| currently applied (FX hook for conduits/particles). */
+  public get maxFloorOffset(): number {
+    return this.maxAppliedOffset;
+  }
+
   /**
    * Per-frame animation tick: smooth ground fade + accelerator core pulse.
    */
@@ -669,6 +810,14 @@ export class LayerTrayManager {
    */
   public clear(): void {
     this.coreMaterials = [];
+    // TASK-CV-1205: drop spring datum/offset tracking with the old geometry
+    this.trayBaseElevations = [];
+    this.trayOffsets = [];
+    this.trayTierIds = [];
+    this.trayFollowSources = [];
+    this.workerDeckTrayIndex = null;
+    this.cageBaseCenterY = null;
+    this.maxAppliedOffset = 0;
     this.trays.forEach((tray) => {
       tray.traverse((child) => {
         if (child instanceof THREE.Mesh || child instanceof THREE.LineSegments || child instanceof THREE.Line) {

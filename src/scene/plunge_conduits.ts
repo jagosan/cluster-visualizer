@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import type { RemoteServiceResourceData } from './subterranean_vaults.js';
+import { LatencySpringEngine } from './latency_spring_engine.js';
 
 /**
  * TASK-CV-904 / SPEC-08 §6: Vertical subterranean plunge conduits.
@@ -87,6 +88,11 @@ export function estimateVaultLatencyMs(resource: RemoteServiceResourceData): num
 const PLUNGE_PIPE_RADIUS = 0.07;
 const PARTICLES_PER_CONDUIT = 6;
 
+/** SPEC-11 §2.5: quiescent core emissive intensity before thermal boost. */
+const THERMAL_BASE_EMISSIVE = 0.6;
+/** Exponential rate (1/s) for cyan → amber → crimson colour/speed lerping. */
+const THERMAL_LERP_RATE = 6.0;
+
 interface PlungeParticle {
   mesh: THREE.Mesh;
   progress: number; // [0, 1) along the curve
@@ -104,12 +110,34 @@ interface PlungeConduitRecord {
   pipes: THREE.Object3D[];
   pipeMaterial: THREE.MeshStandardMaterial | null; // null on fractured conduits
   coreMaterial: THREE.MeshStandardMaterial | null;
+  /** Shared material for this conduit's flow particles (null when failed). */
+  particleMaterial: THREE.MeshStandardMaterial | null;
   particles: PlungeParticle[];
   sparks: Spark | null;
   hazardCone: THREE.Mesh | null;
   velocity: number;
   baseEmissive: number;
   highlighted: boolean;
+
+  // ─── TASK-CV-1206: SPEC-11 §3.3 / blueprint §2.5 thermal FX state ──────
+  /** Latency sample (ms) currently driving the thermal FX. */
+  thermalMs: number;
+  /** True once a latency/spring hook has claimed this conduit's FX. */
+  thermalActive: boolean;
+  /** Smoothed core/particle colour (lerps toward thermalTargetColor). */
+  thermalColor: THREE.Color;
+  /** Target colour from the latest ThermalProfile band. */
+  thermalTargetColor: THREE.Color;
+  /** Smoothed emissive multiplier (1x calm / 1.5x warm / 2.5x hot). */
+  thermalEmissive: number;
+  thermalEmissiveTarget: number;
+  /** Smoothed / target flow velocity under thermal modulation. */
+  thermalVelocity: number;
+  thermalVelocityTarget: number;
+  /** Particle/core pulse frequency in Hz (12 Hz crimson strobe when hot). */
+  strobeHz: number;
+  /** Build-time SPEC-08 flow velocity (thermal multiplier baseline). */
+  baseVelocity: number;
 }
 
 /**
@@ -202,18 +230,33 @@ export class PlungeConduitManager {
   private buildConduit(id: string, spec: PlungeConduitSpec): void {
     const curve = buildPlungeCurve(spec.source, spec.target, -4.8);
     const profile = latencyProfile(spec.latencyMs);
+    // TASK-CV-1206: SPEC-11 §3.3 thermal band (≤15 calm / ≤60 warm / >60 hot)
+    // takes over colour + pulse whenever latency telemetry is being driven.
+    const thermal = LatencySpringEngine.computeThermalProfile(spec.latencyMs);
+    const thermalHex = parseInt(thermal.color.slice(1), 16);
     const record: PlungeConduitRecord = {
       spec,
       curve,
       pipes: [],
       pipeMaterial: null,
       coreMaterial: null,
+      particleMaterial: null,
       particles: [],
       sparks: null,
       hazardCone: null,
       velocity: profile.velocity,
-      baseEmissive: 0.6,
+      baseEmissive: THERMAL_BASE_EMISSIVE,
       highlighted: false,
+      thermalMs: spec.latencyMs,
+      thermalActive: false,
+      thermalColor: new THREE.Color(thermalHex),
+      thermalTargetColor: new THREE.Color(thermalHex),
+      thermalEmissive: thermal.emissiveBoost,
+      thermalEmissiveTarget: thermal.emissiveBoost,
+      thermalVelocity: profile.velocity * thermal.particleSpeedMultiplier,
+      thermalVelocityTarget: profile.velocity * thermal.particleSpeedMultiplier,
+      strobeHz: thermal.strobeHz,
+      baseVelocity: profile.velocity,
     };
 
     if (spec.reachability === 'failed') {
@@ -258,8 +301,10 @@ export class PlungeConduitManager {
     outer.name = `plunge-${record.spec.id}`;
     record.pipes.push(outer, core);
 
-    // Flowing latency particles along the conduit.
+    // Flowing latency particles along the conduit (shared material so a
+    // thermal retint touches one material, not six).
     const particleMat = makeParticleMaterial(profile.color);
+    record.particleMaterial = particleMat;
     for (let i = 0; i < PARTICLES_PER_CONDUIT; i++) {
       const mesh = new THREE.Mesh(this.particleGeometry, particleMat);
       record.particles.push({ mesh, progress: i / PARTICLES_PER_CONDUIT });
@@ -403,8 +448,16 @@ export class PlungeConduitManager {
   }
 
   public update(delta: number, time: number): void {
+    const lerpFactor = Math.min(1.0, THERMAL_LERP_RATE * delta);
     for (const record of this.conduits.values()) {
       const length = record.curve.getLength();
+
+      // Thermal FX lerp (cyan → amber → crimson colour/speed)
+      if (record.thermalActive) {
+        record.thermalColor.lerp(record.thermalTargetColor, lerpFactor);
+        record.thermalEmissive += (record.thermalEmissiveTarget - record.thermalEmissive) * lerpFactor;
+        record.thermalVelocity += (record.thermalVelocityTarget - record.thermalVelocity) * lerpFactor;
+      }
 
       // Flow particles (healthy + degraded only).
       if (record.spec.reachability !== 'failed') {
@@ -474,6 +527,31 @@ export class PlungeConduitManager {
     this.particleGeometry.dispose();
     this.scene.remove(this.group);
     this.group.clear();
+  }
+
+  /** Set the latency for a specific conduit and activate its thermal state. */
+  public setConduitLatency(id: string, latencyMs: number): void {
+    const record = this.conduits.get(id);
+    if (!record) return;
+    record.thermalMs = latencyMs;
+    record.thermalActive = true;
+    const thermal = LatencySpringEngine.computeThermalProfile(latencyMs);
+    record.thermalTargetColor.setStyle(thermal.color);
+    record.thermalEmissiveTarget = thermal.emissiveBoost;
+    record.thermalVelocityTarget = record.baseVelocity * thermal.particleSpeedMultiplier;
+    record.strobeHz = thermal.strobeHz;
+  }
+
+  /** Reset all conduit latencies to their baseline values. */
+  public resetConduitLatencies(): void {
+    for (const record of this.conduits.values()) {
+      if (record.thermalActive) continue;
+      const thermal = LatencySpringEngine.computeThermalProfile(record.spec.latencyMs);
+      record.thermalTargetColor.setStyle(thermal.color);
+      record.thermalEmissiveTarget = thermal.emissiveBoost;
+      record.thermalVelocityTarget = record.baseVelocity * thermal.particleSpeedMultiplier;
+      record.strobeHz = thermal.strobeHz;
+    }
   }
 }
 

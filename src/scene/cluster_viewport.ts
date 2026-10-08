@@ -13,6 +13,9 @@ import type { PlungeConduitSpec } from './plunge_conduits.js';
 import { FlankLabelManager } from './flank_labels.js';
 import { DiffCardManager } from './diff_card.js';
 import { LayoutTransitionController } from './layout_transition.js';
+// SPEC-11 / TASK-CV-1205: Load-driven latency spring physics engine.
+import { LatencySpringEngine } from './latency_spring_engine.js';
+import type { DiffKind } from './diff_sequence.js';
 // SPEC-09 / TASK-CV-1001: procedural proportional pod capsules (ADR-01).
 import { PodCapsuleManager, resolvePodDimensions } from './pod_capsules.js';
 import type { PodGeometryData } from './pod_capsules.js';
@@ -265,6 +268,23 @@ export class ClusterViewport {
 
   // Dual-mode layout controller (Skyscraper <-> Latency Field)
   public layoutController: LayoutTransitionController = new LayoutTransitionController();
+
+  // SPEC-11 / TASK-CV-1205: Load-driven latency spring engine for floor separation.
+  public springEngine: LatencySpringEngine = new LatencySpringEngine();
+  
+  // Diff focus tween state for highlighting component differences.
+  private diffFocusTween: {
+    fromPos: THREE.Vector3;
+    toPos: THREE.Vector3;
+    fromTarget: THREE.Vector3;
+    toTarget: THREE.Vector3;
+    duration: number;
+    elapsed: number;
+  } | null = null;
+  
+  // Diff highlight state - used by setDiffHighlight/clearDiffHighlight methods
+  private activeDiffMesh: THREE.Object3D | null = null; /* used by setDiffHighlight/clearDiffHighlight */
+  private activeDiffOriginalMaterial: THREE.Material | THREE.Material[] | null = null; /* used by setDiffHighlight/clearDiffHighlight */
 
   constructor(container: HTMLElement, label: string) {
     this.container = container;
@@ -1505,6 +1525,26 @@ export class ClusterViewport {
       if (t >= 1) this.subterraneanTween = null;
     }
 
+    // SPEC-11 / TASK-CV-1205: Diff focus tween for highlighting component differences.
+    if (this.diffFocusTween) {
+      const tw = this.diffFocusTween;
+      tw.elapsed += delta;
+      const t = THREE.MathUtils.clamp(tw.elapsed / tw.duration, 0, 1);
+      const ease = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+      this.camera.position.lerpVectors(tw.fromPos, tw.toPos, ease);
+      this.controls.target.lerpVectors(tw.fromTarget, tw.toTarget, ease);
+      this.controls.update();
+      if (t >= 1) this.diffFocusTween = null;
+    }
+
+    // SPEC-11 / TASK-CV-1205: Diff highlight state - update emissive intensity for active diff
+    if (this.activeDiffMesh && 'material' in this.activeDiffMesh) {
+      const mat = (this.activeDiffMesh as any).material;
+      if (mat && 'emissiveIntensity' in mat) {
+        mat.emissiveIntensity = 1.2 + 0.8 * Math.sin(time * 6.0);
+      }
+    }
+
     // Update layout transitions
     if (this.layoutController.isAnimating()) {
       this.layoutController.update(delta);
@@ -1533,5 +1573,123 @@ export class ClusterViewport {
    */
   public toggleGroundCutaway(): number {
     return this.layerTrayManager.toggleGroundCutaway();
+  }
+
+  /** Set the latency for a specific conduit and activate its thermal state. */
+  public setConduitLatency(id: string, latencyMs: number): void {
+    this.plungeConduitManager.setConduitLatency(id, latencyMs);
+  }
+
+  /** Reset all conduit latencies to their baseline values. */
+  public resetConduitLatencies(): void {
+    this.plungeConduitManager.resetConduitLatencies();
+  }
+
+  /**
+   * Focus on a specific component and highlight its difference state.
+   * @param componentId - The ID of the component to focus on
+   * @param customPosition - Optional custom position for the camera target
+   */
+  public focusComponent(componentId: string, customPosition?: { x: number; y: number; z: number }): void {
+    let targetPos: THREE.Vector3 | null = null;
+    
+    if (customPosition) {
+      targetPos = new THREE.Vector3(customPosition.x, customPosition.y, customPosition.z);
+    } else {
+      const mesh = this.nodeMeshes.get(componentId);
+      if (mesh) {
+        targetPos = mesh.position.clone();
+      }
+    }
+    
+    if (!targetPos) return;
+
+    const orbitOffset = new THREE.Vector3(5, 4, 7);
+    
+    this.diffFocusTween = {
+      fromPos: this.camera.position.clone(),
+      toPos: targetPos.clone().add(orbitOffset),
+      fromTarget: this.controls.target.clone(),
+      toTarget: targetPos.clone(),
+      duration: 0.8,
+      elapsed: 0,
+    };
+  }
+
+  /**
+   * Set highlight on a component based on its diff kind (added, deleted, modified).
+   * @param componentId - The ID of the component to highlight
+   * @param kind - The type of difference (added, deleted, modified)
+   */
+  public setDiffHighlight(componentId: string, kind: DiffKind): void {
+    if (!componentId) {
+      this.clearDiffHighlight();
+      return;
+    }
+
+    this.clearDiffHighlight();
+
+    const mesh = this.nodeMeshes.get(componentId);
+    if (!mesh || !('material' in mesh)) return;
+
+    this.activeDiffMesh = mesh;
+    this.activeDiffOriginalMaterial = (mesh as any).material;
+
+    const highlightMat = new THREE.MeshStandardMaterial({
+      roughness: 0.2,
+      metalness: 0.5,
+    });
+
+    switch (kind) {
+      case 'added':
+        highlightMat.color.setHex(0x10b981);
+        highlightMat.emissive.setHex(0x10b981);
+        highlightMat.emissiveIntensity = 1.6;
+        break;
+      case 'deleted':
+        highlightMat.color.setHex(0xef4444);
+        highlightMat.wireframe = true;
+        highlightMat.transparent = true;
+        highlightMat.opacity = 0.65;
+        break;
+      case 'modified':
+      default:
+        highlightMat.color.setHex(0xf59e0b);
+        highlightMat.emissive.setHex(0xf59e0b);
+        highlightMat.emissiveIntensity = 1.4;
+        break;
+    }
+
+    (mesh as any).material = highlightMat;
+  }
+
+  /**
+   * Clear the current diff highlight on a component.
+   */
+  public clearDiffHighlight(): void {
+    if (this.activeDiffMesh && this.activeDiffOriginalMaterial) {
+      if ('material' in this.activeDiffMesh) {
+        (this.activeDiffMesh as any).material = this.activeDiffOriginalMaterial;
+      }
+    }
+
+    this.activeDiffMesh = null;
+    this.activeDiffOriginalMaterial = null;
+  }
+
+  /**
+   * Set the latency for a specific tier or edge in the spring engine.
+   * @param tierOrEdge - The ID of the tier or edge
+   * @param latencyMs - The latency in milliseconds
+   */
+  public setLoadLatency(tierOrEdge: string, latencyMs: number): void {
+    this.springEngine.setTierLatency(tierOrEdge, latencyMs);
+  }
+
+  /**
+   * Reset all latencies in the spring engine to their baseline values.
+   */
+  public resetLoadLatencies(): void {
+    this.springEngine.reset();
   }
 }

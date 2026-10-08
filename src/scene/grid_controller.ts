@@ -223,8 +223,10 @@ export class GridController {
 
   private applyGridStyles(): void {
     const allSlots = this.slots;
+    const divider = this.wrapper.querySelector('.viewport-divider') as HTMLElement | null;
 
     if (this.mode === 'single') {
+      if (divider) divider.style.display = 'none';
       this.wrapper.style.display = 'block';
       this.wrapper.style.flexDirection = '';
       this.wrapper.style.gridTemplateColumns = '';
@@ -240,11 +242,14 @@ export class GridController {
           slot.container.style.width = '100%';
           slot.container.style.height = '100%';
           slot.container.style.flex = '';
+          slot.container.style.gridColumn = '';
+          slot.container.style.gridRow = '';
         } else {
           slot.container.style.display = 'none';
         }
       }
     } else if (this.mode === 'dual') {
+      if (divider) divider.style.display = 'block';
       this.wrapper.style.display = 'flex';
       this.wrapper.style.flexDirection = 'row';
       this.wrapper.style.gridTemplateColumns = '';
@@ -260,17 +265,30 @@ export class GridController {
           slot.container.style.flex = '1 1 50%';
           slot.container.style.height = '100%';
           slot.container.style.width = '';
+          slot.container.style.gridColumn = '';
+          slot.container.style.gridRow = '';
         } else {
           slot.container.style.display = 'none';
         }
       }
     } else if (this.mode === 'quad') {
+      if (divider) {
+        divider.style.display = 'none';
+        divider.style.setProperty('display', 'none', 'important');
+      }
       this.wrapper.style.display = 'grid';
       this.wrapper.style.flexDirection = '';
       this.wrapper.style.gridTemplateColumns = '1fr 1fr';
       this.wrapper.style.gridTemplateRows = '1fr 1fr';
       this.wrapper.style.gap = '2px';
       this.wrapper.style.height = '100%';
+
+      const gridPositions = [
+        { col: '1', row: '1', pos: 'tl' },
+        { col: '2', row: '1', pos: 'tr' },
+        { col: '1', row: '2', pos: 'bl' },
+        { col: '2', row: '2', pos: 'br' },
+      ];
 
       for (let i = 0; i < allSlots.length; i++) {
         const slot = allSlots[i];
@@ -280,6 +298,12 @@ export class GridController {
           slot.container.style.width = '100%';
           slot.container.style.height = '100%';
           slot.container.style.flex = '';
+          const gp = gridPositions[i];
+          if (gp) {
+            slot.container.style.gridColumn = gp.col;
+            slot.container.style.gridRow = gp.row;
+            slot.container.setAttribute('data-grid-pos', gp.pos);
+          }
         } else {
           slot.container.style.display = 'none';
         }
