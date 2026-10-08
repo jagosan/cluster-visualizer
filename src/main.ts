@@ -6,6 +6,8 @@ import { TimelinePlayer } from './scene/timeline_player.js';
 import type { ClusterTimelineData } from './scene/timeline_player.js';
 import { TimelineScrubber } from './ui/timeline_scrubber.js';
 import { GridController, type ViewportSlot, type GridMode } from './scene/grid_controller.js';
+import { DiffSequenceEngine } from './scene/diff_sequence.js';
+import { DiffMediaDeck } from './ui/diff_media_deck.js';
 // SPEC-10 / TASK-CV-1101 + TASK-CV-1102: interactive cluster onboarding modal
 // and the instant simulated sample catalog registry.
 import { ClusterOnboardingModal, type ViewportSlotId } from './ui/cluster_onboarding.js';
@@ -109,6 +111,63 @@ async function bootstrap() {
   viewportB.setClusterData(dataB, diffMapB);
   if (viewportC) viewportC.setClusterData(dataA);
   if (viewportD) viewportD.setClusterData(dataB);
+
+  // Wire Diff Media Deck
+  const diffReportData: DiffReportData = {
+    source_cluster: diffReport.source_cluster,
+    target_cluster: diffReport.target_cluster,
+    summary: diffReport.summary,
+    nodes: diffReport.nodes.map((n) => ({
+      node_id: n.node_id,
+      status: n.status,
+      source_version: n.source_version,
+      target_version: n.target_version,
+      source_image: n.source_image,
+      target_image: n.target_image,
+      source_digest: n.source_digest,
+      target_digest: n.target_digest,
+      diff_details: n.diff_details,
+    })),
+  };
+  const diffEngine = new DiffSequenceEngine();
+  diffEngine.setSequenceSource({ report: diffReportData, alphaGraph: dataA, betaGraph: dataB });
+  const diffDeck = new DiffMediaDeck(diffEngine);
+
+  diffDeck.onItemSelect((item) => {
+    if (viewportA) {
+      if (item.kind === 'deleted' || item.kind === 'modified' || item.alphaPosition) {
+        viewportA.focusComponent(item.id, item.alphaPosition);
+        viewportA.setDiffHighlight(item.id, item.kind);
+      } else {
+        viewportA.clearDiffHighlight();
+      }
+    }
+    if (viewportB) {
+      if (item.kind === 'added' || item.kind === 'modified' || item.betaPosition) {
+        viewportB.focusComponent(item.id, item.betaPosition);
+        viewportB.setDiffHighlight(item.id, item.kind);
+      } else {
+        viewportB.clearDiffHighlight();
+      }
+    }
+  });
+
+  // Wire topbar button #btn-diff-tour
+  const btnDiffTour = document.getElementById('btn-diff-tour');
+  if (btnDiffTour) {
+    btnDiffTour.addEventListener('click', () => {
+      diffDeck.toggle();
+    });
+  }
+
+  // Wire keyboard shortcut KeyD
+  window.addEventListener('keydown', (event) => {
+    if (event.code === 'KeyD' && !event.ctrlKey && !event.altKey && !event.metaKey) {
+      if (!(event.target instanceof HTMLInputElement) && !(event.target instanceof HTMLTextAreaElement)) {
+        diffDeck.toggle();
+      }
+    }
+  });
 
   // 4. Viewport Slots & Grid Controller (SPEC-06)
   const slots: ViewportSlot[] = [

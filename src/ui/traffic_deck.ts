@@ -556,7 +556,9 @@ export class TrafficControlDeck {
 
       if (tint === null) {
         slot.viewport.flowSystem.clearModulation();
+        slot.viewport.resetLoadLatencies();
       } else {
+        slot.viewport.setLoadLatency('worker', worstLatency);
         slot.viewport.flowSystem.setModulation({
           speedGain,
           tint,
@@ -645,7 +647,10 @@ export class TrafficControlDeck {
     this.simulator.stop();
     this.injected = false;
     this.pausedFlag = false;
-    for (const slot of this.slots) slot.viewport.flowSystem.clearModulation();
+    for (const slot of this.slots) {
+      slot.viewport.flowSystem.clearModulation();
+      slot.viewport.resetLoadLatencies();
+    }
     for (const key of this.lastModKey.keys()) this.lastModKey.delete(key);
     this.syncActionButtons();
     this.syncHeaderPill();
