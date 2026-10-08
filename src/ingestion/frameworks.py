@@ -33,7 +33,9 @@ def enrich_framework_components(
         if is_ray:
             node.layer = "framework"
             node.spatial.asset_type = "Framework_Ray"
-            if labels.get("ray.io/node-type") == "head" or "head" in name:
+            if "operator" in name or labels.get("app.kubernetes.io/name") == "kuberay-operator":
+                node.kind = "KubeRayOperator"
+            elif labels.get("ray.io/node-type") == "head" or "head" in name:
                 node.kind = "RayHead"
                 ray_heads.append(node)
             else:

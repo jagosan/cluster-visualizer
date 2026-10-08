@@ -5,9 +5,22 @@
     "identical_nodes": 5,
     "version_skew_nodes": 9,
     "missing_in_target": 2,
-    "added_in_target": 8
+    "added_in_target": 1
   },
   "nodes": [
+    {
+      "node_id": "pod/kube-system/metrics-server-6d89b4b6f8-qpvks",
+      "status": "added",
+      "source_version": null,
+      "target_version": "v0.7.2",
+      "source_image": null,
+      "target_image": "registry.k8s.io/metrics-server/metrics-server:v0.7.2",
+      "source_digest": null,
+      "target_digest": "sha256:00b76a52f0c5b6e7f8",
+      "diff_details": [
+        "Absent in kind-cluster-alpha, present in kind-cluster-beta"
+      ]
+    },
     {
       "node_id": "control-plane/kube-system/coredns-589f44dc88-6vkv7",
       "status": "version_skew",
@@ -74,110 +87,6 @@
         "Version skew: 'v1.36.4' vs 'v1.35.8'",
         "Image tag drift: 'registry.k8s.io/kube-apiserver-amd64:v1.36.4' vs 'registry.k8s.io/kube-apiserver-amd64:v1.35.8'",
         "Image digest skew: sha256:2123d119c... vs sha256:8e41799cf..."
-      ]
-    },
-    {
-      "node_id": "pod/workloads/ray-head-567c8796c5-wx8pg",
-      "status": "added",
-      "source_version": null,
-      "target_version": "2.58.0",
-      "source_image": null,
-      "target_image": "docker.io/rayproject/ray:2.58.0",
-      "source_digest": null,
-      "target_digest": "sha256:61fee5839b2c5e640059a132be3312019c61badbb2396b513d8536b6db82ac4d",
-      "diff_details": [
-        "Absent in kind-cluster-alpha, present in kind-cluster-beta"
-      ]
-    },
-    {
-      "node_id": "pod/workloads/kuberay-operator-5545cbf94f-lbhqk",
-      "status": "added",
-      "source_version": null,
-      "target_version": "v1.1.1",
-      "source_image": null,
-      "target_image": "quay.io/kuberay/operator:v1.1.1",
-      "source_digest": null,
-      "target_digest": "sha256:2ec71219b405dd18a5990a4af2e6a5ffedd8f3099973b2ce6a421732f366f936",
-      "diff_details": [
-        "Absent in kind-cluster-alpha, present in kind-cluster-beta"
-      ]
-    },
-    {
-      "node_id": "pod/workloads/ray-worker-664ffb77bd-7cgq8",
-      "status": "added",
-      "source_version": null,
-      "target_version": "2.58.0",
-      "source_image": null,
-      "target_image": "docker.io/rayproject/ray:2.58.0",
-      "source_digest": null,
-      "target_digest": "sha256:61fee5839b2c5e640059a132be3312019c61badbb2396b513d8536b6db82ac4d",
-      "diff_details": [
-        "Absent in kind-cluster-alpha, present in kind-cluster-beta"
-      ]
-    },
-    {
-      "node_id": "pod/workloads/ray-worker-664ffb77bd-gcj22",
-      "status": "added",
-      "source_version": null,
-      "target_version": "2.58.0",
-      "source_image": null,
-      "target_image": "docker.io/rayproject/ray:2.58.0",
-      "source_digest": null,
-      "target_digest": "sha256:61fee5839b2c5e640059a132be3312019c61badbb2396b513d8536b6db82ac4d",
-      "diff_details": [
-        "Absent in kind-cluster-alpha, present in kind-cluster-beta"
-      ]
-    },
-    {
-      "node_id": "pod/workloads/ray-worker-664ffb77bd-nlhlj",
-      "status": "added",
-      "source_version": null,
-      "target_version": "2.58.0",
-      "source_image": null,
-      "target_image": "docker.io/rayproject/ray:2.58.0",
-      "source_digest": null,
-      "target_digest": "sha256:61fee5839b2c5e640059a132be3312019c61badbb2396b513d8536b6db82ac4d",
-      "diff_details": [
-        "Absent in kind-cluster-alpha, present in kind-cluster-beta"
-      ]
-    },
-    {
-      "node_id": "pod/workloads/spark-driver-54bf4c95cb-cwd5s",
-      "status": "added",
-      "source_version": null,
-      "target_version": "4.2.0",
-      "source_image": null,
-      "target_image": "docker.io/apache/spark:4.2.0",
-      "source_digest": null,
-      "target_digest": "sha256:fc64959c04bd87b0ac686be9aaa9008b69cdb1afc695400528279c8b01f43d89",
-      "diff_details": [
-        "Absent in kind-cluster-alpha, present in kind-cluster-beta"
-      ]
-    },
-    {
-      "node_id": "pod/workloads/spark-executor-6c958b54b-lcdzt",
-      "status": "added",
-      "source_version": null,
-      "target_version": "4.2.0",
-      "source_image": null,
-      "target_image": "docker.io/apache/spark:4.2.0",
-      "source_digest": null,
-      "target_digest": "sha256:fc64959c04bd87b0ac686be9aaa9008b69cdb1afc695400528279c8b01f43d89",
-      "diff_details": [
-        "Absent in kind-cluster-alpha, present in kind-cluster-beta"
-      ]
-    },
-    {
-      "node_id": "pod/workloads/spark-executor-6c958b54b-slm4t",
-      "status": "added",
-      "source_version": null,
-      "target_version": "4.2.0",
-      "source_image": null,
-      "target_image": "docker.io/apache/spark:4.2.0",
-      "source_digest": null,
-      "target_digest": "sha256:fc64959c04bd87b0ac686be9aaa9008b69cdb1afc695400528279c8b01f43d89",
-      "diff_details": [
-        "Absent in kind-cluster-alpha, present in kind-cluster-beta"
       ]
     },
     {

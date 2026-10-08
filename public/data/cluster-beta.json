@@ -6,7 +6,7 @@
     "distribution": "kind",
     "timestamp": "2026-10-03T02:10:12.254764+00:00",
     "node_count": 1,
-    "pod_count": 20
+    "pod_count": 10
   },
   "nodes": [
     {
@@ -192,32 +192,6 @@
       }
     },
     {
-      "id": "pod/workloads/kuberay-operator-5545cbf94f-lbhqk",
-      "layer": "framework",
-      "kind": "RayWorker",
-      "name": "kuberay-operator-5545cbf94f-lbhqk",
-      "namespace": "workloads",
-      "version": "v1.1.1",
-      "image": "quay.io/kuberay/operator:v1.1.1",
-      "digest": "sha256:2ec71219b405dd18a5990a4af2e6a5ffedd8f3099973b2ce6a421732f366f936",
-      "status": "Healthy",
-      "metrics": {
-        "containers": [
-          "operator"
-        ]
-      },
-      "spatial": {
-        "x": 0.2,
-        "y": 2.5,
-        "z": 0.0,
-        "asset_type": "Cuboid_Ray"
-      },
-      "raw_labels": {
-        "app.kubernetes.io/name": "kuberay-operator",
-        "pod-template-hash": "5545cbf94f"
-      }
-    },
-    {
       "id": "pod/workloads/postgres-primary-0",
       "layer": "workload",
       "kind": "PostgresPrimary",
@@ -244,110 +218,6 @@
         "apps.kubernetes.io/pod-index": "0",
         "controller-revision-hash": "postgres-primary-5f9f54d6c4",
         "statefulset.kubernetes.io/pod-name": "postgres-primary-0"
-      }
-    },
-    {
-      "id": "pod/workloads/ray-head-567c8796c5-wx8pg",
-      "layer": "framework",
-      "kind": "RayHead",
-      "name": "ray-head-567c8796c5-wx8pg",
-      "namespace": "workloads",
-      "version": "2.58.0",
-      "image": "docker.io/rayproject/ray:2.58.0",
-      "digest": "sha256:61fee5839b2c5e640059a132be3312019c61badbb2396b513d8536b6db82ac4d",
-      "status": "Healthy",
-      "metrics": {
-        "containers": [
-          "ray-head"
-        ]
-      },
-      "spatial": {
-        "x": -2.0,
-        "y": 2.5,
-        "z": 0.0,
-        "asset_type": "Cuboid_Ray"
-      },
-      "raw_labels": {
-        "pod-template-hash": "567c8796c5",
-        "ray.io/node-type": "head"
-      }
-    },
-    {
-      "id": "pod/workloads/ray-worker-664ffb77bd-7cgq8",
-      "layer": "framework",
-      "kind": "RayWorker",
-      "name": "ray-worker-664ffb77bd-7cgq8",
-      "namespace": "workloads",
-      "version": "2.58.0",
-      "image": "docker.io/rayproject/ray:2.58.0",
-      "digest": "sha256:61fee5839b2c5e640059a132be3312019c61badbb2396b513d8536b6db82ac4d",
-      "status": "Healthy",
-      "metrics": {
-        "containers": [
-          "ray-worker"
-        ]
-      },
-      "spatial": {
-        "x": 1.8,
-        "y": 2.5,
-        "z": 0.0,
-        "asset_type": "Cuboid_Ray"
-      },
-      "raw_labels": {
-        "pod-template-hash": "664ffb77bd",
-        "ray.io/node-type": "worker"
-      }
-    },
-    {
-      "id": "pod/workloads/ray-worker-664ffb77bd-gcj22",
-      "layer": "framework",
-      "kind": "RayWorker",
-      "name": "ray-worker-664ffb77bd-gcj22",
-      "namespace": "workloads",
-      "version": "2.58.0",
-      "image": "docker.io/rayproject/ray:2.58.0",
-      "digest": "sha256:61fee5839b2c5e640059a132be3312019c61badbb2396b513d8536b6db82ac4d",
-      "status": "Healthy",
-      "metrics": {
-        "containers": [
-          "ray-worker"
-        ]
-      },
-      "spatial": {
-        "x": 3.4000000000000004,
-        "y": 2.5,
-        "z": 0.0,
-        "asset_type": "Cuboid_Ray"
-      },
-      "raw_labels": {
-        "pod-template-hash": "664ffb77bd",
-        "ray.io/node-type": "worker"
-      }
-    },
-    {
-      "id": "pod/workloads/ray-worker-664ffb77bd-nlhlj",
-      "layer": "framework",
-      "kind": "RayWorker",
-      "name": "ray-worker-664ffb77bd-nlhlj",
-      "namespace": "workloads",
-      "version": "2.58.0",
-      "image": "docker.io/rayproject/ray:2.58.0",
-      "digest": "sha256:61fee5839b2c5e640059a132be3312019c61badbb2396b513d8536b6db82ac4d",
-      "status": "Healthy",
-      "metrics": {
-        "containers": [
-          "ray-worker"
-        ]
-      },
-      "spatial": {
-        "x": 5.000000000000001,
-        "y": 2.5,
-        "z": 0.0,
-        "asset_type": "Cuboid_Ray"
-      },
-      "raw_labels": {
-        "pod-template-hash": "664ffb77bd",
-        "ray.io/node-type": "worker"
       }
     },
     {
@@ -400,84 +270,6 @@
       "raw_labels": {
         "app.kubernetes.io/name": "redis",
         "pod-template-hash": "84475f8ffc"
-      }
-    },
-    {
-      "id": "pod/workloads/spark-driver-54bf4c95cb-cwd5s",
-      "layer": "framework",
-      "kind": "SparkDriver",
-      "name": "spark-driver-54bf4c95cb-cwd5s",
-      "namespace": "workloads",
-      "version": "4.2.0",
-      "image": "docker.io/apache/spark:4.2.0",
-      "digest": "sha256:fc64959c04bd87b0ac686be9aaa9008b69cdb1afc695400528279c8b01f43d89",
-      "status": "Healthy",
-      "metrics": {
-        "containers": [
-          "spark-driver"
-        ]
-      },
-      "spatial": {
-        "x": 6.6000000000000005,
-        "y": 2.5,
-        "z": 0.0,
-        "asset_type": "Framework_Spark"
-      },
-      "raw_labels": {
-        "pod-template-hash": "54bf4c95cb",
-        "spark-role": "driver"
-      }
-    },
-    {
-      "id": "pod/workloads/spark-executor-6c958b54b-lcdzt",
-      "layer": "framework",
-      "kind": "SparkExecutor",
-      "name": "spark-executor-6c958b54b-lcdzt",
-      "namespace": "workloads",
-      "version": "4.2.0",
-      "image": "docker.io/apache/spark:4.2.0",
-      "digest": "sha256:fc64959c04bd87b0ac686be9aaa9008b69cdb1afc695400528279c8b01f43d89",
-      "status": "Healthy",
-      "metrics": {
-        "containers": [
-          "spark-executor"
-        ]
-      },
-      "spatial": {
-        "x": 8.2,
-        "y": 2.5,
-        "z": 0.0,
-        "asset_type": "Framework_Spark"
-      },
-      "raw_labels": {
-        "pod-template-hash": "6c958b54b",
-        "spark-role": "executor"
-      }
-    },
-    {
-      "id": "pod/workloads/spark-executor-6c958b54b-slm4t",
-      "layer": "framework",
-      "kind": "SparkExecutor",
-      "name": "spark-executor-6c958b54b-slm4t",
-      "namespace": "workloads",
-      "version": "4.2.0",
-      "image": "docker.io/apache/spark:4.2.0",
-      "digest": "sha256:fc64959c04bd87b0ac686be9aaa9008b69cdb1afc695400528279c8b01f43d89",
-      "status": "Healthy",
-      "metrics": {
-        "containers": [
-          "spark-executor"
-        ]
-      },
-      "spatial": {
-        "x": 9.8,
-        "y": 2.5,
-        "z": 0.0,
-        "asset_type": "Framework_Spark"
-      },
-      "raw_labels": {
-        "pod-template-hash": "6c958b54b",
-        "spark-role": "executor"
       }
     },
     {
@@ -566,6 +358,31 @@
         "asset_type": "Cuboid_Containerd"
       },
       "raw_labels": {}
+    },
+    {
+      "id": "pod/kube-system/metrics-server-6d89b4b6f8-qpvks",
+      "layer": "control-plane",
+      "kind": "Pod",
+      "name": "metrics-server-6d89b4b6f8-qpvks",
+      "namespace": "kube-system",
+      "version": "v0.7.2",
+      "image": "registry.k8s.io/metrics-server/metrics-server:v0.7.2",
+      "digest": "sha256:00b76a52f0c5b6e7f8",
+      "status": "Healthy",
+      "metrics": {
+        "containers": [
+          "metrics-server"
+        ]
+      },
+      "spatial": {
+        "x": -1.8,
+        "y": 0.75,
+        "z": -0.4,
+        "asset_type": "ControlPlane_Cube"
+      },
+      "raw_labels": {
+        "k8s-app": "metrics-server"
+      }
     }
   ],
   "edges": [
@@ -595,60 +412,6 @@
       "direction": "unidirectional",
       "animated": false,
       "volume_label": null
-    },
-    {
-      "source": "pod/workloads/ray-head-567c8796c5-wx8pg",
-      "target": "pod/workloads/kuberay-operator-5545cbf94f-lbhqk",
-      "flow_type": "framework_control",
-      "protocol": "gRPC/10001",
-      "direction": "bidirectional",
-      "animated": true,
-      "volume_label": "Raylet Task Stream"
-    },
-    {
-      "source": "pod/workloads/ray-head-567c8796c5-wx8pg",
-      "target": "pod/workloads/ray-worker-664ffb77bd-7cgq8",
-      "flow_type": "framework_control",
-      "protocol": "gRPC/10001",
-      "direction": "bidirectional",
-      "animated": true,
-      "volume_label": "Raylet Task Stream"
-    },
-    {
-      "source": "pod/workloads/ray-head-567c8796c5-wx8pg",
-      "target": "pod/workloads/ray-worker-664ffb77bd-gcj22",
-      "flow_type": "framework_control",
-      "protocol": "gRPC/10001",
-      "direction": "bidirectional",
-      "animated": true,
-      "volume_label": "Raylet Task Stream"
-    },
-    {
-      "source": "pod/workloads/ray-head-567c8796c5-wx8pg",
-      "target": "pod/workloads/ray-worker-664ffb77bd-nlhlj",
-      "flow_type": "framework_control",
-      "protocol": "gRPC/10001",
-      "direction": "bidirectional",
-      "animated": true,
-      "volume_label": "Raylet Task Stream"
-    },
-    {
-      "source": "pod/workloads/spark-driver-54bf4c95cb-cwd5s",
-      "target": "pod/workloads/spark-executor-6c958b54b-lcdzt",
-      "flow_type": "framework_control",
-      "protocol": "Spark/7077",
-      "direction": "bidirectional",
-      "animated": true,
-      "volume_label": "Shuffle / Task Scheduling"
-    },
-    {
-      "source": "pod/workloads/spark-driver-54bf4c95cb-cwd5s",
-      "target": "pod/workloads/spark-executor-6c958b54b-slm4t",
-      "flow_type": "framework_control",
-      "protocol": "Spark/7077",
-      "direction": "bidirectional",
-      "animated": true,
-      "volume_label": "Shuffle / Task Scheduling"
     },
     {
       "source": "kind-cluster-beta/client-kubectl",
@@ -685,42 +448,6 @@
       "direction": "unidirectional",
       "animated": true,
       "volume_label": "lease heartbeat"
-    },
-    {
-      "source": "pod/workloads/ray-head-567c8796c5-wx8pg",
-      "target": "pod/workloads/kuberay-operator-5545cbf94f-lbhqk",
-      "flow_type": "framework_control",
-      "protocol": "gRPC/10001",
-      "direction": "bidirectional",
-      "animated": true,
-      "volume_label": "tensor bypass"
-    },
-    {
-      "source": "pod/workloads/ray-head-567c8796c5-wx8pg",
-      "target": "pod/workloads/ray-worker-664ffb77bd-7cgq8",
-      "flow_type": "framework_control",
-      "protocol": "gRPC/10001",
-      "direction": "bidirectional",
-      "animated": true,
-      "volume_label": "tensor bypass"
-    },
-    {
-      "source": "pod/workloads/ray-head-567c8796c5-wx8pg",
-      "target": "pod/workloads/ray-worker-664ffb77bd-gcj22",
-      "flow_type": "framework_control",
-      "protocol": "gRPC/10001",
-      "direction": "bidirectional",
-      "animated": true,
-      "volume_label": "tensor bypass"
-    },
-    {
-      "source": "pod/workloads/ray-head-567c8796c5-wx8pg",
-      "target": "pod/workloads/ray-worker-664ffb77bd-nlhlj",
-      "flow_type": "framework_control",
-      "protocol": "gRPC/10001",
-      "direction": "bidirectional",
-      "animated": true,
-      "volume_label": "tensor bypass"
     }
   ],
   "diff_summary": {

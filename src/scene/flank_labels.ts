@@ -45,7 +45,7 @@ export class FlankLabelManager {
   /**
    * Builds all flank labels based on worker count and extended cluster flag.
    */
-  buildLabels(workerCount: number, isExtended: boolean): void {
+  buildLabels(workerCount: number, isExtended: boolean, hasRayCluster: boolean = isExtended): void {
     this.clear();
 
     const configs: LabelConfig[] = [];
@@ -113,7 +113,8 @@ export class FlankLabelManager {
         side: 'right',
         y: 4.5,
       });
-
+    }
+    if (hasRayCluster) {
       configs.push({
         text: 'Plasma Shared Object Store',
         subtitle: 'IPC/SharedMem',
