@@ -395,6 +395,11 @@ export class ClusterViewport {
     const hasRay = data.nodes.some(
       (n) => n.name.toLowerCase().includes('ray') || n.kind.toLowerCase().includes('ray')
     );
+    const hasRayCluster = data.nodes.some((n) => {
+      const nm = n.name.toLowerCase();
+      const kd = n.kind.toLowerCase();
+      return (nm.includes('ray') || kd.includes('ray')) && !nm.includes('operator') && kd !== 'kuberayoperator';
+    });
 
     // Build layered architectural trays and outer structural cage.
     // TASK-CV-903: feed the snapshot's machine_shapes so chassis footprints,
@@ -403,7 +408,7 @@ export class ClusterViewport {
     this.layerTrayManager.buildTowerTrays(workerCount, hasRay);
 
     // Build flank typographic billboard labels
-    this.flankLabelManager.buildLabels(workerCount, hasRay);
+    this.flankLabelManager.buildLabels(workerCount, hasRay, hasRayCluster);
 
     const nodePositions = new Map<string, THREE.Vector3>();
 
