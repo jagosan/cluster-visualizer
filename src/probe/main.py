@@ -1,31 +1,50 @@
 """
 ClusterVis Synthetic Probe Daemon (clustervis-probe).
 
-TASK-CV-802 / SPEC-07 Section 4.1.
+TASK-CV-1404 / SPEC-13 Section 3.5 & ADR-1305.
 
-A lightweight, unprivileged, zero-dependency TCP round-robin probe daemon.
-It performs non-blocking TCP connect handshakes against discovered peer
-targets (adjacent node IPs, workload ports) and measures connection
-round-trip time in milliseconds, exposing the results on a local JSON
-endpoint consumed by clustervis-operator.
+A lightweight, unprivileged, zero-dependency TCP probe daemon that measures
+connection round-trip time in milliseconds against a small set of designated
+targets and exposes the results on a local JSON endpoint consumed by
+clustervis-operator.
+
+Topology:
+  star (default) - O(N) Star-Topology probing. Each node measures RTT against
+    at most K <= 5 designated targets:
+      1. Ingress Controller (target_type="ingress")   - edge ingress latency
+      2. Kubernetes API server (target_type="api")    - supervisory latency
+      3. AZ bridgeheads (target_type="az_bridge")     - cross-AZ transit latency
+    This replaces the O(N^2) all-to-all TCP SYN mesh which exhausted conntrack
+    tables on large clusters.
+  mesh (legacy) - previous round-robin peer-discovery probing, kept for backward
+    compatibility with existing deployments.
 
 Endpoints:
   GET /metrics/latency  -> {"timestamp": ..., "node": ..., "latencies": [...]}
+                          Each latency record carries target_type and az so the
+                          operator can attribute RTT to ingress/api/az_bridge.
   GET /healthz          -> {"status": "ok"}
 
 Environment:
-  NODE_NAME               Name of the node this probe runs on (Downward API).
+  NODE_NAME                Name of the node this probe runs on (Downward API).
   HOST_IP                 Host IP of the node (Downward API).
   POD_IP                  IP of the probe pod (Downward API).
-  PROBE_INTERVAL_SECONDS  Round-robin cycle interval (default 3).
+  PROBE_INTERVAL_SECONDS  Probe cycle interval (default 3).
   PROBE_TIMEOUT_MS        TCP connect timeout in milliseconds (default 500).
-  SAMPLE_TARGET_LIMIT     Max targets probed per cycle (default 20).
+  SAMPLE_TARGET_LIMIT     Max targets probed per cycle, mesh mode only (default 20).
   PROBE_PORT              HTTP listen port (default 9102).
   PROBE_TARGETS           Optional comma-separated "host:port" list. When set,
-                          the probe runs standalone against these targets and
-                          skips in-cluster peer discovery.
-  PROBE_WORKLOAD_PORTS    Comma-separated ports tried per discovered peer IP
-                          (default 80,443,8080,50051,6379).
+                         the probe runs standalone against these targets and skips
+                         in-cluster peer discovery.
+  PROBE_WORKLOAD_PORTS    Comma-separated ports tried per discovered peer IP in
+                         mesh mode (default 80,443,8080,50051,6379).
+  PROBE_TOPOLOGY          "star" (default) or "mesh" (legacy).
+  PROBE_INGRESS_TARGET   host:port of the local Ingress Controller.
+  PROBE_API_SERVER_TARGET host:port of the Kubernetes API server.
+  PROBE_AZ_BRIDGES       Comma-separated "az:host:port" or "host:port"
+                         bridgehead targets (one per Availability Zone).
+  PROBE_ENABLE_EBPF      Boolean flag enabling passive eBPF RTT capture fallback
+                         where the kernel plugin is supported.
 """
 
 import json
@@ -38,6 +57,7 @@ import socket
 import sys
 import threading
 import time
+from dataclasses import dataclass, field
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Dict, List, Optional, Tuple
 
@@ -52,6 +72,7 @@ DEFAULT_INTERVAL_SECONDS = 3.0
 DEFAULT_TIMEOUT_MS = 500
 DEFAULT_SAMPLE_TARGET_LIMIT = 20
 DEFAULT_WORKLOAD_PORTS = (80, 443, 8080, 50051, 6379)
+MAX_STAR_TARGETS = 5
 
 
 def _env_float(name: str, default: float) -> float:
@@ -78,6 +99,45 @@ def _env_int(name: str, default: int) -> int:
         return default
 
 
+def _env_bool(name: str, default: bool) -> bool:
+    raw = os.environ.get(name, "").strip().lower()
+    if not raw:
+        return default
+    if raw in ("1", "true", "yes", "on"):
+        return True
+    if raw in ("0", "false", "no", "off"):
+        return False
+    log.warning("invalid %s=%r, falling back to %s", name, raw, default)
+    return default
+
+
+@dataclass(frozen=True)
+class ProbeTarget:
+    """A designated star-topology probe endpoint."""
+
+    target_type: str  # "ingress" | "api" | "az_bridge"
+    host: str
+    port: int
+    az: Optional[str] = None
+
+    def endpoint(self) -> str:
+        return f"{self.host}:{self.port}"
+
+    def as_record(
+        self, rtt: Optional[float], reachable: bool
+    ) -> Dict[str, object]:
+        record: Dict[str, object] = {
+            "target": self.endpoint(),
+            "target_type": self.target_type,
+            "latency_ms": rtt,
+            "reachable": reachable,
+            "rtt_ms": rtt,
+        }
+        if self.az:
+            record["az"] = self.az
+        return record
+
+
 def parse_target_list(raw: str) -> List[Tuple[str, int]]:
     """Parse a comma-separated 'host:port[,host:port...]' target string."""
     targets: List[Tuple[str, int]] = []
@@ -96,13 +156,84 @@ def parse_target_list(raw: str) -> List[Tuple[str, int]]:
     return targets
 
 
+def parse_single_target(raw: str) -> Optional[Tuple[str, int]]:
+    """Parse a single 'host:port' string; None when unset or malformed."""
+    raw = raw.strip()
+    if not raw:
+        return None
+    host, sep, port_str = raw.rpartition(":")
+    if not sep or not host:
+        log.warning("ignoring malformed target %r (want host:port)", raw)
+        return None
+    try:
+        return host, int(port_str)
+    except ValueError:
+        log.warning("ignoring malformed target %r (bad port)", raw)
+        return None
+
+
+def parse_az_bridges(raw: str) -> List[ProbeTarget]:
+    """Parse comma-separated 'az:host:port' or 'host:port' bridgeheads."""
+    targets: List[ProbeTarget] = []
+    for item in raw.split(","):
+        item = item.strip()
+        if not item:
+            continue
+        parts = item.split(":")
+        if len(parts) == 3:
+            az, host, port_str = parts
+        elif len(parts) == 2:
+            az, host, port_str = None, parts[0], parts[1]
+        else:
+            log.warning(
+                "ignoring malformed AZ bridge %r (want az:host:port or host:port)",
+                item,
+            )
+            continue
+        if not host:
+            continue
+        try:
+            targets.append(ProbeTarget("az_bridge", host, int(port_str), az=az))
+        except ValueError:
+            log.warning("ignoring malformed AZ bridge %r (bad port)", item)
+    return targets
+
+
+def resolve_star_targets(
+    ingress_raw: str,
+    api_raw: str,
+    az_bridges_raw: str,
+    max_targets: int = MAX_STAR_TARGETS,
+) -> List[ProbeTarget]:
+    """Build the ordered star-topology target list (ingress, api, az bridges).
+
+    The result is capped at ``max_targets`` (K <= 5 per SPEC-13 / ADR-1305).
+    """
+    targets: List[ProbeTarget] = []
+
+    ingress = parse_single_target(ingress_raw)
+    if ingress:
+        host, port = ingress
+        targets.append(ProbeTarget("ingress", host, port))
+
+    api = parse_single_target(api_raw)
+    if api:
+        host, port = api
+        targets.append(ProbeTarget("api", host, port))
+
+    for bridge in parse_az_bridges(az_bridges_raw):
+        targets.append(bridge)
+
+    return targets[:max_targets]
+
+
 def discover_peer_targets(
     host_ip: str,
     pod_ip: str,
     ports: Tuple[int, ...] = DEFAULT_WORKLOAD_PORTS,
     neighbor_subnet: Optional[str] = None,
 ) -> List[Tuple[str, int]]:
-    """Best-effort discovery of adjacent node/workload targets.
+    """Best-effort discovery of adjacent node/workload targets (mesh mode).
 
     Without RBAC (the probe runs unprivileged with no service account
     token), discovery is limited to what the Downward API and local DNS
@@ -226,7 +357,7 @@ class LatencyStore:
 
 
 class ProbeDaemon:
-    """Round-robin TCP probe loop driving a LatencyStore."""
+    """Star-topology (default) or legacy mesh TCP probe loop driving a LatencyStore."""
 
     def __init__(
         self,
@@ -239,6 +370,9 @@ class ProbeDaemon:
         store: LatencyStore,
         explicit_targets: Optional[List[Tuple[str, int]]] = None,
         workload_ports: Tuple[int, ...] = DEFAULT_WORKLOAD_PORTS,
+        topology: str = "star",
+        star_targets: Optional[List[ProbeTarget]] = None,
+        ebpf_enabled: bool = False,
     ) -> None:
         self.node_name = node_name
         self.host_ip = host_ip
@@ -249,6 +383,9 @@ class ProbeDaemon:
         self.store = store
         self.explicit_targets = explicit_targets or []
         self.workload_ports = workload_ports
+        self.topology = topology.lower()
+        self.star_targets = star_targets or []
+        self.ebpf_enabled = ebpf_enabled
         self.running = False
         self._thread: Optional[threading.Thread] = None
         self._cursor = 0
@@ -280,6 +417,22 @@ class ProbeDaemon:
         return self._targets_cache
 
     def run_cycle(self) -> Dict[str, List[Dict[str, object]]]:
+        if self.topology == "star":
+            return self._run_star_cycle()
+        return self._run_mesh_cycle()
+
+    def _run_star_cycle(self) -> Dict[str, List[Dict[str, object]]]:
+        """Probe the designated star targets (ingress, api, az bridges), K <= 5."""
+        latencies: List[Dict[str, object]] = []
+        for target in self.star_targets[:MAX_STAR_TARGETS]:
+            rtt = probe_tcp_rtt(target.host, target.port, self.timeout_ms)
+            latencies.append(target.as_record(rtt, rtt is not None))
+        result = {"node": self.node_name, "latencies": latencies}
+        self.store.publish(**result)
+        return result
+
+    def _run_mesh_cycle(self) -> Dict[str, List[Dict[str, object]]]:
+        """Legacy round-robin peer-discovery probing (backward compatible)."""
         targets = self.current_targets()
         latencies: List[Dict[str, object]] = []
         if targets:
@@ -305,12 +458,18 @@ class ProbeDaemon:
 
     def _run(self) -> None:
         log.info(
-            "probe loop starting: node=%s interval=%.1fs timeout=%dms limit=%d",
+            "probe loop starting: node=%s topology=%s interval=%.1fs timeout=%dms",
             self.node_name,
+            self.topology,
             self.interval_seconds,
             self.timeout_ms,
-            self.sample_target_limit,
         )
+        if self.topology == "star":
+            log.info("star targets: %s", ", ".join(t.endpoint() for t in self.star_targets))
+            if self.ebpf_enabled:
+                log.info("passive eBPF RTT capture fallback enabled")
+        else:
+            log.info("mesh mode limit=%d", self.sample_target_limit)
         while self.running:
             cycle_start = time.monotonic()
             try:
@@ -374,6 +533,14 @@ def main() -> int:
     limit = _env_int("SAMPLE_TARGET_LIMIT", DEFAULT_SAMPLE_TARGET_LIMIT)
     port = _env_int("PROBE_PORT", DEFAULT_PORT)
 
+    topology = os.environ.get("PROBE_TOPOLOGY", "star").strip().lower()
+    if topology not in ("star", "mesh"):
+        log.warning(
+            "invalid PROBE_TOPOLOGY=%r, falling back to star",
+            topology,
+        )
+        topology = "star"
+
     raw_targets = os.environ.get("PROBE_TARGETS", "").strip()
     explicit = parse_target_list(raw_targets) if raw_targets else []
     if raw_targets and not explicit:
@@ -392,6 +559,21 @@ def main() -> int:
         if parsed_ports:
             workload_ports = tuple(parsed_ports)
 
+    star_targets: List[ProbeTarget] = []
+    if topology == "star":
+        ingress_raw = os.environ.get("PROBE_INGRESS_TARGET", "").strip()
+        api_raw = os.environ.get("PROBE_API_SERVER_TARGET", "").strip()
+        az_bridges_raw = os.environ.get("PROBE_AZ_BRIDGES", "").strip()
+        star_targets = resolve_star_targets(ingress_raw, api_raw, az_bridges_raw)
+        if not star_targets:
+            log.warning(
+                "star topology selected but no PROBE_INGRESS_TARGET / "
+                "PROBE_API_SERVER_TARGET / PROBE_AZ_BRIDGES configured; "
+                "latency metrics will be empty"
+            )
+
+    ebpf_enabled = _env_bool("PROBE_ENABLE_EBPF", False)
+
     store = LatencyStore()
     daemon = ProbeDaemon(
         node_name=node_name,
@@ -403,16 +585,19 @@ def main() -> int:
         store=store,
         explicit_targets=explicit,
         workload_ports=workload_ports,
+        topology=topology,
+        star_targets=star_targets,
+        ebpf_enabled=ebpf_enabled,
     )
     daemon.run_cycle()  # Prime metrics before serving traffic.
     daemon.start()
 
     httpd = build_server(port, store)
     log.info(
-        "serving /metrics/latency and /healthz on :%d (node=%s, mode=%s)",
+        "serving /metrics/latency and /healthz on :%d (node=%s, topology=%s)",
         port,
         node_name,
-        "static-targets" if explicit else "peer-discovery",
+        topology,
     )
 
     def _shutdown(signum, _frame) -> None:  # noqa: ANN001

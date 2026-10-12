@@ -16,6 +16,8 @@ Zero third-party dependencies (urllib only).
 """
 
 import base64
+import hashlib
+import hmac
 import json
 import logging
 import os
@@ -51,6 +53,132 @@ class AuthResult:
     user: str = ""
     groups: list = field(default_factory=list)
     error: Opt[str] = None
+
+
+# Header names trusted from the oauth2-proxy / OIDC gateway sidecar (SPEC-13 §3.3).
+X_FORWARDED_USER_HEADER = "x-forwarded-user"
+X_FORWARDED_EMAIL_HEADER = "x-forwarded-email"
+X_FORWARDED_GROUPS_HEADER = "x-forwarded-groups"
+X_FORWARDED_TIMESTAMP_HEADER = "x-forwarded-timestamp"
+X_FORWARDED_SIGNATURE_HEADER = "x-forwarded-access-signature"
+
+# Default maximum acceptable clock drift between the operator and the signing proxy.
+DEFAULT_MAX_DRIFT_SECONDS = 300
+
+
+class HMACAuthenticator:
+    """
+    Validates X-Forwarded-* headers signed by an OAuth2-Proxy / OIDC gateway sidecar
+    (SPEC-13 §3.3, ADR-1303).
+
+    The proxy computes an HMAC-SHA256 digest over a canonical header payload using the
+    shared secret (``CLUSTERVIS_PROXY_SHARED_SECRET``) and forwards it in the
+    ``X-Forwarded-Access-Signature`` header. This class recomputes the digest locally
+    and constant-time compares, rejecting forged or missing signatures.
+
+    Canonical payload::
+
+        user=<user>
+        groups=<groups>
+        email=<email>
+        timestamp=<timestamp>
+
+    Only fields actually present are included; an empty signature always fails.
+    """
+
+    def __init__(
+        self,
+        shared_secret: str,
+        max_drift_seconds: int = DEFAULT_MAX_DRIFT_SECONDS,
+    ) -> None:
+        secret = shared_secret or os.environ.get("CLUSTERVIS_PROXY_SHARED_SECRET", "")
+        self.shared_secret = secret.encode("utf-8")
+        self.max_drift_seconds = int(max_drift_seconds)
+
+    # ------------------------------------------------------------------
+    # Canonical payload & digest
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def canonical_payload(
+        user: str,
+        groups: str,
+        email: str = "",
+        timestamp: str = "",
+    ) -> str:
+        """Build the deterministic string that gets signed."""
+        parts = []
+        if user:
+            parts.append(f"user={user}")
+        if groups:
+            parts.append(f"groups={groups}")
+        if email:
+            parts.append(f"email={email}")
+        if timestamp:
+            parts.append(f"timestamp={timestamp}")
+        return "\n".join(parts)
+
+    def compute_signature(
+        self,
+        user: str,
+        groups: str,
+        email: str = "",
+        timestamp: str = "",
+    ) -> str:
+        payload = self.canonical_payload(user, groups, email, timestamp)
+        digest = hmac.new(self.shared_secret, payload.encode("utf-8"), hashlib.sha256)
+        return digest.hexdigest()
+
+    @staticmethod
+    def _constant_time_eq(a: str, b: str) -> bool:
+        a_b = (a or "").encode("utf-8")
+        b_b = (b or "").encode("utf-8")
+        return hmac.compare_digest(a_b, b_b)
+
+    # ------------------------------------------------------------------
+    # Verification
+    # ------------------------------------------------------------------
+
+    def verify_headers(
+        self,
+        user: str,
+        groups: str,
+        timestamp: str,
+        received_signature: str,
+        email: str = "",
+    ) -> AuthResult:
+        """Verify the HMAC signature and (optionally) the timestamp drift."""
+        if not received_signature:
+            return AuthResult(
+                False, error="missing X-Forwarded-Access-Signature header"
+            )
+
+        expected = self.compute_signature(user, groups, email, timestamp)
+        if not self._constant_time_eq(expected, received_signature):
+            return AuthResult(False, error="invalid HMAC signature")
+
+        # Timestamp replay protection (only when the proxy forwards one).
+        if timestamp:
+            try:
+                drift = abs(time.time() - float(timestamp))
+            except (TypeError, ValueError):
+                return AuthResult(
+                    False, error=f"malformed X-Forwarded-Timestamp {timestamp!r}"
+                )
+            if drift > self.max_drift_seconds:
+                return AuthResult(
+                    False,
+                    error=(
+                        f"X-Forwarded-Timestamp drift {drift:.1f}s exceeds "
+                        f"max {self.max_drift_seconds}s"
+                    ),
+                )
+
+        return AuthResult(True, user=user or "", groups=self._split_groups(groups))
+
+    @staticmethod
+    def _split_groups(groups: str) -> list:
+        return [g.strip() for g in (groups or "").split(",") if g.strip()]
 
 
 class Authenticator:
@@ -97,6 +225,9 @@ class Authenticator:
         # token -> (expires_at, AuthResult)
         self._cache: Dict[str, Any] = {}
         self._cache_lock = threading.Lock()
+
+        # HMAC verifier used by the oauth2-proxy mode when a shared secret is set.
+        self._hmac = HMACAuthenticator(self.proxy_shared_secret)
 
     # ------------------------------------------------------------------
     # Environment defaults (in-cluster)
@@ -189,19 +320,39 @@ class Authenticator:
     # ------------------------------------------------------------------
 
     def _authenticate_oauth2_proxy(self, h: Dict[str, str]) -> "tuple[bool, str, Opt[str]]":
-        if self.proxy_shared_secret:
-            provided = h.get("x-forwarded-access-token", "")
-            if provided != self.proxy_shared_secret:
-                return False, "", "invalid or missing proxy shared secret"
-
         user = (h.get("x-forwarded-user") or "").strip()
         email = (h.get("x-forwarded-email") or "").strip()
+        groups_raw = h.get("x-forwarded-groups", "") or ""
+        timestamp = h.get("x-forwarded-timestamp", "") or ""
+        received_signature = h.get("x-forwarded-access-signature", "") or ""
+
+        # Zero-trust (SPEC-13 §3.3 / ADR-1303): HMAC verification is MANDATORY
+        # in oauth2-proxy mode. Without a configured shared secret we FAIL CLOSED —
+        # raw spoofable X-Forwarded-* plaintext headers are never trusted.
+        if not self.proxy_shared_secret:
+            logger.error(
+                "oauth2-proxy mode requires CLUSTERVIS_PROXY_SHARED_SECRET; "
+                "refusing to trust unsigned X-Forwarded-* headers"
+            )
+            return False, "", (
+                "oauth2-proxy mode requires a shared secret "
+                "(CLUSTERVIS_PROXY_SHARED_SECRET); refusing to trust unsigned headers"
+            )
+
+        result = self._hmac.verify_headers(
+            user, groups_raw, timestamp, received_signature, email=email
+        )
+        if not result.authenticated:
+            return False, "", result.error or "invalid proxy signature"
+        # Fall back to the signed identity when no plaintext user header exists.
+        user = result.user or user
+
         if not user and email:
             user = email.split("@", 1)[0]
         if not user:
             return False, "", "missing X-Forwarded-User / X-Forwarded-Email headers"
 
-        groups = [g for g in (h.get("x-forwarded-groups", "") or "").split(",") if g]
+        groups = [g for g in groups_raw.split(",") if g]
         return True, user, None
 
     # ------------------------------------------------------------------
@@ -393,8 +544,18 @@ def build_authenticator_from_config(config: Optional[dict] = None) -> Authentica
         return Authenticator(mode="none")
 
     tv = config.get("tokenValidation", {}) or {}
+    proxy = config.get("proxyAuth", {}) or {}
     return Authenticator(
         mode=config.get("type", "token"),
         audience=tv.get("audience", DEFAULT_AUDIENCE),
         require_cluster_admin=bool(tv.get("requireClusterAdmin", False)),
+        proxy_shared_secret=proxy.get("sharedSecret") or config.get("sharedSecret"),
     )
+
+
+__all__ = [
+    "Authenticator",
+    "AuthResult",
+    "HMACAuthenticator",
+    "build_authenticator_from_config",
+]

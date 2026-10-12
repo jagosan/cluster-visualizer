@@ -27,6 +27,8 @@
 - `docs/architecture/11-quad-layout-diff-tour-and-latency-springs.md`: Architectural blueprint for deterministic quad grid layout, diff sequence tour engine, docked media controller deck, and logarithmic damped harmonic latency spring physics.
 - `specs/12-viewport-pane-zoom-and-restore.md`: Master specification for single-pane zoom-in focus, magnifying glass in-pane trigger, and previous view restoration.
 - `docs/architecture/12-viewport-pane-zoom-and-restore.md`: Architectural blueprint for GridController zoom state machine, contextual pane controls, and layout restoration mechanics.
+- `specs/13-next-gen-instanced-lod-security-hardening-and-dual-projection.md`: Master specification for next-gen InstancedMesh GPU rendering, Semantic LOD with anomaly outlier ejection, zero-trust OAuth2-Proxy hardening, asyncio operator delta streaming, star-topology probe mesh, and 2.5D orthographic CAD projection mode.
+- `docs/architecture/13-next-gen-instanced-lod-security-hardening-and-dual-projection.md`: Architectural blueprint for GPU instance buffer attributes, semantic anomaly ejection, OAuth2-Proxy session flow, and star latency probing.
 - `docs/MAP.md`: This symbol and directory reference map.
 
 ## 3D Asset Pipeline (Blender `bpy`)
@@ -103,8 +105,13 @@
 - `src/scene/diff_sequence.ts`: SPEC-11 §3.2 Diff sequence player engine extracting prioritized tour items (added, deleted, modified, latency skews).
 - `src/ui/diff_media_deck.ts`: SPEC-11 §3.2 Docked media controller deck (`⏮`, `▶/⏸`, `⏭`, speed multipliers, interactive color pin scrubber, delta event banner).
 - `src/scene/latency_spring_engine.ts`: SPEC-11 §3.3 Load-driven logarithmic damped harmonic spring engine expanding floor tray clearance $\Delta Y$ under latency spikes.
+- `src/scene/instanced_pod_renderer.ts`: SPEC-13 §3.1 `InstancedPodRenderer` GPU instancing pipeline using `THREE.InstancedMesh` with `aInstanceData` shader buffer attributes.
+- `src/scene/semantic_lod.ts`: SPEC-13 §3.2 `SemanticLodManager` multi-tier LOD controller with Anomaly Outlier Ejection for failing/morphing workloads.
+- `src/scene/focal_lens.ts`: SPEC-13 §3.6 `IncidentFocalLens` dependency blast-radius focus mode (`KeyB`) dimming background to 15% opacity.
+- `src/ui/cad_overlay.ts`: SPEC-13 §3.6 2.5D CAD overlay grid and SVG annotation labels for Orthographic floor-cut mode (`KeyF`).
 
 ## Tests & SPEC Verification
+- `tests/test_spec13_instancing_security_dual_projection.py`: SPEC-13 test suite verifying HMAC authentication, star-topology probe contracts, instanced buffer data layout, and dual-projection camera state transitions.
 - `tests/test_spec12_pane_zoom_and_restore.py`: SPEC-12 test suite verifying dynamic slot zoom targeting, restore previous mode state machine, in-pane zoom/restore buttons, and keyboard shortcuts.
 - `tests/test_spec11_layout_diff_and_springs.py`: SPEC-11 test suite verifying quad grid slot isolation, diff sequence generation and ordering, media deck state transitions, and logarithmic harmonic spring physics.
 - `tests/test_spec10_onboarding_and_traffic.py`: SPEC-10 / TASK-CV-1106 suite — pydantic ClusterGraph schema conformance for the four `public/data/samples/*.json` catalog fixtures (§3 topologies: upstream baseline, Online Boutique HPA/VPA + vaults, KubeRay accelerator bays + Kueue gang pallet, Compute Class vs Karpenter staging), M/M/c/K queuing math (step/sine/ramp/chaos λ(t) profiles, ρ(t) = λ/(N·μ) readout, Erlang-C cross-check vs independent lgamma-free reference, saturated-regime W_q growth), HPA `ceil(N·cpu/target)` bounds + stabilization, VPA 80 %-sustained trigger with τ_vpa morph, §5.3 scheduling-skew bands (GKE τ_sched 3–6 s vs Karpenter τ_node 60–150 s), and secret-scrubbing/token-hygiene guarantees; engine physics exercised through an esbuild→node bridge.

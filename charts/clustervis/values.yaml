@@ -31,6 +31,14 @@ probe:
   probeIntervalSeconds: 3
   probeTimeoutMs: 500
   sampleTargetLimit: 20
+  # Star-topology probing (SPEC-13 §3.5 / ADR-1305): O(N) instead of the
+  # legacy all-to-all mesh. Each node probes at most K <= 5 designated targets.
+  topology: "star" # "star" | "mesh"
+  targets:
+    ingress: ""   # host:port of the local Ingress Controller (target_type="ingress")
+    api: ""       # host:port of the Kubernetes API server (target_type="api")
+    azBridges: [] # list of "az:host:port" or "host:port" bridgeheads (target_type="az_bridge")
+  ebpf: false     # passive eBPF RTT capture fallback
   resources:
     limits:
       cpu: 50m

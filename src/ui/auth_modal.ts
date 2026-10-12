@@ -60,10 +60,13 @@ export class AuthModal {
     title.style.color = '#1a1a1a';
     modal.appendChild(title);
 
-    // Security explanation
+    // Security explanation (SPEC-13 §3.3.1 / ADR-1303)
     const securityNote = document.createElement('p');
     securityNote.textContent =
-      'Tokens are stored in browser sessionStorage for this tab only, never persisted to disk or localStorage.';
+      '⚠ DEPRECATED: direct ServiceAccount token pasting is deprecated per SPEC-13 ' +
+      '§3.3.1 — prefer an OAuth2-Proxy / OIDC session cookie (oauth2-proxy or ' +
+      'token auth mode). Tokens are kept in browser sessionStorage for this tab only, ' +
+      'never persisted to disk or localStorage.';
     securityNote.style.fontSize = '12px';
     securityNote.style.color = '#666666';
     securityNote.style.marginBottom = '16px';

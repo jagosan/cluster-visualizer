@@ -810,7 +810,7 @@ export class ClusterOnboardingModal {
     f.style.cssText =
       'font-size:10px;color:#6b7280;border-top:1px dashed #1f2937;padding-top:10px;line-height:1.6;';
     f.innerHTML =
-      '🔒 Tokens are kept strictly in <code style="color:#38bdf8;">sessionStorage</code> (<code style="color:#38bdf8;">clustervis_token_&lt;id&gt;</code>) — cleared when the tab closes, never written to disk, localStorage, cookies, or URL query strings (SPEC-07 §5.1). RBAC is least-privilege read-only; the operator scrubs all *KEY*/*TOKEN*/*PASS*/*AUTH*/*SECRET* values before serialization.';
+      '⚠ <strong>DEPRECATED (SPEC-13 §3.3.1):</strong> direct ServiceAccount token pasting is deprecated — prefer an OAuth2-Proxy / OIDC session cookie (oauth2-proxy or token auth mode; operator verifies HMAC via CLUSTERVIS_PROXY_SHARED_SECRET). Tokens are kept strictly in <code style="color:#38bdf8;">sessionStorage</code> (<code style="color:#38bdf8;">clustervis_token_&lt;id&gt;</code>) — cleared when the tab closes, never written to disk, localStorage, cookies, or URL query strings (SPEC-07 §5.1). RBAC is least-privilege read-only; the operator scrubs all *KEY*/*TOKEN*/*PASS*/*AUTH*/*SECRET* values before serialization.';
     return f;
   }
 }
