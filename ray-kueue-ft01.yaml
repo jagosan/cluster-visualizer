@@ -1,0 +1,129 @@
+# Canonical KubeRay + Kueue Sample 2: Distributed Ray Data + Ray Train LoRA Fine-Tuning Pipeline
+# Apply to either cluster:
+#   kubectl --context gke_jmacleod-42_us-central1-a_clustervis-kuberay apply -f ray-kueue-ft01.yaml
+#   kubectl --context gke_jmacleod-42_us-central1-a_clustervis-vanilla apply -f ray-kueue-ft01.yaml
+apiVersion: ray.io/v1
+kind: RayJob
+metadata:
+  name: ray-kueue-ft01
+  namespace: default
+  labels:
+    app.kubernetes.io/name: ray-kueue-ft01
+    app.kubernetes.io/part-of: demo-jago-ion
+    kueue.x-k8s.io/queue-name: llm-inference-queue
+    kueue.x-k8s.io/priority-class: spot-burst-finetune
+    autoscaling.k8s.io/vpa-mode: in-place
+  annotations:
+    clustervis.io/vpa-target-cpu: "8"
+    clustervis.io/vpa-target-memory: "32Gi"
+    clustervis.io/in-place-resize: "true"
+spec:
+  entrypoint: |
+    python3 -c "
+    import ray, time, math, random
+    ray.init()
+    print('[Ray Data + Ray Train] Connected to Ray cluster! Resources:', ray.cluster_resources())
+
+    @ray.remote
+    class DataShardTokenizer:
+        def __init__(self, shard_id: int):
+            self.shard_id = shard_id
+        def preprocess_batch(self, step: int) -> dict:
+            time.sleep(1.5)
+            tokens = 4096 * (step + 1)
+            return {'shard': self.shard_id, 'tokens': tokens, 'packing_eff': 0.94}
+
+    @ray.remote
+    def lora_train_epoch_worker(worker_rank: int, epoch: int, lr: float) -> dict:
+        # Simulate forward/backward LoRA adapter gradient all-reduce on Qwen2.5-3B
+        loss = 2.45 * math.exp(-0.18 * epoch) + random.uniform(-0.03, 0.03)
+        time.sleep(2.5)
+        return {'rank': worker_rank, 'epoch': epoch, 'loss': round(loss, 4), 'grad_norm': round(0.85 / (1 + 0.1 * epoch), 4)}
+
+    tokenizers = [DataShardTokenizer.remote(i) for i in range(4)]
+    for epoch in range(1, 16):
+        shard_stats = ray.get([t.preprocess_batch.remote(epoch) for t in tokenizers])
+        total_tokens = sum(s['tokens'] for s in shard_stats)
+        train_metrics = ray.get([lora_train_epoch_worker.remote(r, epoch, 2e-4) for r in range(4)])
+        avg_loss = sum(m['loss'] for m in train_metrics) / len(train_metrics)
+        print(f'[Epoch {epoch:02d}/15] Ray Data streamed {total_tokens} tokens | LoRA AllReduce avg_loss={avg_loss:.4f}')
+    print('[Ray Train] Checkpoint saved -> gs://demo-jago-ion/checkpoints/qwen-2.5-3b-lora-ft01')
+    "
+  shutdownAfterJobFinishes: false
+  rayClusterSpec:
+    rayVersion: '2.9.0'
+    headGroupSpec:
+      rayStartParams:
+        dashboard-host: '0.0.0.0'
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: ray-kueue-ft01-head
+            ray.io/node-type: head
+            kueue.x-k8s.io/queue-name: llm-inference-queue
+            autoscaling.k8s.io/vpa-managed: "true"
+          annotations:
+            clustervis.io/vpa-target-cpu: "4"
+            clustervis.io/vpa-target-memory: "16Gi"
+        spec:
+          containers:
+            - name: ray-head
+              image: rayproject/ray:2.9.0
+              env:
+                - name: RAY_ENABLE_K8S_EVENTS
+                  value: "1"
+              resizePolicy:
+                - resourceName: cpu
+                  restartPolicy: NotRequired
+                - resourceName: memory
+                  restartPolicy: NotRequired
+              ports:
+                - containerPort: 6379
+                  name: gcs-server
+                - containerPort: 8265
+                  name: dashboard
+                - containerPort: 10001
+                  name: client
+              resources:
+                limits:
+                  cpu: "2"
+                  memory: 4Gi
+                requests:
+                  cpu: 250m
+                  memory: 512Mi
+    workerGroupSpecs:
+      - replicas: 2
+        minReplicas: 1
+        maxReplicas: 4
+        groupName: lora-train-workers
+        rayStartParams: {}
+        template:
+          metadata:
+            labels:
+              app.kubernetes.io/name: ray-kueue-ft01-worker
+              ray.io/node-type: worker
+              kueue.x-k8s.io/queue-name: llm-inference-queue
+              autoscaling.k8s.io/vpa-managed: "true"
+              autoscaling.k8s.io/in-place-resize: "enabled"
+            annotations:
+              clustervis.io/vpa-target-cpu: "8"
+              clustervis.io/vpa-target-memory: "32Gi"
+          spec:
+            containers:
+              - name: ray-worker
+                image: rayproject/ray:2.9.0
+                env:
+                  - name: RAY_ENABLE_K8S_EVENTS
+                    value: "1"
+                resizePolicy:
+                  - resourceName: cpu
+                    restartPolicy: NotRequired
+                  - resourceName: memory
+                    restartPolicy: NotRequired
+                resources:
+                  limits:
+                    cpu: "2"
+                    memory: 4Gi
+                  requests:
+                    cpu: 250m
+                    memory: 512Mi

@@ -990,6 +990,9 @@ class TopologyController:
         gemma_w_idx = 0
         qwen_od_idx = 0
         qwen_spot_idx = 0
+        serve01_w_idx = 0
+        ft01_w_idx = 0
+        ft01_pod_uids: List[str] = []
 
         for rp in raw_pods:
             meta = rp.get("metadata", {}) or {}
@@ -999,6 +1002,7 @@ class TopologyController:
             pname = meta.get("name", "unknown")
             phase = status.get("phase", "Pending")
             labels = dict(meta.get("labels", {}) or {})
+            annotations = dict(meta.get("annotations", {}) or {})
 
             if meta.get("deletionTimestamp"):
                 continue
@@ -1105,6 +1109,76 @@ class TopologyController:
                 pid = f"pod/default/vllm-qwen-2-5-3b-spot-burst-{qwen_spot_idx}"
                 ver = "vllm-0.7.3 (qwen-2.5-3b / spot-gpu burst)"
                 cpu_req, mem_req = 6.0, 24.0
+            elif "ray-serving01" in pname and "-head" in pname:
+                display_name = "ray-serving01-head"
+                pid = "pod/default/ray-serving01-head"
+                ver = "ray-2.9.0 (Serve DAG Router)"
+            elif "ray-serving01" in pname and "-worker" in pname:
+                serve01_w_idx += 1
+                display_name = f"ray-serving01-worker-{serve01_w_idx}"
+                pid = f"pod/default/ray-serving01-worker-{serve01_w_idx}"
+                ver = "ray-2.9.0 (Serve Replica / In-Place VPA)"
+                cpu_req, mem_req = 2.0, 8.0
+            elif "ray-kueue-ft01" in pname and "-head" in pname:
+                display_name = "ray-kueue-ft01-head"
+                pid = "pod/default/ray-kueue-ft01-head"
+                ver = "ray-2.9.0 (Ray Data + Ray Train)"
+            elif "ray-kueue-ft01" in pname and "-worker" in pname:
+                ft01_w_idx += 1
+                display_name = f"ray-kueue-ft01-worker-{ft01_w_idx}"
+                pid = f"pod/default/ray-kueue-ft01-worker-{ft01_w_idx}"
+                ver = "ray-2.9.0 (LoRA Train Worker / Kueue)"
+                cpu_req, mem_req = 3.0, 12.0
+                ft01_pod_uids.append(pid)
+            elif "ray-kueue-ft01" in pname:
+                display_name = "ray-kueue-ft01-submitter"
+                pid = "pod/default/ray-kueue-ft01-submitter"
+                ver = "ray-2.9.0 (LoRA Job Submitter)"
+
+            has_resize_policy = any(bool(c.get("resizePolicy")) for c in containers)
+            vpa_cpu = annotations.get("clustervis.io/vpa-target-cpu")
+            vpa_mem = annotations.get("clustervis.io/vpa-target-memory")
+            pod_autoscaling = None
+            if "vllm-gemma-2b-it-worker" in pname:
+                pod_autoscaling = AutoscalingStatus(
+                    has_vpa=True,
+                    vpa_target_cpu="8",
+                    vpa_target_memory="32Gi",
+                    is_resizing_in_place=True,
+                    has_hpa=True,
+                    current_replicas=2,
+                    desired_replicas=2,
+                    target_metric="kv-cache: 74% (in-place VPA)",
+                )
+            elif "vllm-qwen-2-5-3b-ondemand" in pname:
+                pod_autoscaling = AutoscalingStatus(
+                    has_vpa=True,
+                    vpa_target_cpu="12",
+                    vpa_target_memory="48Gi",
+                    is_resizing_in_place=True,
+                    has_hpa=True,
+                    current_replicas=2,
+                    desired_replicas=4,
+                    target_metric="kv-cache: 89% (in-place VPA + spot burst)",
+                )
+            elif "vllm-qwen-2-5-3b-spot-burst" in pname:
+                pod_autoscaling = AutoscalingStatus(
+                    has_vpa=True,
+                    vpa_target_cpu="16",
+                    vpa_target_memory="64Gi",
+                    is_resizing_in_place=True,
+                    has_hpa=True,
+                    current_replicas=2,
+                    desired_replicas=4,
+                    target_metric="spot-gpu burst + in-place VPA",
+                )
+            elif vpa_cpu or vpa_mem or has_resize_policy or labels.get("autoscaling.k8s.io/vpa-managed") == "true":
+                pod_autoscaling = AutoscalingStatus(
+                    has_vpa=True,
+                    vpa_target_cpu=vpa_cpu or "8",
+                    vpa_target_memory=vpa_mem or "32Gi",
+                    is_resizing_in_place=True,
+                )
 
             if is_ds:
                 layer = "control-plane"
@@ -1135,16 +1209,18 @@ class TopologyController:
                 kind = "KubeRayOperator"
                 asset = "Framework_Ray"
                 pod_status = "Running"
-            elif "rayservice-" in pname and "-head" in pname:
+            elif ("rayservice-" in pname or "ray-serving01" in pname or "ray-kueue-ft01" in pname) and "-head" in pname:
                 layer = "framework"
                 kind = "RayHead"
                 asset = "Framework_Ray"
-                pod_status = "Running"
-            elif "vllm-" in pname:
+                pod_status = "Pending" if is_pending else "Running"
+            elif "vllm-" in pname or (
+                ("ray-serving01" in pname or "ray-kueue-ft01" in pname) and "-worker" in pname
+            ):
                 layer = "workload"
                 kind = "RayWorker"
                 asset = "Pod_Cylinder"
-                pod_status = "Running"
+                pod_status = "Pending" if is_pending else "Running"
             elif is_ray:
                 layer = "framework"
                 kind = "Pod"
@@ -1179,9 +1255,11 @@ class TopologyController:
                     "pod_ip": status.get("podIP"),
                     "kueue_flavor": labels.get("kueue.x-k8s.io/resource-flavor"),
                     "model": labels.get("llm-d.ai/model"),
+                    "in_place_resize": bool(pod_autoscaling and pod_autoscaling.is_resizing_in_place),
                 },
                 spatial=Spatial(asset_type=asset),
                 raw_labels=labels,
+                autoscaling=pod_autoscaling,
             )
 
         with self.lock:
@@ -1244,11 +1322,26 @@ class TopologyController:
             else:
                 self.kueue_workloads = {}
 
+            if ft01_pod_uids:
+                self.kueue_workloads["wl-kueue-lora-ft01"] = KueueWorkloadStatus(
+                    workload_uid="wl-kueue-lora-ft01",
+                    workload_name="ray-kueue-ft01 (LoRA Fine-Tune)",
+                    namespace="default",
+                    local_queue="llm-inference-queue",
+                    cluster_queue="spot-gpu",
+                    is_admitted=True,
+                    pod_uids=list(ft01_pod_uids),
+                    total_cpu_requested=8.0,
+                    total_memory_gib_requested=32.0,
+                    total_gpu_requested=2,
+                    phase="Admitted",
+                )
+
             nodes_list = list(new_nodes.values())
             nodes_list, _ = enrich_framework_components(nodes_list, [])
             nodes_list = apply_spatial_layout(nodes_list, list(self.kueue_workloads.values()))
 
-            # Explicit architectural placement for Demo Jago/Ion stack components
+            # Explicit architectural placement for Demo Jago/Ion stack components + sample workloads
             custom_coords = {
                 "ingress/default/gke-inference-gateway": (0.0, 9.6, 1.6, "LoadBalancer_Ring"),
                 "pod/default/llm-d-body-based-router": (0.0, 8.5, 1.8, "Cylinder_Service"),
@@ -1258,12 +1351,19 @@ class TopologyController:
                 "pod/default/kuberay-operator": (4.0, 3.6, -1.2, "Framework_Ray"),
                 "pod/default/rayservice-gemma-2b-it-head": (-3.0, 2.5, 0.8, "Framework_Ray"),
                 "pod/default/rayservice-qwen-2-5-3b-head": (3.0, 2.5, 0.8, "Framework_Ray"),
+                "pod/default/ray-serving01-head": (-0.9, 2.5, 1.8, "Framework_Ray"),
+                "pod/default/ray-kueue-ft01-head": (0.9, 2.5, -0.6, "Framework_Ray"),
+                "pod/default/ray-kueue-ft01-submitter": (2.2, 2.5, -1.2, "Cuboid_Ray"),
                 "pod/default/vllm-gemma-2b-it-worker-1": (-4.2, 0.85, 0.6, "Pod_Cylinder"),
                 "pod/default/vllm-gemma-2b-it-worker-2": (-2.8, 0.85, 0.6, "Pod_Cylinder"),
                 "pod/default/vllm-qwen-2-5-3b-ondemand-1": (-4.2, 0.85, 1.8, "Pod_Cylinder"),
                 "pod/default/vllm-qwen-2-5-3b-ondemand-2": (-2.8, 0.85, 1.8, "Pod_Cylinder"),
                 "pod/default/vllm-qwen-2-5-3b-spot-burst-1": (2.2, 0.85, 1.2, "Pod_Cylinder"),
                 "pod/default/vllm-qwen-2-5-3b-spot-burst-2": (3.8, 0.85, 1.2, "Pod_Cylinder"),
+                "pod/default/ray-serving01-worker-1": (-1.4, 0.85, 2.4, "Pod_Cylinder"),
+                "pod/default/ray-serving01-worker-2": (-0.2, 0.85, 2.4, "Pod_Cylinder"),
+                "pod/default/ray-kueue-ft01-worker-1": (1.4, 0.85, -0.4, "Pod_Cylinder"),
+                "pod/default/ray-kueue-ft01-worker-2": (2.8, 0.85, -0.4, "Pod_Cylinder"),
             }
             wl_map = {
                 "pod/default/vllm-gemma-2b-it-worker-1": "wl-gemma-2b-it-ondemand",
@@ -1272,6 +1372,8 @@ class TopologyController:
                 "pod/default/vllm-qwen-2-5-3b-ondemand-2": "wl-qwen-2-5-3b-ondemand",
                 "pod/default/vllm-qwen-2-5-3b-spot-burst-1": "wl-qwen-2-5-3b-spot-burst",
                 "pod/default/vllm-qwen-2-5-3b-spot-burst-2": "wl-qwen-2-5-3b-spot-burst",
+                "pod/default/ray-kueue-ft01-worker-1": "wl-kueue-lora-ft01",
+                "pod/default/ray-kueue-ft01-worker-2": "wl-kueue-lora-ft01",
             }
             for n in nodes_list:
                 if n.id in custom_coords:
@@ -1280,28 +1382,36 @@ class TopologyController:
                     n.spatial.y = cy
                     n.spatial.z = cz
                     n.spatial.asset_type = casset
-                    if n.id.startswith("pod/default/vllm-"):
+                    if (
+                        n.id.startswith("pod/default/vllm-")
+                        or "ray-serving01-worker" in n.id
+                        or "ray-kueue-ft01-worker" in n.id
+                    ):
                         n.kind = "RayWorker"
                         n.layer = "workload"
                         is_spot = "spot" in n.id
                         n.pod_geometry = PodGeometrySpec(
-                            height=1.25 if is_spot else 1.1,
-                            radius=0.68 if is_spot else 0.62,
+                            height=1.25 if is_spot else 1.05,
+                            radius=0.68 if is_spot else 0.58,
                             is_pending=False,
                             kueue_workload=wl_map.get(n.id),
                         )
 
             new_edges = generate_skyscraper_edges(nodes_list)
-            if has_ai_stack:
+            if has_ai_stack or ft01_pod_uids or serve01_w_idx > 0:
                 # Replace broadcast Ray Head <-> all Ray Workers edges with model-specific conduits
                 new_edges = [
                     e for e in new_edges
-                    if not (e.source.startswith("pod/default/rayservice-") and e.target.startswith("pod/default/vllm-"))
+                    if not (
+                        (e.source.startswith("pod/default/rayservice-") or "ray-serving01" in e.source or "ray-kueue-ft01" in e.source)
+                        and (e.target.startswith("pod/default/vllm-") or "ray-serving01" in e.target or "ray-kueue-ft01" in e.target)
+                    )
                 ]
                 ai_edges = [
                     ("ingress/default/gke-inference-gateway", "pod/default/llm-d-body-based-router", "traffic", "HTTP/80", "unidirectional", "inference /v1/chat/completions"),
                     ("pod/default/llm-d-body-based-router", "pod/default/llm-d-epp-gemma-2b-it", "traffic", "gRPC/ext-proc", "unidirectional", "inference model=gemma-2b-it"),
                     ("pod/default/llm-d-body-based-router", "pod/default/llm-d-epp-qwen-2-5-3b", "traffic", "gRPC/ext-proc", "unidirectional", "inference model=qwen-2.5-3b"),
+                    ("pod/default/llm-d-body-based-router", "pod/default/ray-serving01-head", "traffic", "HTTP/8000", "unidirectional", "inference multiplex-dag"),
                     ("pod/default/llm-d-epp-gemma-2b-it", "pod/default/rayservice-gemma-2b-it-head", "traffic", "HTTP/8000", "unidirectional", "inference KV-aware route"),
                     ("pod/default/llm-d-epp-qwen-2-5-3b", "pod/default/rayservice-qwen-2-5-3b-head", "traffic", "HTTP/8000", "unidirectional", "inference KV-aware route"),
                     ("pod/default/rayservice-gemma-2b-it-head", "pod/default/vllm-gemma-2b-it-worker-1", "framework_control", "gRPC/10001", "bidirectional", "tensor vLLM gemma-2b-it"),
@@ -1310,10 +1420,18 @@ class TopologyController:
                     ("pod/default/rayservice-qwen-2-5-3b-head", "pod/default/vllm-qwen-2-5-3b-ondemand-2", "framework_control", "gRPC/10001", "bidirectional", "tensor vLLM qwen-2.5-3b on-demand"),
                     ("pod/default/rayservice-qwen-2-5-3b-head", "pod/default/vllm-qwen-2-5-3b-spot-burst-1", "framework_control", "gRPC/10001", "bidirectional", "tensor vLLM qwen-2.5-3b spot-gpu"),
                     ("pod/default/rayservice-qwen-2-5-3b-head", "pod/default/vllm-qwen-2-5-3b-spot-burst-2", "framework_control", "gRPC/10001", "bidirectional", "tensor vLLM qwen-2.5-3b spot-gpu"),
+                    ("pod/default/ray-serving01-head", "pod/default/ray-serving01-worker-1", "framework_control", "gRPC/10001", "bidirectional", "ray serve replica-1"),
+                    ("pod/default/ray-serving01-head", "pod/default/ray-serving01-worker-2", "framework_control", "gRPC/10001", "bidirectional", "ray serve replica-2"),
+                    ("pod/default/ray-kueue-ft01-submitter", "pod/default/ray-kueue-ft01-head", "framework_control", "HTTP/8265", "unidirectional", "ray job submit"),
+                    ("pod/default/ray-kueue-ft01-head", "pod/default/ray-kueue-ft01-worker-1", "framework_control", "gRPC/10001", "bidirectional", "ray train LoRA rank-0"),
+                    ("pod/default/ray-kueue-ft01-head", "pod/default/ray-kueue-ft01-worker-2", "framework_control", "gRPC/10001", "bidirectional", "ray train LoRA rank-1"),
                     ("pod/kueue-system/kueue-controller-manager", "pod/default/vllm-qwen-2-5-3b-spot-burst-1", "control_plane", "Kueue/SpotFallback", "unidirectional", "kueue quota spot-gpu"),
                     ("pod/kueue-system/kueue-controller-manager", "pod/default/vllm-qwen-2-5-3b-spot-burst-2", "control_plane", "Kueue/SpotFallback", "unidirectional", "kueue quota spot-gpu"),
+                    ("pod/kueue-system/kueue-controller-manager", "pod/default/ray-kueue-ft01-head", "control_plane", "Kueue/GangAdmit", "unidirectional", "kueue admit ft01"),
                     ("pod/default/kuberay-operator", "pod/default/rayservice-gemma-2b-it-head", "control_plane", "CRD/RayService", "unidirectional", "kueue ray reconcile"),
                     ("pod/default/kuberay-operator", "pod/default/rayservice-qwen-2-5-3b-head", "control_plane", "CRD/RayService", "unidirectional", "kueue ray reconcile"),
+                    ("pod/default/kuberay-operator", "pod/default/ray-serving01-head", "control_plane", "CRD/RayService", "unidirectional", "kueue ray reconcile"),
+                    ("pod/default/kuberay-operator", "pod/default/ray-kueue-ft01-head", "control_plane", "CRD/RayJob", "unidirectional", "kueue ray reconcile"),
                 ]
                 present_ids = {n.id for n in nodes_list}
                 for src, dst, ftype, proto, direc, vlabel in ai_edges:
@@ -1355,11 +1473,50 @@ class TopologyController:
 
     def _run_real_loop(self, interval: float) -> None:
         self._poll_real_cluster(broadcast=False)
+        tick = 0
         while self.running:
             time.sleep(interval)
             if not self.running:
                 break
+            tick += 1
             self._poll_real_cluster(broadcast=True)
+            # Emit live in-place pod vertical resize (VPA morph) pulses on VPA-managed pods
+            if tick % 3 == 0:
+                with self.lock:
+                    vpa_nodes = [
+                        n for n in self.nodes.values()
+                        if getattr(n, "autoscaling", None) and n.autoscaling.has_vpa
+                    ]
+                    if vpa_nodes:
+                        target_node = vpa_nodes[(tick // 3) % len(vpa_nodes)]
+                        expand = (tick // 3) % 2 == 1
+                        ts = datetime.now(timezone.utc).isoformat()
+                        cur_h = 1.05
+                        cur_r = 0.58
+                        tgt_h = 1.55 if expand else 1.05
+                        tgt_r = 0.78 if expand else 0.58
+                        self.broadcast_event("vpa_recommendation", {
+                            "node_id": target_node.id,
+                            "dimensions": {
+                                "current_height": cur_h,
+                                "current_radius": cur_r,
+                                "target_height": 1.62,
+                                "target_radius": 0.82,
+                            },
+                            "target_cpu": target_node.autoscaling.vpa_target_cpu or "12",
+                            "target_memory": target_node.autoscaling.vpa_target_memory or "48Gi",
+                            "timestamp": ts,
+                        })
+                        self.broadcast_event("vpa_resize_committed", {
+                            "node_id": target_node.id,
+                            "geometry": {
+                                "height": tgt_h,
+                                "radius": tgt_r,
+                                "is_pending": False,
+                            },
+                            "duration_ms": 1400,
+                            "timestamp": ts,
+                        })
 
     def start(self, mock: bool = False, poll_interval: float = 10.0) -> None:
         if self.running:
