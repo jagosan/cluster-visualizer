@@ -1537,7 +1537,79 @@ export class ClusterViewport {
 
     this.diffCard.updatePosition(this.camera, this.renderer);
     this.controls.update();
-    this.flowSystem.update(delta, speedMultiplier);
+
+    // SPEC-11 §3.3 / TASK-CV-1205: Drive load-dependent LatencySpringEngine floor separation.
+    // Clusters with llm-d KV-cache-aware Inference Gateway + Kueue maintain low, steady latency
+    // (~6-11ms calm band -> minimal floor separation), whereas vanilla clusters without llm-d
+    // experience KV-cache miss & queueing latency surges (40-360ms -> floors physically push apart).
+    if (this.clusterData) {
+      const hasLlmdGateway = this.clusterData.nodes.some(
+        (n) =>
+          n.kind === 'InferenceGateway' ||
+          n.kind === 'BodyBasedRouter' ||
+          n.name.toLowerCase().includes('llm-d'),
+      );
+      let p99ReadoutMs = 8.4;
+      if (hasLlmdGateway) {
+        const calmWave = 0.5 + 0.5 * Math.sin(time * 1.4);
+        p99ReadoutMs = 7.2 + 3.4 * calmWave;
+        this.springEngine.setTierLatency('worker', 5.2);
+        this.springEngine.setTierLatency('framework', 6.4 + 1.8 * calmWave);
+        this.springEngine.setTierLatency('services', 6.8 + 2.0 * calmWave);
+        this.springEngine.setTierLatency('etcd', 7.0 + 2.2 * calmWave);
+        this.springEngine.setTierLatency('apiserver', 7.5 + 2.6 * calmWave);
+        this.springEngine.setTierLatency('ingress', p99ReadoutMs);
+        this.springEngine.setTierLatency('clients', p99ReadoutMs + 1.2);
+      } else {
+        // Periodic KV-cache miss & head-of-line queuing surge on vanilla Round-Robin cluster
+        const surge = Math.pow(0.5 + 0.5 * Math.sin(time * 1.15), 1.6);
+        p99ReadoutMs = 28.0 + 310.0 * surge;
+        this.springEngine.setTierLatency('worker', 8.0 + 18.0 * surge);
+        this.springEngine.setTierLatency('framework', 18.0 + 95.0 * surge);
+        this.springEngine.setTierLatency('services', 24.0 + 150.0 * surge);
+        this.springEngine.setTierLatency('etcd', 28.0 + 185.0 * surge);
+        this.springEngine.setTierLatency('apiserver', 35.0 + 250.0 * surge);
+        this.springEngine.setTierLatency('ingress', p99ReadoutMs);
+        this.springEngine.setTierLatency('clients', p99ReadoutMs * 1.15);
+      }
+
+      this.springEngine.update(delta);
+      this.layerTrayManager.updateElevations(this.springEngine);
+
+      const tierOffsetForY = (baseY: number): number => {
+        if (baseY >= 11.0) return this.springEngine.getDisplacement('clients') * 2.65;
+        if (baseY >= 8.0) return this.springEngine.getDisplacement('ingress') * 2.15;
+        if (baseY >= 6.2) return this.springEngine.getDisplacement('apiserver') * 1.65;
+        if (baseY >= 5.1) return this.springEngine.getDisplacement('etcd') * 1.3;
+        if (baseY >= 3.3) return this.springEngine.getDisplacement('services') * 1.05;
+        if (baseY >= 1.8) return this.springEngine.getDisplacement('framework') * 0.55;
+        return 0;
+      };
+
+      if (!this.layoutController.isAnimating()) {
+        for (const mesh of this.nodeMeshes.values()) {
+          const nd = mesh.userData.nodeData as ClusterNodeData | undefined;
+          if (!nd?.spatial) continue;
+          mesh.position.y = nd.spatial.y + tierOffsetForY(nd.spatial.y);
+        }
+      }
+
+      const titleEl = this.container.querySelector('.viewport-title') as HTMLElement | null;
+      if (titleEl && this.clusterData.metadata?.cluster_name) {
+        const slotPrefix = titleEl.innerText.split('(')[0]?.trim() || 'Cluster';
+        const topDeltaY = this.springEngine.getDisplacement('clients') * 2.65;
+        const badge = hasLlmdGateway
+          ? `⚡ llm-d KV-Cache: ${p99ReadoutMs.toFixed(1)}ms [Calm] · Floor ΔY +${topDeltaY.toFixed(2)}u`
+          : `🔥 Naive Round-Robin: ${Math.round(p99ReadoutMs)}ms [KV Miss Surge] · Floor ΔY +${topDeltaY.toFixed(2)}u`;
+        titleEl.innerText = `${slotPrefix} (${this.clusterData.metadata.cluster_name} · ${badge})`;
+      }
+
+      const speedBoost = hasLlmdGateway ? 1.35 : Math.max(0.35, 1.0 - 0.55 * ((p99ReadoutMs - 28.0) / 310.0));
+      this.flowSystem.update(delta, speedMultiplier * speedBoost);
+    } else {
+      this.flowSystem.update(delta, speedMultiplier);
+    }
+
     this.layerTrayManager.update(delta, time);
     // SPEC-09: proportional pod capsule emissive pulse/glow.
     this.podCapsuleManager.update(time);
