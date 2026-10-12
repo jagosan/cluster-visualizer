@@ -437,106 +437,267 @@ async function bootstrap() {
     }
   });
 
-  // 9. In-Cluster Streaming Operator Client (SPEC-04)
+  // 9. In-Cluster Streaming Operator Client (SPEC-04) — Dual Viewport Live GKE Streaming
   const streamStatusDot = document.getElementById('stream-status-dot');
   const btnLiveStream = document.getElementById('btn-live-stream');
 
-  const liveStream = new LiveStreamManager({
-    onStatusChange: (status) => {
-      if (!streamStatusDot || !btnLiveStream) return;
-      streamStatusDot.className = 'stream-dot';
-      btnLiveStream.classList.remove('active');
+  let liveGraphA: ClusterGraphData = dataA;
+  let liveGraphB: ClusterGraphData = dataB;
 
-      if (status === 'connected') {
-        streamStatusDot.classList.add('connected');
-        btnLiveStream.classList.add('active');
-        btnLiveStream.title = 'Live Stream Connected (Click to disconnect)';
-      } else if (status === 'reconnecting') {
-        streamStatusDot.classList.add('reconnecting');
-        btnLiveStream.title = 'Live Stream Reconnecting...';
-      } else {
-        btnLiveStream.title = 'Connect to in-cluster streaming operator';
+  const canonicalNodeKey = (n: any): string => {
+    const name = String(n.name || '');
+    if (n.layer === 'control-plane') {
+      for (const pfx of ['kube-apiserver', 'etcd', 'coredns', 'kindnet', 'kube-controller-manager', 'kube-scheduler', 'kube-proxy', 'clustervis-probe']) {
+        if (name.startsWith(pfx)) return `control-plane:${n.namespace}:${pfx}`;
       }
+    }
+    if (n.layer === 'node') {
+      if (n.kind === 'Node') return `node:Node:${name.split(' ')[0]}`;
+      return `node:${n.kind}:${name}`;
+    }
+    const parts = name.split('-');
+    let base = name;
+    if (parts.length >= 3 && parts[parts.length - 1]!.length >= 4 && parts[parts.length - 2]!.length >= 5) {
+      base = parts.slice(0, -2).join('-');
+    } else if (parts.length >= 2 && parts[parts.length - 1]!.length >= 4 && !/^\d+$/.test(parts[parts.length - 1]!)) {
+      base = parts.slice(0, -1).join('-');
+    }
+    return `${n.layer}:${n.namespace}:${n.kind}:${base}`;
+  };
+
+  const recomputeLiveDiff = (refreshA: boolean, refreshB: boolean) => {
+    const mapA = new Map<string, { status: any; diffDetails: string[] }>();
+    const mapB = new Map<string, { status: any; diffDetails: string[] }>();
+    const byKeyA = new Map<string, any[]>();
+    const byKeyB = new Map<string, any[]>();
+
+    for (const n of liveGraphA.nodes || []) {
+      const k = canonicalNodeKey(n);
+      byKeyA.set(k, [...(byKeyA.get(k) || []), n]);
+    }
+    for (const n of liveGraphB.nodes || []) {
+      const k = canonicalNodeKey(n);
+      byKeyB.set(k, [...(byKeyB.get(k) || []), n]);
+    }
+
+    const allKeys = new Set<string>([...byKeyA.keys(), ...byKeyB.keys()]);
+    let identical = 0;
+    let skew = 0;
+    let missing = 0;
+    let added = 0;
+
+    const liveNodeDiffs: any[] = [];
+    for (const k of allKeys) {
+      const listA = byKeyA.get(k) || [];
+      const listB = byKeyB.get(k) || [];
+      const maxLen = Math.max(listA.length, listB.length);
+      for (let i = 0; i < maxLen; i++) {
+        const na = listA[i];
+        const nb = listB[i];
+        if (na && nb) {
+          const diffs: string[] = [];
+          if (na.version !== nb.version) diffs.push(`Version skew: '${na.version}' vs '${nb.version}'`);
+          if (na.image && nb.image && na.image !== nb.image) diffs.push(`Image drift: '${na.image}' vs '${nb.image}'`);
+          const st = diffs.length > 0 ? 'version_skew' : 'identical';
+          if (st === 'version_skew') skew++;
+          else identical++;
+          mapA.set(na.id, { status: st, diffDetails: diffs });
+          mapB.set(nb.id, { status: st, diffDetails: diffs });
+          liveNodeDiffs.push({
+            node_id: nb.id,
+            status: st,
+            source_version: na.version,
+            target_version: nb.version,
+            diff_details: diffs,
+          });
+        } else if (na) {
+          missing++;
+          const d = [`Present in ${liveGraphA.metadata.cluster_name}, absent in ${liveGraphB.metadata.cluster_name}`];
+          mapA.set(na.id, { status: 'missing', diffDetails: d });
+          liveNodeDiffs.push({
+            node_id: na.id,
+            status: 'missing',
+            source_version: na.version,
+            diff_details: d,
+          });
+        } else if (nb) {
+          added++;
+          const d = [`Added in ${liveGraphB.metadata.cluster_name} (absent in ${liveGraphA.metadata.cluster_name})`];
+          mapB.set(nb.id, { status: 'added', diffDetails: d });
+          liveNodeDiffs.push({
+            node_id: nb.id,
+            status: 'added',
+            target_version: nb.version,
+            diff_details: d,
+          });
+        }
+      }
+    }
+
+    if (refreshA) viewportA.setClusterData(liveGraphA, mapA);
+    if (refreshB) viewportB.setClusterData(liveGraphB, mapB);
+
+    diffEngine.setSequenceSource({
+      report: {
+        source_cluster: liveGraphA.metadata.cluster_name,
+        target_cluster: liveGraphB.metadata.cluster_name,
+        summary: {
+          identical_nodes: identical,
+          version_skew_nodes: skew,
+          missing_in_target: missing,
+          added_in_target: added,
+        },
+        nodes: liveNodeDiffs,
+      },
+      alphaGraph: liveGraphA,
+      betaGraph: liveGraphB,
+    });
+
+    if (pillsContainer) {
+      pillsContainer.innerHTML = `
+        <div class="pill pill-identical">✓ ${identical} Identical</div>
+        <div class="pill pill-skew">⚠ ${skew} Version Skews</div>
+        <div class="pill pill-missing">✕ ${missing} Missing in Beta</div>
+        <div class="pill pill-added">+ ${added} Added in Beta</div>
+      `;
+    }
+    trafficDeckRef.current?.refreshWorkloads();
+  };
+
+  const updateStreamIndicator = () => {
+    if (!streamStatusDot || !btnLiveStream) return;
+    const stA = liveStream.getStatus();
+    const stB = liveStreamB.getStatus();
+    streamStatusDot.className = 'stream-dot';
+    btnLiveStream.classList.remove('active');
+    if (stA === 'connected' || stB === 'connected') {
+      streamStatusDot.classList.add('connected');
+      btnLiveStream.classList.add('active');
+      btnLiveStream.title = `Live GKE Streams Connected: A=${stA}, B=${stB} (Click to disconnect)`;
+    } else if (stA === 'reconnecting' || stB === 'reconnecting') {
+      streamStatusDot.classList.add('reconnecting');
+      btnLiveStream.title = 'Live Stream Reconnecting...';
+    } else {
+      btnLiveStream.title = 'Connect to in-cluster streaming operator';
+    }
+  };
+
+  const makeStreamCallbacks = (slotId: 'a' | 'b', targetViewport: ClusterViewport) => ({
+    onStatusChange: (status: string, url?: string) => {
+      const slot = slots.find((s) => s.id === slotId);
+      if (slot) {
+        slot.streamUrl = status === 'connected' ? (url || 'live') : undefined;
+        gridController.updateSkewMatrixHUD();
+      }
+      updateStreamIndicator();
     },
-    onInitialSnapshot: (snapshot) => {
+    onInitialSnapshot: (snapshot: any) => {
       if (snapshot && snapshot.nodes) {
-        viewportA.setClusterData(snapshot);
+        if (slotId === 'a') {
+          liveGraphA = snapshot;
+          const slot = slots.find((s) => s.id === 'a');
+          if (slot) {
+            slot.title = `Cluster Alpha (${snapshot.metadata.cluster_name})`;
+            slot.clusterName = snapshot.metadata.cluster_name;
+            slot.k8sVersion = snapshot.metadata.kubernetes_version.replace(/^v/, '');
+            slot.channel = 'Rapid';
+          }
+          recomputeLiveDiff(true, true);
+        } else {
+          liveGraphB = snapshot;
+          const slot = slots.find((s) => s.id === 'b');
+          if (slot) {
+            slot.title = `Cluster Beta (${snapshot.metadata.cluster_name})`;
+            slot.clusterName = snapshot.metadata.cluster_name;
+            slot.k8sVersion = snapshot.metadata.kubernetes_version.replace(/^v/, '');
+            slot.channel = 'Rapid';
+          }
+          recomputeLiveDiff(true, true);
+        }
+        gridController.updateSkewMatrixHUD();
       }
     },
-    onNodeAdded: (node) => {
-      viewportA.addNode(node);
+    onNodeAdded: (node: any) => {
+      targetViewport.addNode(node);
+      recomputeLiveDiff(false, false);
     },
-    onNodeRemoved: (nodeId) => {
-      viewportA.removeNode(nodeId);
+    onNodeRemoved: (nodeId: string) => {
+      targetViewport.removeNode(nodeId);
+      recomputeLiveDiff(false, false);
     },
-    onNodeModified: (nodeId, diffDetails, status) => {
-      viewportA.modifyNode(nodeId, diffDetails, status);
+    onNodeModified: (nodeId: string, diffDetails?: string[], status?: string) => {
+      targetViewport.modifyNode(nodeId, diffDetails, status);
     },
-    // SPEC-09 / TASK-CV-1002: VPA morphing & HPA lateral spawning pipelines.
-    onVpaRecommendation: (payload) => {
-      viewportA.applyVpaRecommendation(payload.node_id, payload.dimensions ?? null);
+    onVpaRecommendation: (payload: any) => {
+      targetViewport.applyVpaRecommendation(payload.node_id, payload.dimensions ?? null);
     },
-    onVpaResizeCommitted: (payload) => {
+    onVpaResizeCommitted: (payload: any) => {
       const height = payload.geometry?.height;
       const radius = payload.geometry?.radius;
       if (typeof height === 'number' && typeof radius === 'number') {
-        viewportA.applyVpaResize(
-          payload.node_id,
-          height,
-          radius,
-          payload.duration_ms ?? 1200,
-        );
+        targetViewport.applyVpaResize(payload.node_id, height, radius, payload.duration_ms ?? 1200);
       }
     },
-    onHpaScaleOut: (payload) => {
-      viewportA.applyHpaScaleOut(payload);
+    onHpaScaleOut: (payload: any) => {
+      targetViewport.applyHpaScaleOut(payload);
     },
-    // SPEC-09 / TASK-CV-1003: staging-yard Karpenter provisioning pipeline.
-    onKarpenterClaimUpdated: (payload) => {
-      viewportA.applyKarpenterClaim(payload);
+    onKarpenterClaimUpdated: (payload: any) => {
+      targetViewport.applyKarpenterClaim(payload);
     },
-    onKarpenterTractorBeam: (payload) => {
-      viewportA.applyKarpenterTractorBeam(payload);
+    onKarpenterTractorBeam: (payload: any) => {
+      targetViewport.applyKarpenterTractorBeam(payload);
     },
-    // SPEC-09 / TASK-CV-1004: Kueue gang cargo pallet lifecycle pipeline.
-    onKueueWorkloadUpdated: (payload) => {
-      viewportA.applyKueueWorkloadUpdated(payload);
+    onKueueWorkloadUpdated: (payload: any) => {
+      targetViewport.applyKueueWorkloadUpdated(payload);
     },
-    onKueueQuotaDeficit: (payload) => {
-      viewportA.applyKueueQuotaDeficit(payload);
+    onKueueQuotaDeficit: (payload: any) => {
+      targetViewport.applyKueueQuotaDeficit(payload);
     },
-    onKueueQuotaReserved: (payload) => {
-      viewportA.applyKueueQuotaReserved(payload);
+    onKueueQuotaReserved: (payload: any) => {
+      targetViewport.applyKueueQuotaReserved(payload);
     },
-    onKueueAdmissionAdmitted: (payload) => {
-      viewportA.applyKueueAdmissionAdmitted(payload);
+    onKueueAdmissionAdmitted: (payload: any) => {
+      targetViewport.applyKueueAdmissionAdmitted(payload);
     },
-    onKueueGangDeployed: (payload) => {
-      viewportA.applyKueueGangDeployed(payload);
+    onKueueGangDeployed: (payload: any) => {
+      targetViewport.applyKueueGangDeployed(payload);
     },
   });
 
+  const liveStream = new LiveStreamManager(makeStreamCallbacks('a', viewportA));
+  const liveStreamB = new LiveStreamManager(makeStreamCallbacks('b', viewportB));
+  (window as any).__liveStreamB = liveStreamB;
+
   if (btnLiveStream) {
     btnLiveStream.addEventListener('click', () => {
-      if (liveStream.getStatus() === 'connected') {
-        const confirmDisconnect = confirm('Live Stream is active. Disconnect and return to static offline mode?');
+      if (liveStream.getStatus() === 'connected' || liveStreamB.getStatus() === 'connected') {
+        const confirmDisconnect = confirm('Live GKE Streams are active. Disconnect and return to static offline mode?');
         if (confirmDisconnect) {
           liveStream.disconnect();
+          liveStreamB.disconnect();
         }
       } else {
-        const defaultUrl = 'http://localhost:8080/api/v1/topology/stream';
-        const targetUrl = prompt('Enter Operator Topology Stream SSE URL:', defaultUrl);
-        if (targetUrl) {
-          liveStream.connect(targetUrl.trim());
-        }
+        liveStream.connect(`${window.location.origin}/clusters/vanilla/api/v1/topology/stream`);
+        liveStreamB.connect(`${window.location.origin}/clusters/kuberay/api/v1/topology/stream`);
       }
     });
   }
 
-  // Auto-connect if ?stream= URL parameter is provided
+  // Auto-connect to live GKE clusters (or ?stream= override)
   const streamParam = new URLSearchParams(window.location.search).get('stream');
   if (streamParam) {
     liveStream.connect(streamParam);
+  } else {
+    fetch(`${window.location.origin}/clusters/vanilla/api/v1/healthz`)
+      .then((r) => {
+        if (r.ok) liveStream.connect(`${window.location.origin}/clusters/vanilla/api/v1/topology/stream`);
+      })
+      .catch(() => {});
+    fetch(`${window.location.origin}/clusters/kuberay/api/v1/healthz`)
+      .then((r) => {
+        if (r.ok) liveStreamB.connect(`${window.location.origin}/clusters/kuberay/api/v1/topology/stream`);
+      })
+      .catch(() => {});
   }
 
   // 9b. SPEC-10 / TASK-CV-1101 + 1102: Interactive Cluster Onboarding.
@@ -564,30 +725,31 @@ async function bootstrap() {
       trafficDeckRef.current?.refreshWorkloads();
     },
     onLiveConnect: (url, _token, config) => {
-      // Operator Mode streams SSE; derive the stream URL from the probed
-      // API base unless the user pointed straight at a stream endpoint.
-      // (kubeconfig-proxy / client-direct full extraction lands with
-      // TASK-CV-1103's browser extractor; the SSE path works unchanged for
-      // proxies that expose the operator endpoints.)
       const base = url.replace(/\/+$/, '');
       const streamUrl = base.endsWith('/api/v1/topology/stream')
         ? base
         : `${base}/api/v1/topology/stream`;
-      void config; // config is handed to the caller-side store; stream needs URL only
-      liveStream.connect(streamUrl);
+      const targetSlot = config?.targetSlot ?? (base.includes('kuberay') || base.includes('8082') ? 'b' : 'a');
+      if (targetSlot === 'b') {
+        liveStreamB.connect(streamUrl);
+      } else {
+        liveStream.connect(streamUrl);
+      }
     },
-    onClientGraphExtracted: (graph) => {
-      // TASK-CV-1103: Tab 1 Mode B parsed the raw Kubernetes API entirely
-      // client-side — hydrate the active viewport with zero server install.
-      const target = viewportA ?? viewportB;
+    onClientGraphExtracted: (graph, config) => {
+      const slotId = config?.targetSlot ?? 'a';
+      const target = viewportBySlot.get(slotId) ?? viewportA ?? viewportB;
       if (!target) return;
-      target.setClusterData(graph);
-      const slot = slots.find((s) => s.id === 'a') ?? slots[0];
+      if (slotId === 'a') liveGraphA = graph;
+      if (slotId === 'b') liveGraphB = graph;
+      recomputeLiveDiff(slotId === 'a', slotId === 'b');
+      const slot = slots.find((s) => s.id === slotId) ?? slots[0];
       if (slot) {
         slot.clusterName = graph.metadata.cluster_name;
         slot.k8sVersion = graph.metadata.kubernetes_version.replace(/^v/, '');
+        gridController.updateSkewMatrixHUD();
       }
-      trafficDeckRef.current?.refreshWorkloads(); // TASK-CV-1105
+      trafficDeckRef.current?.refreshWorkloads();
     },
     onError: (message) => {
       console.warn('Cluster onboarding:', message);

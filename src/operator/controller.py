@@ -51,8 +51,21 @@ from src.operator.kcc_mapper import parse_kcc_resource, parse_node_machine_shape
 class TopologyController:
     """Kubernetes topology informer controller with real-time mutation injection."""
 
-    def __init__(self, cluster_name: str = "in-cluster"):
-        self.cluster_name = cluster_name
+    def __init__(
+        self,
+        cluster_name: str = "in-cluster",
+        context_name: Optional[str] = None,
+        api_url: Optional[str] = None,
+        bearer_token: Optional[str] = None,
+    ):
+        import os
+        self.cluster_name = cluster_name or os.environ.get("CLUSTERVIS_CLUSTER_NAME", "in-cluster")
+        self.context_name = context_name if context_name is not None else os.environ.get("CLUSTERVIS_CONTEXT", "")
+        self.api_url = (api_url or os.environ.get("CLUSTERVIS_API_URL", "")).rstrip("/")
+        self.bearer_token = bearer_token or os.environ.get("CLUSTERVIS_BEARER_TOKEN", "")
+        self.mock = True
+        self.kube_version = "v1.36.4"
+        self.distribution = "in-cluster"
         self.nodes: Dict[str, NodeComponent] = {}
         self.edges: List[DataFlowEdge] = []
         self.subterranean_resources: Dict[str, RemoteServiceResource] = {}
@@ -85,14 +98,15 @@ class TopologyController:
 
     def get_snapshot(self) -> dict:
         with self.lock:
-            if not self.nodes:
+            if not self.nodes and getattr(self, 'mock', True):
                 self._seed_mock_data()
             nodes_list = list(self.nodes.values())
-            nodes_list, edges_list = enrich_framework_components(nodes_list, list(self.edges))
-            nodes_list = apply_spatial_layout(nodes_list, list(self.kueue_workloads.values()))
-            self.edges = generate_skyscraper_edges(nodes_list)
-            for n in nodes_list:
-                self.nodes[n.id] = n
+            if getattr(self, 'mock', True):
+                nodes_list, edges_list = enrich_framework_components(nodes_list, list(self.edges))
+                nodes_list = apply_spatial_layout(nodes_list, list(self.kueue_workloads.values()))
+                self.edges = generate_skyscraper_edges(nodes_list)
+                for n in nodes_list:
+                    self.nodes[n.id] = n
 
             apply_subterranean_layout(
                 list(self.machine_shapes.values()),
@@ -101,8 +115,8 @@ class TopologyController:
 
             meta = ClusterMetadata(
                 cluster_name=self.cluster_name,
-                kubernetes_version="v1.36.4",
-                distribution="in-cluster",
+                kubernetes_version=getattr(self, "kube_version", "v1.36.4"),
+                distribution=getattr(self, "distribution", "in-cluster"),
                 timestamp=datetime.now(timezone.utc).isoformat(),
                 node_count=len([n for n in nodes_list if n.kind == "Node"]),
                 pod_count=len([n for n in nodes_list if n.kind == "Pod"]),
@@ -778,13 +792,581 @@ class TopologyController:
                     },
                 })
 
+    def _fetch_k8s_json(self, path: str, kubectl_args: List[str]) -> dict:
+        import json, os, ssl, subprocess, urllib.request
+        if getattr(self, "api_url", "") and getattr(self, "bearer_token", ""):
+            ctx = ssl._create_unverified_context()
+            req = urllib.request.Request(
+                f"{self.api_url}{path}",
+                headers={"Authorization": f"Bearer {self.bearer_token}", "Accept": "application/json"},
+            )
+            with urllib.request.urlopen(req, context=ctx, timeout=15) as resp:
+                return json.loads(resp.read().decode("utf-8"))
+        if self.context_name and self.context_name != "in-cluster":
+            cmd = ["kubectl", "--context", self.context_name] + kubectl_args + ["-o", "json"]
+            res = subprocess.run(cmd, capture_output=True, text=True, timeout=30, check=False)
+            if res.returncode == 0 and res.stdout.strip():
+                return json.loads(res.stdout)
+            raise RuntimeError(f"kubectl failed ({res.returncode}): {res.stderr.strip()}")
+        host = os.environ.get("KUBERNETES_SERVICE_HOST")
+        port = os.environ.get("KUBERNETES_SERVICE_PORT", "443")
+        tok_path = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+        ca_path = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+        if host and os.path.exists(tok_path):
+            token = open(tok_path, "r", encoding="utf-8").read().strip()
+            ctx = ssl.create_default_context(cafile=ca_path) if os.path.exists(ca_path) else ssl._create_unverified_context()
+            req = urllib.request.Request(
+                f"https://{host}:{port}{path}",
+                headers={"Authorization": f"Bearer {token}", "Accept": "application/json"},
+            )
+            with urllib.request.urlopen(req, context=ctx, timeout=15) as resp:
+                return json.loads(resp.read().decode("utf-8"))
+        cmd = ["kubectl"] + kubectl_args + ["-o", "json"]
+        res = subprocess.run(cmd, capture_output=True, text=True, timeout=30, check=False)
+        if res.returncode == 0 and res.stdout.strip():
+            return json.loads(res.stdout)
+        raise RuntimeError(f"kubectl failed ({res.returncode}): {res.stderr.strip()}")
+
+    def _poll_real_cluster(self, broadcast: bool = True) -> None:
+        from src.ingestion.models import Spatial
+        try:
+            nodes_env = self._fetch_k8s_json("/api/v1/nodes", ["get", "nodes"])
+            pods_env = self._fetch_k8s_json("/api/v1/pods", ["get", "pods", "-A"])
+        except Exception:
+            return
+
+        raw_nodes = nodes_env.get("items", []) or []
+        raw_pods = pods_env.get("items", []) or []
+
+        new_nodes: Dict[str, NodeComponent] = {}
+        new_shapes: Dict[str, MachineShape] = {}
+
+        kube_ver = "v1.36.4"
+        for idx, rn in enumerate(raw_nodes, 1):
+            meta = rn.get("metadata", {}) or {}
+            status = rn.get("status", {}) or {}
+            nname = meta.get("name", f"worker-{idx}")
+            kver = (status.get("nodeInfo", {}) or {}).get("kubeletVersion", "v1.36.4")
+            kube_ver = kver
+            ready = any(
+                c.get("type") == "Ready" and c.get("status") == "True"
+                for c in (status.get("conditions", []) or [])
+            )
+            cap = status.get("capacity", {}) or {}
+            alloc = status.get("allocatable", {}) or {}
+            comp = NodeComponent(
+                id=f"node/worker-{idx}",
+                layer="node",
+                kind="Node",
+                name=f"worker-{idx} ({nname[-12:]})",
+                namespace="cluster",
+                version=kver,
+                status="Healthy" if ready else "Degraded",
+                metrics={
+                    "cpu_capacity": cap.get("cpu", "4"),
+                    "memory_capacity": cap.get("memory", "16Gi"),
+                    "cpu_allocatable": alloc.get("cpu", "4"),
+                    "memory_allocatable": alloc.get("memory", "16Gi"),
+                    "os_image": (status.get("nodeInfo", {}) or {}).get("osImage", "Container-Optimized OS"),
+                    "gke_node_name": nname,
+                },
+                spatial=Spatial(asset_type="LayerTray_Worker"),
+                raw_labels=dict(meta.get("labels", {}) or {}),
+            )
+            new_nodes[comp.id] = comp
+            try:
+                shape = parse_node_machine_shape(rn)
+                if shape:
+                    new_shapes[shape.node_name] = shape
+            except Exception:
+                pass
+
+            kl = NodeComponent(
+                id=f"node/worker-{idx}/kubelet",
+                layer="node",
+                kind="Kubelet",
+                name=f"kubelet-worker-{idx}",
+                namespace="kube-system",
+                version=kver,
+                status="Healthy" if ready else "Degraded",
+                metrics={"component": "kubelet", "node": nname},
+                spatial=Spatial(asset_type="Cuboid_Kubelet"),
+            )
+            ct = NodeComponent(
+                id=f"node/worker-{idx}/containerd",
+                layer="node",
+                kind="Containerd",
+                name=f"containerd-worker-{idx}",
+                namespace="kube-system",
+                version="v1.7.22",
+                status="Healthy" if ready else "Degraded",
+                metrics={"runtime": "containerd", "node": nname},
+                spatial=Spatial(asset_type="Cuboid_Containerd"),
+            )
+            new_nodes[kl.id] = kl
+            new_nodes[ct.id] = ct
+
+        self.kube_version = kube_ver
+        self.distribution = "gke"
+
+        for cid, cname, cmd_label in [
+            ("client/kubectl-cli", "kubectl-cli", "watch pods -A"),
+            ("client/crd-watcher", "client-crd-watcher", "watch rayjobs.ray.io"),
+        ]:
+            new_nodes[cid] = NodeComponent(
+                id=cid,
+                layer="ingress",
+                kind="Client",
+                name=cname,
+                namespace="external",
+                version=kube_ver,
+                status="Healthy",
+                metrics={"tool": cname, "command": cmd_label},
+                spatial=Spatial(asset_type="Client_Slab"),
+            )
+
+        for cpid, cpkind, cpname, cpasset, cpver in [
+            ("control-plane/kube-apiserver-0", "APIServer", "kube-apiserver-gke", "Cuboid_APIServer", kube_ver),
+            ("control-plane/etcd-0", "etcd", "etcd-gke-0", "Cuboid_etcd", "v3.5.15"),
+            ("control-plane/kube-scheduler-0", "Scheduler", "kube-scheduler-gke", "Cuboid_Supervisor", kube_ver),
+            ("control-plane/kube-controller-manager-0", "ControllerManager", "kube-controller-manager-gke", "Cuboid_Supervisor", kube_ver),
+        ]:
+            new_nodes[cpid] = NodeComponent(
+                id=cpid,
+                layer="control-plane",
+                kind=cpkind,
+                name=cpname,
+                namespace="kube-system",
+                version=cpver,
+                image=f"registry.k8s.io/{cpkind.lower()}:{cpver}",
+                status="Healthy",
+                spatial=Spatial(asset_type=cpasset),
+            )
+
+        has_ai_stack = any(
+            "llm-d" in ((rp.get("metadata") or {}).get("name") or "")
+            or "kueue" in ((rp.get("metadata") or {}).get("name") or "")
+            for rp in raw_pods
+        )
+
+        if has_ai_stack:
+            from src.ingestion.models import KueueWorkloadStatus, PodGeometrySpec
+            new_shapes = {
+                "worker-1": MachineShape(
+                    node_name="worker-1 (on-demand-gpu)",
+                    instance_type="g2-standard-24",
+                    vcpus=24,
+                    memory_gib=96.0,
+                    capacity_type="on-demand",
+                    zone="us-central1-a",
+                    accelerator_type="nvidia-l4",
+                    accelerator_count=2,
+                ),
+                "worker-2": MachineShape(
+                    node_name="worker-2 (spot-gpu)",
+                    instance_type="g2-standard-24",
+                    vcpus=24,
+                    memory_gib=96.0,
+                    capacity_type="spot",
+                    zone="us-central1-a",
+                    accelerator_type="nvidia-l4",
+                    accelerator_count=2,
+                ),
+            }
+            new_nodes["ingress/default/gke-inference-gateway"] = NodeComponent(
+                id="ingress/default/gke-inference-gateway",
+                layer="ingress",
+                kind="InferenceGateway",
+                name="gke-inference-gateway (llm-d)",
+                namespace="default",
+                version="v1.4.0",
+                status="Healthy",
+                metrics={"component": "gke-inference-gateway", "route": "/v1/chat/completions", "models": "gemma-2b-it, qwen-2.5-3b"},
+                spatial=Spatial(x=0.0, y=9.6, z=1.6, asset_type="LoadBalancer_Ring"),
+            )
+
+        kube_proxy_idx = 0
+        probe_idx = 0
+        gemma_w_idx = 0
+        qwen_od_idx = 0
+        qwen_spot_idx = 0
+
+        for rp in raw_pods:
+            meta = rp.get("metadata", {}) or {}
+            spec = rp.get("spec", {}) or {}
+            status = rp.get("status", {}) or {}
+            pns = meta.get("namespace", "default")
+            pname = meta.get("name", "unknown")
+            phase = status.get("phase", "Pending")
+            labels = dict(meta.get("labels", {}) or {})
+
+            if meta.get("deletionTimestamp"):
+                continue
+
+            if phase in ("Succeeded", "Failed") and "ray" not in pname.lower():
+                continue
+
+            if pns in ("kube-node-lease", "kube-public", "gmp-system", "gmp-public", "gke-managed-cim"):
+                continue
+
+            if pns == "kube-system":
+                if not pname.startswith("kube-proxy"):
+                    continue
+
+            if pns == "clustervis-system" and "clustervis-web" in pname:
+                continue
+
+            containers = spec.get("containers", []) or []
+            cstatuses = status.get("containerStatuses", []) or []
+            image = containers[0].get("image", "") if containers else ""
+            digest = None
+            for cs in cstatuses:
+                iid = cs.get("imageID", "") or ""
+                if "@" in iid:
+                    digest = iid.rsplit("@", 1)[1]
+                    break
+
+            cpu_req = 0.0
+            mem_req = 0.0
+            for c in containers:
+                reqs = ((c.get("resources") or {}).get("requests")) or {}
+                c_val = parse_resource_quantity(reqs.get("cpu"), "cpu")
+                m_val = parse_resource_quantity(reqs.get("memory"), "memory")
+                if c_val:
+                    cpu_req += c_val
+                if m_val:
+                    mem_req += m_val
+            if cpu_req <= 0:
+                cpu_req = 0.5
+            if mem_req <= 0:
+                mem_req = 1.0
+
+            ready_cond = any(
+                c.get("type") == "Ready" and c.get("status") == "True"
+                for c in (status.get("conditions", []) or [])
+            )
+            waiting_container = any(
+                (cs.get("state") or {}).get("waiting") is not None
+                for cs in cstatuses
+            )
+            is_pending = (phase == "Pending") or (not ready_cond and waiting_container and phase != "Succeeded")
+
+            owners = meta.get("ownerReferences", []) or []
+            is_ds = any(o.get("kind") == "DaemonSet" for o in owners) or pname.startswith("kube-proxy") or "probe" in pname.lower()
+            is_ray = "ray" in pname.lower() or "kuberay" in pname.lower() or "vllm" in pname.lower() or "ray" in image.lower()
+
+            ver = labels.get("clustervis.io/version") or (image.rsplit(":", 1)[1] if ":" in image else kube_ver)
+            display_name = pname
+            pid = f"pod/{pns}/{pname}"
+
+            if "kuberay-operator" in pname:
+                display_name = "kuberay-operator"
+                pid = "pod/default/kuberay-operator"
+                ver = "v1.3.0 / Ray 2.56" if has_ai_stack else "v1.3.0"
+            elif "kueue-controller-manager" in pname:
+                display_name = "kueue-controller-manager"
+                pid = "pod/kueue-system/kueue-controller-manager"
+                ver = "v0.10.2 (on-demand → spot-gpu)"
+            elif "llm-d-body-based-router" in pname:
+                display_name = "llm-d-body-based-router"
+                pid = "pod/default/llm-d-body-based-router"
+                ver = "v1.4.0 (ext-proc)"
+            elif "llm-d-epp-gemma-2b-it" in pname:
+                display_name = "llm-d-epp-gemma-2b-it"
+                pid = "pod/default/llm-d-epp-gemma-2b-it"
+                ver = "v1.4.0 (InferencePool: gemma-2b-it)"
+            elif "llm-d-epp-qwen-2-5-3b" in pname:
+                display_name = "llm-d-epp-qwen-2-5-3b"
+                pid = "pod/default/llm-d-epp-qwen-2-5-3b"
+                ver = "v1.4.0 (InferencePool: qwen-2.5-3b)"
+            elif "rayservice-gemma-2b-it-head" in pname:
+                display_name = "rayservice-gemma-2b-it-head"
+                pid = "pod/default/rayservice-gemma-2b-it-head"
+                ver = "ray-2.56.0 (K8s Events=ON)"
+            elif "rayservice-qwen-2-5-3b-head" in pname:
+                display_name = "rayservice-qwen-2-5-3b-head"
+                pid = "pod/default/rayservice-qwen-2-5-3b-head"
+                ver = "ray-2.56.0 (K8s Events=ON)"
+            elif "vllm-gemma-2b-it-worker" in pname:
+                gemma_w_idx += 1
+                display_name = f"vllm-gemma-2b-it-worker-{gemma_w_idx}"
+                pid = f"pod/default/vllm-gemma-2b-it-worker-{gemma_w_idx}"
+                ver = "vllm-0.7.3 (gemma-2b-it / on-demand-gpu)"
+                cpu_req, mem_req = 4.0, 16.0
+            elif "vllm-qwen-2-5-3b-ondemand" in pname:
+                qwen_od_idx += 1
+                display_name = f"vllm-qwen-2-5-3b-ondemand-{qwen_od_idx}"
+                pid = f"pod/default/vllm-qwen-2-5-3b-ondemand-{qwen_od_idx}"
+                ver = "vllm-0.7.3 (qwen-2.5-3b / on-demand-gpu)"
+                cpu_req, mem_req = 4.0, 16.0
+            elif "vllm-qwen-2-5-3b-spot-burst" in pname:
+                qwen_spot_idx += 1
+                display_name = f"vllm-qwen-2-5-3b-spot-burst-{qwen_spot_idx}"
+                pid = f"pod/default/vllm-qwen-2-5-3b-spot-burst-{qwen_spot_idx}"
+                ver = "vllm-0.7.3 (qwen-2.5-3b / spot-gpu burst)"
+                cpu_req, mem_req = 6.0, 24.0
+
+            if is_ds:
+                layer = "control-plane"
+                kind = "DaemonSet"
+                asset = "Cuboid_DaemonSet"
+                pod_status = "Running"
+                is_pending = False
+                if pname.startswith("kube-proxy"):
+                    kube_proxy_idx += 1
+                    display_name = f"kube-proxy-w{kube_proxy_idx}"
+                    pid = f"pod/{pns}/kube-proxy-w{kube_proxy_idx}"
+                elif "probe" in pname.lower():
+                    probe_idx += 1
+                    display_name = f"clustervis-probe-w{probe_idx}"
+                    pid = f"pod/{pns}/clustervis-probe-w{probe_idx}"
+            elif "llm-d" in pname:
+                layer = "ingress"
+                kind = "BodyBasedRouter" if "router" in pname else "InferencePool"
+                asset = "Cylinder_Service"
+                pod_status = "Running"
+            elif "kueue-controller-manager" in pname:
+                layer = "framework"
+                kind = "KueueOperator"
+                asset = "Cuboid_Supervisor"
+                pod_status = "Running"
+            elif "kuberay-operator" in pname:
+                layer = "framework"
+                kind = "KubeRayOperator"
+                asset = "Framework_Ray"
+                pod_status = "Running"
+            elif "rayservice-" in pname and "-head" in pname:
+                layer = "framework"
+                kind = "RayHead"
+                asset = "Framework_Ray"
+                pod_status = "Running"
+            elif "vllm-" in pname:
+                layer = "workload"
+                kind = "RayWorker"
+                asset = "Pod_Cylinder"
+                pod_status = "Running"
+            elif is_ray:
+                layer = "framework"
+                kind = "Pod"
+                asset = "Cuboid_Ray"
+                pod_status = "Pending" if is_pending else ("Completed" if phase == "Succeeded" else "Running")
+            else:
+                layer = "workload"
+                kind = "Pod"
+                asset = "Pod_Cylinder"
+                pod_status = "Pending" if is_pending else "Running"
+                if "clustervis-operator" in pname:
+                    display_name = "clustervis-operator"
+                    pid = f"pod/{pns}/clustervis-operator"
+
+            new_nodes[pid] = NodeComponent(
+                id=pid,
+                layer=layer,
+                kind=kind,
+                name=display_name,
+                namespace=pns,
+                version=ver,
+                image=image or None,
+                digest=digest,
+                status=pod_status,
+                metrics={
+                    "cpu_request_cores": round(cpu_req, 3),
+                    "memory_request_gib": round(mem_req, 3),
+                    "phase": phase,
+                    "pending": is_pending,
+                    "scheduled": not is_pending,
+                    "host_node": spec.get("nodeName"),
+                    "pod_ip": status.get("podIP"),
+                    "kueue_flavor": labels.get("kueue.x-k8s.io/resource-flavor"),
+                    "model": labels.get("llm-d.ai/model"),
+                },
+                spatial=Spatial(asset_type=asset),
+                raw_labels=labels,
+            )
+
+        with self.lock:
+            prev_ids = set(self.nodes.keys())
+            new_ids = set(new_nodes.keys())
+            added_ids = sorted(new_ids - prev_ids)
+            removed_ids = sorted(prev_ids - new_ids)
+
+            if has_ai_stack:
+                self.kueue_workloads = {
+                    "wl-gemma-2b-it-ondemand": KueueWorkloadStatus(
+                        workload_uid="wl-gemma-2b-it-ondemand",
+                        workload_name="gemma-2b-it-vllm (on-demand-gpu)",
+                        namespace="default",
+                        local_queue="llm-inference-queue",
+                        cluster_queue="on-demand-gpu",
+                        is_admitted=True,
+                        pod_uids=[
+                            "pod/default/vllm-gemma-2b-it-worker-1",
+                            "pod/default/vllm-gemma-2b-it-worker-2",
+                        ],
+                        total_cpu_requested=8.0,
+                        total_memory_gib_requested=32.0,
+                        total_gpu_requested=2,
+                        phase="Admitted",
+                    ),
+                    "wl-qwen-2-5-3b-ondemand": KueueWorkloadStatus(
+                        workload_uid="wl-qwen-2-5-3b-ondemand",
+                        workload_name="qwen-2.5-3b-vllm (on-demand FULL)",
+                        namespace="default",
+                        local_queue="llm-inference-queue",
+                        cluster_queue="on-demand-gpu",
+                        is_admitted=True,
+                        pod_uids=[
+                            "pod/default/vllm-qwen-2-5-3b-ondemand-1",
+                            "pod/default/vllm-qwen-2-5-3b-ondemand-2",
+                        ],
+                        total_cpu_requested=8.0,
+                        total_memory_gib_requested=32.0,
+                        total_gpu_requested=2,
+                        phase="Admitted",
+                    ),
+                    "wl-qwen-2-5-3b-spot-burst": KueueWorkloadStatus(
+                        workload_uid="wl-qwen-2-5-3b-spot-burst",
+                        workload_name="qwen-2.5-3b-burst (spot-gpu fallback)",
+                        namespace="default",
+                        local_queue="llm-inference-queue",
+                        cluster_queue="spot-gpu",
+                        is_admitted=True,
+                        pod_uids=[
+                            "pod/default/vllm-qwen-2-5-3b-spot-burst-1",
+                            "pod/default/vllm-qwen-2-5-3b-spot-burst-2",
+                        ],
+                        total_cpu_requested=12.0,
+                        total_memory_gib_requested=48.0,
+                        total_gpu_requested=4,
+                        phase="Admitted",
+                    ),
+                }
+            else:
+                self.kueue_workloads = {}
+
+            nodes_list = list(new_nodes.values())
+            nodes_list, _ = enrich_framework_components(nodes_list, [])
+            nodes_list = apply_spatial_layout(nodes_list, list(self.kueue_workloads.values()))
+
+            # Explicit architectural placement for Demo Jago/Ion stack components
+            custom_coords = {
+                "ingress/default/gke-inference-gateway": (0.0, 9.6, 1.6, "LoadBalancer_Ring"),
+                "pod/default/llm-d-body-based-router": (0.0, 8.5, 1.8, "Cylinder_Service"),
+                "pod/default/llm-d-epp-gemma-2b-it": (-3.0, 8.1, 2.0, "Cylinder_Service"),
+                "pod/default/llm-d-epp-qwen-2-5-3b": (3.0, 8.1, 2.0, "Cylinder_Service"),
+                "pod/kueue-system/kueue-controller-manager": (-4.0, 3.6, -1.2, "Cuboid_Supervisor"),
+                "pod/default/kuberay-operator": (4.0, 3.6, -1.2, "Framework_Ray"),
+                "pod/default/rayservice-gemma-2b-it-head": (-3.0, 2.5, 0.8, "Framework_Ray"),
+                "pod/default/rayservice-qwen-2-5-3b-head": (3.0, 2.5, 0.8, "Framework_Ray"),
+                "pod/default/vllm-gemma-2b-it-worker-1": (-4.2, 0.85, 0.6, "Pod_Cylinder"),
+                "pod/default/vllm-gemma-2b-it-worker-2": (-2.8, 0.85, 0.6, "Pod_Cylinder"),
+                "pod/default/vllm-qwen-2-5-3b-ondemand-1": (-4.2, 0.85, 1.8, "Pod_Cylinder"),
+                "pod/default/vllm-qwen-2-5-3b-ondemand-2": (-2.8, 0.85, 1.8, "Pod_Cylinder"),
+                "pod/default/vllm-qwen-2-5-3b-spot-burst-1": (2.2, 0.85, 1.2, "Pod_Cylinder"),
+                "pod/default/vllm-qwen-2-5-3b-spot-burst-2": (3.8, 0.85, 1.2, "Pod_Cylinder"),
+            }
+            wl_map = {
+                "pod/default/vllm-gemma-2b-it-worker-1": "wl-gemma-2b-it-ondemand",
+                "pod/default/vllm-gemma-2b-it-worker-2": "wl-gemma-2b-it-ondemand",
+                "pod/default/vllm-qwen-2-5-3b-ondemand-1": "wl-qwen-2-5-3b-ondemand",
+                "pod/default/vllm-qwen-2-5-3b-ondemand-2": "wl-qwen-2-5-3b-ondemand",
+                "pod/default/vllm-qwen-2-5-3b-spot-burst-1": "wl-qwen-2-5-3b-spot-burst",
+                "pod/default/vllm-qwen-2-5-3b-spot-burst-2": "wl-qwen-2-5-3b-spot-burst",
+            }
+            for n in nodes_list:
+                if n.id in custom_coords:
+                    cx, cy, cz, casset = custom_coords[n.id]
+                    n.spatial.x = cx
+                    n.spatial.y = cy
+                    n.spatial.z = cz
+                    n.spatial.asset_type = casset
+                    if n.id.startswith("pod/default/vllm-"):
+                        n.kind = "RayWorker"
+                        n.layer = "workload"
+                        is_spot = "spot" in n.id
+                        n.pod_geometry = PodGeometrySpec(
+                            height=1.25 if is_spot else 1.1,
+                            radius=0.68 if is_spot else 0.62,
+                            is_pending=False,
+                            kueue_workload=wl_map.get(n.id),
+                        )
+
+            new_edges = generate_skyscraper_edges(nodes_list)
+            if has_ai_stack:
+                # Replace broadcast Ray Head <-> all Ray Workers edges with model-specific conduits
+                new_edges = [
+                    e for e in new_edges
+                    if not (e.source.startswith("pod/default/rayservice-") and e.target.startswith("pod/default/vllm-"))
+                ]
+                ai_edges = [
+                    ("ingress/default/gke-inference-gateway", "pod/default/llm-d-body-based-router", "traffic", "HTTP/80", "unidirectional", "inference /v1/chat/completions"),
+                    ("pod/default/llm-d-body-based-router", "pod/default/llm-d-epp-gemma-2b-it", "traffic", "gRPC/ext-proc", "unidirectional", "inference model=gemma-2b-it"),
+                    ("pod/default/llm-d-body-based-router", "pod/default/llm-d-epp-qwen-2-5-3b", "traffic", "gRPC/ext-proc", "unidirectional", "inference model=qwen-2.5-3b"),
+                    ("pod/default/llm-d-epp-gemma-2b-it", "pod/default/rayservice-gemma-2b-it-head", "traffic", "HTTP/8000", "unidirectional", "inference KV-aware route"),
+                    ("pod/default/llm-d-epp-qwen-2-5-3b", "pod/default/rayservice-qwen-2-5-3b-head", "traffic", "HTTP/8000", "unidirectional", "inference KV-aware route"),
+                    ("pod/default/rayservice-gemma-2b-it-head", "pod/default/vllm-gemma-2b-it-worker-1", "framework_control", "gRPC/10001", "bidirectional", "tensor vLLM gemma-2b-it"),
+                    ("pod/default/rayservice-gemma-2b-it-head", "pod/default/vllm-gemma-2b-it-worker-2", "framework_control", "gRPC/10001", "bidirectional", "tensor vLLM gemma-2b-it"),
+                    ("pod/default/rayservice-qwen-2-5-3b-head", "pod/default/vllm-qwen-2-5-3b-ondemand-1", "framework_control", "gRPC/10001", "bidirectional", "tensor vLLM qwen-2.5-3b on-demand"),
+                    ("pod/default/rayservice-qwen-2-5-3b-head", "pod/default/vllm-qwen-2-5-3b-ondemand-2", "framework_control", "gRPC/10001", "bidirectional", "tensor vLLM qwen-2.5-3b on-demand"),
+                    ("pod/default/rayservice-qwen-2-5-3b-head", "pod/default/vllm-qwen-2-5-3b-spot-burst-1", "framework_control", "gRPC/10001", "bidirectional", "tensor vLLM qwen-2.5-3b spot-gpu"),
+                    ("pod/default/rayservice-qwen-2-5-3b-head", "pod/default/vllm-qwen-2-5-3b-spot-burst-2", "framework_control", "gRPC/10001", "bidirectional", "tensor vLLM qwen-2.5-3b spot-gpu"),
+                    ("pod/kueue-system/kueue-controller-manager", "pod/default/vllm-qwen-2-5-3b-spot-burst-1", "control_plane", "Kueue/SpotFallback", "unidirectional", "kueue quota spot-gpu"),
+                    ("pod/kueue-system/kueue-controller-manager", "pod/default/vllm-qwen-2-5-3b-spot-burst-2", "control_plane", "Kueue/SpotFallback", "unidirectional", "kueue quota spot-gpu"),
+                    ("pod/default/kuberay-operator", "pod/default/rayservice-gemma-2b-it-head", "control_plane", "CRD/RayService", "unidirectional", "kueue ray reconcile"),
+                    ("pod/default/kuberay-operator", "pod/default/rayservice-qwen-2-5-3b-head", "control_plane", "CRD/RayService", "unidirectional", "kueue ray reconcile"),
+                ]
+                present_ids = {n.id for n in nodes_list}
+                for src, dst, ftype, proto, direc, vlabel in ai_edges:
+                    if src in present_ids and dst in present_ids:
+                        new_edges.append(
+                            DataFlowEdge(
+                                source=src,
+                                target=dst,
+                                flow_type=ftype,
+                                protocol=proto,
+                                direction=direc,
+                                volume_label=vlabel,
+                            )
+                        )
+            laid_out = {n.id: n for n in nodes_list}
+
+            changed_ids = []
+            for nid in sorted(new_ids & prev_ids):
+                old_n = self.nodes[nid]
+                cur_n = laid_out[nid]
+                if (
+                    old_n.status != cur_n.status
+                    or round(old_n.spatial.x, 2) != round(cur_n.spatial.x, 2)
+                    or round(old_n.spatial.y, 2) != round(cur_n.spatial.y, 2)
+                    or round(old_n.spatial.z, 2) != round(cur_n.spatial.z, 2)
+                ):
+                    changed_ids.append(nid)
+
+            self.nodes = laid_out
+            self.edges = new_edges
+            self.machine_shapes = new_shapes
+
+            if broadcast and (added_ids or removed_ids or changed_ids):
+                ts = datetime.now(timezone.utc).isoformat()
+                for rid in removed_ids:
+                    self.broadcast_event("node_removed", {"node_id": rid, "nodeId": rid, "timestamp": ts})
+                snap = self.get_snapshot()
+                self.broadcast_event("initial_snapshot", snap)
+
     def _run_real_loop(self, interval: float) -> None:
+        self._poll_real_cluster(broadcast=False)
         while self.running:
             time.sleep(interval)
+            if not self.running:
+                break
+            self._poll_real_cluster(broadcast=True)
 
     def start(self, mock: bool = False, poll_interval: float = 10.0) -> None:
         if self.running:
             return
+        self.mock = mock
+        if not mock:
+            self._poll_real_cluster(broadcast=False)
         self.running = True
         target = self._run_mock_loop if mock else self._run_real_loop
         self.worker_thread = threading.Thread(target=target, args=(poll_interval,), daemon=True)

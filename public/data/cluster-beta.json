@@ -1,290 +1,239 @@
 {
-  "$schema": "https://example.com/schemas/cluster-graph-v1.json",
+  "schema_url": "https://example.com/schemas/cluster-graph-v1.json",
   "metadata": {
-    "cluster_name": "kind-cluster-beta",
-    "kubernetes_version": "v1.35.8",
-    "distribution": "kind",
-    "timestamp": "2026-10-03T02:10:12.254764+00:00",
-    "node_count": 1,
-    "pod_count": 10
+    "cluster_name": "clustervis-kuberay",
+    "kubernetes_version": "v1.36.4-gke.1495000",
+    "distribution": "gke",
+    "timestamp": "2026-10-12T16:21:12.935180+00:00",
+    "node_count": 2,
+    "pod_count": 1
   },
   "nodes": [
     {
-      "id": "node/cluster-beta-control-plane",
+      "id": "node/worker-1",
       "layer": "node",
       "kind": "Node",
-      "name": "cluster-beta-control-plane",
+      "name": "worker-1 (60cf690-0bkr)",
       "namespace": "cluster",
-      "version": "v1.35.8",
+      "version": "v1.36.4-gke.1495000",
       "image": null,
       "digest": null,
       "status": "Healthy",
       "metrics": {
-        "cpu_capacity": "16",
-        "memory_capacity": "15580528Ki",
-        "cpu_allocatable": "16",
-        "memory_allocatable": "15580528Ki",
-        "os_image": "Debian GNU/Linux 13 (trixie)",
-        "unschedulable": false
+        "cpu_capacity": "4",
+        "memory_capacity": "16380004Ki",
+        "cpu_allocatable": "3920m",
+        "memory_allocatable": "13591652Ki",
+        "os_image": "Container-Optimized OS from Google",
+        "gke_node_name": "gke-clustervis-kuberay-default-pool-760cf690-0bkr"
       },
       "spatial": {
-        "x": 0.0,
+        "x": -3.0,
         "y": 0.5,
         "z": 0.0,
         "asset_type": "LayerTray_Worker"
       },
       "raw_labels": {
+        "addon.gke.io/node-local-dns-ds-ready": "true",
         "beta.kubernetes.io/arch": "amd64",
+        "beta.kubernetes.io/instance-type": "e2-standard-4",
         "beta.kubernetes.io/os": "linux",
+        "cloud.google.com/gke-boot-disk": "pd-balanced",
+        "cloud.google.com/gke-container-runtime": "containerd",
+        "cloud.google.com/gke-cpu-scaling-level": "4",
+        "cloud.google.com/gke-logging-variant": "DEFAULT",
+        "cloud.google.com/gke-max-pods-per-node": "110",
+        "cloud.google.com/gke-memory-gb-scaling-level": "16",
+        "cloud.google.com/gke-nodepool": "default-pool",
+        "cloud.google.com/gke-os-distribution": "cos",
+        "cloud.google.com/gke-provisioning": "standard",
+        "cloud.google.com/gke-stack-type": "IPV4",
+        "cloud.google.com/machine-family": "e2",
+        "cloud.google.com/private-node": "false",
+        "disk-type.gke.io/pd-balanced": "true",
+        "disk-type.gke.io/pd-extreme": "true",
+        "disk-type.gke.io/pd-ssd": "true",
+        "disk-type.gke.io/pd-standard": "true",
+        "failure-domain.beta.kubernetes.io/region": "us-central1",
+        "failure-domain.beta.kubernetes.io/zone": "us-central1-a",
         "kubernetes.io/arch": "amd64",
-        "kubernetes.io/hostname": "cluster-beta-control-plane",
+        "kubernetes.io/hostname": "gke-clustervis-kuberay-default-pool-760cf690-0bkr",
         "kubernetes.io/os": "linux",
-        "node-role.kubernetes.io/control-plane": ""
-      }
+        "node.kubernetes.io/instance-type": "e2-standard-4",
+        "topology.gke.io/zone": "us-central1-a",
+        "topology.kubernetes.io/region": "us-central1",
+        "topology.kubernetes.io/zone": "us-central1-a"
+      },
+      "pod_geometry": null,
+      "autoscaling": null
     },
     {
-      "id": "control-plane/kube-system/coredns-7d764666f9-sf62q",
-      "layer": "control-plane",
-      "kind": "Pod",
-      "name": "coredns-7d764666f9-sf62q",
+      "id": "node/worker-1/kubelet",
+      "layer": "node",
+      "kind": "Kubelet",
+      "name": "kubelet-worker-1",
       "namespace": "kube-system",
-      "version": "v1.13.1",
-      "image": "registry.k8s.io/coredns/coredns:v1.13.1",
-      "digest": null,
-      "status": "Healthy",
-      "metrics": {
-        "component": "coredns"
-      },
-      "spatial": {
-        "x": -0.6,
-        "y": 0.75,
-        "z": 0.2,
-        "asset_type": "Cuboid_Pod"
-      },
-      "raw_labels": {
-        "k8s-app": "kube-dns",
-        "pod-template-hash": "7d764666f9"
-      }
-    },
-    {
-      "id": "control-plane/kube-system/coredns-7d764666f9-w8p9g",
-      "layer": "control-plane",
-      "kind": "Pod",
-      "name": "coredns-7d764666f9-w8p9g",
-      "namespace": "kube-system",
-      "version": "v1.13.1",
-      "image": "registry.k8s.io/coredns/coredns:v1.13.1",
-      "digest": null,
-      "status": "Healthy",
-      "metrics": {
-        "component": "coredns"
-      },
-      "spatial": {
-        "x": 0.6,
-        "y": 0.75,
-        "z": 0.2,
-        "asset_type": "Cuboid_Pod"
-      },
-      "raw_labels": {
-        "k8s-app": "kube-dns",
-        "pod-template-hash": "7d764666f9"
-      }
-    },
-    {
-      "id": "control-plane/kube-system/etcd-cluster-beta-control-plane",
-      "layer": "control-plane",
-      "kind": "Pod",
-      "name": "etcd-cluster-beta-control-plane",
-      "namespace": "kube-system",
-      "version": "3.6.6-0",
-      "image": "registry.k8s.io/etcd:3.6.6-0",
-      "digest": null,
-      "status": "Healthy",
-      "metrics": {
-        "component": "etcd"
-      },
-      "spatial": {
-        "x": 0.0,
-        "y": 5.5,
-        "z": -3.5,
-        "asset_type": "Cuboid_etcd"
-      },
-      "raw_labels": {
-        "component": "etcd",
-        "tier": "control-plane"
-      }
-    },
-    {
-      "id": "control-plane/kube-system/kindnet-qp5vd",
-      "layer": "control-plane",
-      "kind": "Pod",
-      "name": "kindnet-qp5vd",
-      "namespace": "kube-system",
-      "version": "v20260820-69b56db7",
-      "image": "docker.io/kindest/kindnetd:v20260820-69b56db7",
-      "digest": null,
-      "status": "Healthy",
-      "metrics": {
-        "component": "kindnet"
-      },
-      "spatial": {
-        "x": -0.6,
-        "y": 0.75,
-        "z": 1.2,
-        "asset_type": "Cuboid_Pod"
-      },
-      "raw_labels": {
-        "app": "kindnet",
-        "controller-revision-hash": "75bfb6859f",
-        "k8s-app": "kindnet",
-        "pod-template-generation": "1",
-        "tier": "node"
-      }
-    },
-    {
-      "id": "control-plane/kube-system/kube-apiserver-cluster-beta-control-plane",
-      "layer": "control-plane",
-      "kind": "Pod",
-      "name": "kube-apiserver-cluster-beta-control-plane",
-      "namespace": "kube-system",
-      "version": "v1.35.8",
-      "image": "registry.k8s.io/kube-apiserver-amd64:v1.35.8",
-      "digest": "sha256:8e41799cf8c3df55aa00caa3e0fca38e93616e3932cb027b84b49d668d5c5b3e",
-      "status": "Healthy",
-      "metrics": {
-        "component": "kube-apiserver"
-      },
-      "spatial": {
-        "x": 0.0,
-        "y": 7.0,
-        "z": 0.0,
-        "asset_type": "Cuboid_APIServer"
-      },
-      "raw_labels": {
-        "component": "kube-apiserver",
-        "tier": "control-plane"
-      }
-    },
-    {
-      "id": "pod/local-path-storage/local-path-provisioner-67b778fdf6-pp858",
-      "layer": "workload",
-      "kind": "Pod",
-      "name": "local-path-provisioner-67b778fdf6-pp858",
-      "namespace": "local-path-storage",
-      "version": "v20260820-69b56db7",
-      "image": "docker.io/kindest/local-path-provisioner:v20260820-69b56db7",
-      "digest": null,
-      "status": "Healthy",
-      "metrics": {
-        "containers": [
-          "local-path-provisioner"
-        ]
-      },
-      "spatial": {
-        "x": 0.6,
-        "y": 0.75,
-        "z": 1.2,
-        "asset_type": "Cuboid_Pod"
-      },
-      "raw_labels": {
-        "app": "local-path-provisioner",
-        "pod-template-hash": "67b778fdf6"
-      }
-    },
-    {
-      "id": "pod/workloads/postgres-primary-0",
-      "layer": "workload",
-      "kind": "PostgresPrimary",
-      "name": "postgres-primary-0",
-      "namespace": "workloads",
-      "version": "17.11",
-      "image": "docker.io/library/postgres:17.11",
-      "digest": "sha256:d74eeac9a635390a49bc21bd49fccd973de707e2a53a76ac49b552b8712ec46f",
-      "status": "Healthy",
-      "metrics": {
-        "containers": [
-          "postgres"
-        ]
-      },
-      "spatial": {
-        "x": -0.6,
-        "y": 0.75,
-        "z": 0.2,
-        "asset_type": "Database_Postgres"
-      },
-      "raw_labels": {
-        "app.kubernetes.io/component": "primary",
-        "app.kubernetes.io/name": "postgresql",
-        "apps.kubernetes.io/pod-index": "0",
-        "controller-revision-hash": "postgres-primary-5f9f54d6c4",
-        "statefulset.kubernetes.io/pod-name": "postgres-primary-0"
-      }
-    },
-    {
-      "id": "pod/workloads/redis-cluster-84475f8ffc-55jzn",
-      "layer": "workload",
-      "kind": "RedisNode",
-      "name": "redis-cluster-84475f8ffc-55jzn",
-      "namespace": "workloads",
-      "version": "7.4.2",
-      "image": "docker.io/library/redis:7.4.2",
-      "digest": "sha256:fbdbaea47b9ae4ecc2082ecdb4e1cea81e32176ffb1dcf643d422ad07427e5d9",
-      "status": "Healthy",
-      "metrics": {
-        "containers": [
-          "redis"
-        ]
-      },
-      "spatial": {
-        "x": 0.6,
-        "y": 0.75,
-        "z": 0.2,
-        "asset_type": "Cache_Redis"
-      },
-      "raw_labels": {
-        "app.kubernetes.io/name": "redis",
-        "pod-template-hash": "84475f8ffc"
-      }
-    },
-    {
-      "id": "pod/workloads/redis-cluster-84475f8ffc-qbtwr",
-      "layer": "workload",
-      "kind": "RedisNode",
-      "name": "redis-cluster-84475f8ffc-qbtwr",
-      "namespace": "workloads",
-      "version": "7.4.2",
-      "image": "docker.io/library/redis:7.4.2",
-      "digest": "sha256:fbdbaea47b9ae4ecc2082ecdb4e1cea81e32176ffb1dcf643d422ad07427e5d9",
-      "status": "Healthy",
-      "metrics": {
-        "containers": [
-          "redis"
-        ]
-      },
-      "spatial": {
-        "x": -0.6,
-        "y": 0.75,
-        "z": 1.2,
-        "asset_type": "Cache_Redis"
-      },
-      "raw_labels": {
-        "app.kubernetes.io/name": "redis",
-        "pod-template-hash": "84475f8ffc"
-      }
-    },
-    {
-      "id": "kind-cluster-beta/client-kubectl",
-      "layer": "ingress",
-      "kind": "Client",
-      "name": "kubectl-cli",
-      "namespace": "external",
-      "version": "v1.31.0",
+      "version": "v1.36.4-gke.1495000",
       "image": null,
       "digest": null,
       "status": "Healthy",
       "metrics": {
-        "tool": "kubectl",
-        "command": "list pods"
+        "component": "kubelet",
+        "node": "gke-clustervis-kuberay-default-pool-760cf690-0bkr"
+      },
+      "spatial": {
+        "x": -4.8,
+        "y": 0.7,
+        "z": -1.5,
+        "asset_type": "Cuboid_Kubelet"
+      },
+      "raw_labels": {},
+      "pod_geometry": null,
+      "autoscaling": null
+    },
+    {
+      "id": "node/worker-1/containerd",
+      "layer": "node",
+      "kind": "Containerd",
+      "name": "containerd-worker-1",
+      "namespace": "kube-system",
+      "version": "v1.7.22",
+      "image": null,
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "runtime": "containerd",
+        "node": "gke-clustervis-kuberay-default-pool-760cf690-0bkr"
+      },
+      "spatial": {
+        "x": -3.8,
+        "y": 0.7,
+        "z": -1.5,
+        "asset_type": "Cuboid_Containerd"
+      },
+      "raw_labels": {},
+      "pod_geometry": null,
+      "autoscaling": null
+    },
+    {
+      "id": "node/worker-2",
+      "layer": "node",
+      "kind": "Node",
+      "name": "worker-2 (60cf690-j0f1)",
+      "namespace": "cluster",
+      "version": "v1.36.4-gke.1495000",
+      "image": null,
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "cpu_capacity": "4",
+        "memory_capacity": "16380004Ki",
+        "cpu_allocatable": "3920m",
+        "memory_allocatable": "13591652Ki",
+        "os_image": "Container-Optimized OS from Google",
+        "gke_node_name": "gke-clustervis-kuberay-default-pool-760cf690-j0f1"
+      },
+      "spatial": {
+        "x": 3.0,
+        "y": 0.5,
+        "z": 0.0,
+        "asset_type": "LayerTray_Worker"
+      },
+      "raw_labels": {
+        "addon.gke.io/node-local-dns-ds-ready": "true",
+        "beta.kubernetes.io/arch": "amd64",
+        "beta.kubernetes.io/instance-type": "e2-standard-4",
+        "beta.kubernetes.io/os": "linux",
+        "cloud.google.com/gke-boot-disk": "pd-balanced",
+        "cloud.google.com/gke-container-runtime": "containerd",
+        "cloud.google.com/gke-cpu-scaling-level": "4",
+        "cloud.google.com/gke-logging-variant": "DEFAULT",
+        "cloud.google.com/gke-max-pods-per-node": "110",
+        "cloud.google.com/gke-memory-gb-scaling-level": "16",
+        "cloud.google.com/gke-nodepool": "default-pool",
+        "cloud.google.com/gke-os-distribution": "cos",
+        "cloud.google.com/gke-provisioning": "standard",
+        "cloud.google.com/gke-stack-type": "IPV4",
+        "cloud.google.com/machine-family": "e2",
+        "cloud.google.com/private-node": "false",
+        "disk-type.gke.io/pd-balanced": "true",
+        "disk-type.gke.io/pd-extreme": "true",
+        "disk-type.gke.io/pd-ssd": "true",
+        "disk-type.gke.io/pd-standard": "true",
+        "failure-domain.beta.kubernetes.io/region": "us-central1",
+        "failure-domain.beta.kubernetes.io/zone": "us-central1-a",
+        "kubernetes.io/arch": "amd64",
+        "kubernetes.io/hostname": "gke-clustervis-kuberay-default-pool-760cf690-j0f1",
+        "kubernetes.io/os": "linux",
+        "node.kubernetes.io/instance-type": "e2-standard-4",
+        "topology.gke.io/zone": "us-central1-a",
+        "topology.kubernetes.io/region": "us-central1",
+        "topology.kubernetes.io/zone": "us-central1-a"
+      },
+      "pod_geometry": null,
+      "autoscaling": null
+    },
+    {
+      "id": "node/worker-2/kubelet",
+      "layer": "node",
+      "kind": "Kubelet",
+      "name": "kubelet-worker-2",
+      "namespace": "kube-system",
+      "version": "v1.36.4-gke.1495000",
+      "image": null,
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "component": "kubelet",
+        "node": "gke-clustervis-kuberay-default-pool-760cf690-j0f1"
+      },
+      "spatial": {
+        "x": 1.2,
+        "y": 0.7,
+        "z": -1.5,
+        "asset_type": "Cuboid_Kubelet"
+      },
+      "raw_labels": {},
+      "pod_geometry": null,
+      "autoscaling": null
+    },
+    {
+      "id": "node/worker-2/containerd",
+      "layer": "node",
+      "kind": "Containerd",
+      "name": "containerd-worker-2",
+      "namespace": "kube-system",
+      "version": "v1.7.22",
+      "image": null,
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "runtime": "containerd",
+        "node": "gke-clustervis-kuberay-default-pool-760cf690-j0f1"
+      },
+      "spatial": {
+        "x": 2.2,
+        "y": 0.7,
+        "z": -1.5,
+        "asset_type": "Cuboid_Containerd"
+      },
+      "raw_labels": {},
+      "pod_geometry": null,
+      "autoscaling": null
+    },
+    {
+      "id": "client/kubectl-cli",
+      "layer": "ingress",
+      "kind": "Client",
+      "name": "kubectl-cli",
+      "namespace": "external",
+      "version": "v1.36.4-gke.1495000",
+      "image": null,
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {
+        "tool": "kubectl-cli",
+        "command": "watch pods -A"
       },
       "spatial": {
         "x": -1.4,
@@ -292,20 +241,23 @@
         "z": 6.0,
         "asset_type": "Client_Slab"
       },
-      "raw_labels": {}
+      "raw_labels": {},
+      "pod_geometry": null,
+      "autoscaling": null
     },
     {
-      "id": "kind-cluster-beta/client-crd-watcher",
+      "id": "client/crd-watcher",
       "layer": "ingress",
       "kind": "Client",
       "name": "client-crd-watcher",
       "namespace": "external",
-      "version": "v1.0.0",
+      "version": "v1.36.4-gke.1495000",
       "image": null,
       "digest": null,
       "status": "Healthy",
       "metrics": {
-        "watch": "rayclusters.ray.io"
+        "tool": "client-crd-watcher",
+        "command": "watch rayjobs.ray.io"
       },
       "spatial": {
         "x": 1.4,
@@ -313,109 +265,940 @@
         "z": 6.0,
         "asset_type": "Client_Slab"
       },
-      "raw_labels": {}
+      "raw_labels": {},
+      "pod_geometry": null,
+      "autoscaling": null
     },
     {
-      "id": "node/cluster-beta-control-plane/kubelet",
-      "layer": "node",
-      "kind": "Kubelet",
-      "name": "kubelet-cluster-beta-control-plane",
-      "namespace": "kube-system",
-      "version": "v1.35.8",
-      "image": null,
-      "digest": null,
-      "status": "Healthy",
-      "metrics": {
-        "component": "kubelet",
-        "node": "cluster-beta-control-plane"
-      },
-      "spatial": {
-        "x": -1.8,
-        "y": 0.7,
-        "z": -1.5,
-        "asset_type": "Cuboid_Kubelet"
-      },
-      "raw_labels": {}
-    },
-    {
-      "id": "node/cluster-beta-control-plane/containerd",
-      "layer": "node",
-      "kind": "Containerd",
-      "name": "containerd-cluster-beta-control-plane",
-      "namespace": "kube-system",
-      "version": "v1.7.20",
-      "image": null,
-      "digest": null,
-      "status": "Healthy",
-      "metrics": {
-        "runtime": "containerd",
-        "node": "cluster-beta-control-plane"
-      },
-      "spatial": {
-        "x": -0.8,
-        "y": 0.7,
-        "z": -1.5,
-        "asset_type": "Cuboid_Containerd"
-      },
-      "raw_labels": {}
-    },
-    {
-      "id": "pod/kube-system/metrics-server-6d89b4b6f8-qpvks",
+      "id": "control-plane/kube-apiserver-0",
       "layer": "control-plane",
-      "kind": "Pod",
-      "name": "metrics-server-6d89b4b6f8-qpvks",
+      "kind": "APIServer",
+      "name": "kube-apiserver-gke",
       "namespace": "kube-system",
-      "version": "v0.7.2",
-      "image": "registry.k8s.io/metrics-server/metrics-server:v0.7.2",
-      "digest": "sha256:00b76a52f0c5b6e7f8",
+      "version": "v1.36.4-gke.1495000",
+      "image": "registry.k8s.io/apiserver:v1.36.4-gke.1495000",
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {},
+      "spatial": {
+        "x": 0.0,
+        "y": 7.0,
+        "z": 0.0,
+        "asset_type": "Cuboid_APIServer"
+      },
+      "raw_labels": {},
+      "pod_geometry": null,
+      "autoscaling": null
+    },
+    {
+      "id": "control-plane/etcd-0",
+      "layer": "control-plane",
+      "kind": "etcd",
+      "name": "etcd-gke-0",
+      "namespace": "kube-system",
+      "version": "v3.5.15",
+      "image": "registry.k8s.io/etcd:v3.5.15",
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {},
+      "spatial": {
+        "x": 0.0,
+        "y": 5.5,
+        "z": -3.5,
+        "asset_type": "Cuboid_etcd"
+      },
+      "raw_labels": {},
+      "pod_geometry": null,
+      "autoscaling": null
+    },
+    {
+      "id": "control-plane/kube-scheduler-0",
+      "layer": "control-plane",
+      "kind": "Scheduler",
+      "name": "kube-scheduler-gke",
+      "namespace": "kube-system",
+      "version": "v1.36.4-gke.1495000",
+      "image": "registry.k8s.io/scheduler:v1.36.4-gke.1495000",
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {},
+      "spatial": {
+        "x": -2.8,
+        "y": 4.5,
+        "z": 0.8,
+        "asset_type": "Cuboid_Supervisor"
+      },
+      "raw_labels": {},
+      "pod_geometry": null,
+      "autoscaling": null
+    },
+    {
+      "id": "control-plane/kube-controller-manager-0",
+      "layer": "control-plane",
+      "kind": "ControllerManager",
+      "name": "kube-controller-manager-gke",
+      "namespace": "kube-system",
+      "version": "v1.36.4-gke.1495000",
+      "image": "registry.k8s.io/controllermanager:v1.36.4-gke.1495000",
+      "digest": null,
+      "status": "Healthy",
+      "metrics": {},
+      "spatial": {
+        "x": 2.8,
+        "y": 4.5,
+        "z": 0.8,
+        "asset_type": "Cuboid_Supervisor"
+      },
+      "raw_labels": {},
+      "pod_geometry": null,
+      "autoscaling": null
+    },
+    {
+      "id": "ingress/default/gke-inference-gateway",
+      "layer": "ingress",
+      "kind": "InferenceGateway",
+      "name": "gke-inference-gateway (llm-d)",
+      "namespace": "default",
+      "version": "v1.4.0",
+      "image": null,
+      "digest": null,
       "status": "Healthy",
       "metrics": {
-        "containers": [
-          "metrics-server"
-        ]
+        "component": "gke-inference-gateway",
+        "route": "/v1/chat/completions",
+        "models": "gemma-2b-it, qwen-2.5-3b"
       },
       "spatial": {
-        "x": -1.8,
+        "x": 0.0,
+        "y": 9.6,
+        "z": 1.6,
+        "asset_type": "LoadBalancer_Ring"
+      },
+      "raw_labels": {},
+      "pod_geometry": {
+        "height": 0.647,
+        "radius": 0.2,
+        "color_tint": "#4FC3F7",
+        "is_pending": false,
+        "staging_track_x": null,
+        "karpenter_target_node_claim": null,
+        "kueue_workload": null
+      },
+      "autoscaling": null
+    },
+    {
+      "id": "pod/clustervis-system/clustervis-operator",
+      "layer": "workload",
+      "kind": "Pod",
+      "name": "clustervis-operator",
+      "namespace": "clustervis-system",
+      "version": "3.11-slim",
+      "image": "python:3.11-slim",
+      "digest": "sha256:0dd364ba7e10242f07755449e3a3d0e35f9efd987952737b90def6709ab0c5ce",
+      "status": "Running",
+      "metrics": {
+        "cpu_request_cores": 0.02,
+        "memory_request_gib": 0.047,
+        "phase": "Running",
+        "pending": false,
+        "scheduled": true,
+        "host_node": "gke-clustervis-kuberay-default-pool-760cf690-j0f1",
+        "pod_ip": "10.20.0.6",
+        "kueue_flavor": null,
+        "model": null
+      },
+      "spatial": {
+        "x": 2.4,
         "y": 0.75,
-        "z": -0.4,
-        "asset_type": "ControlPlane_Cube"
+        "z": 0.2,
+        "asset_type": "Cuboid_Pod"
       },
       "raw_labels": {
-        "k8s-app": "metrics-server"
-      }
+        "app.kubernetes.io/component": "operator",
+        "app.kubernetes.io/instance": "clustervis",
+        "app.kubernetes.io/name": "clustervis",
+        "pod-template-hash": "58f68df89c",
+        "topology.kubernetes.io/region": "us-central1",
+        "topology.kubernetes.io/zone": "us-central1-a"
+      },
+      "pod_geometry": {
+        "height": 0.449,
+        "radius": 0.2,
+        "color_tint": "#4FC3F7",
+        "is_pending": false,
+        "staging_track_x": null,
+        "karpenter_target_node_claim": null,
+        "kueue_workload": null
+      },
+      "autoscaling": null
+    },
+    {
+      "id": "pod/clustervis-system/clustervis-probe-w1",
+      "layer": "control-plane",
+      "kind": "DaemonSet",
+      "name": "clustervis-probe-w1",
+      "namespace": "clustervis-system",
+      "version": "3.11-slim",
+      "image": "python:3.11-slim",
+      "digest": "sha256:0dd364ba7e10242f07755449e3a3d0e35f9efd987952737b90def6709ab0c5ce",
+      "status": "Running",
+      "metrics": {
+        "cpu_request_cores": 0.005,
+        "memory_request_gib": 0.016,
+        "phase": "Running",
+        "pending": false,
+        "scheduled": true,
+        "host_node": "gke-clustervis-kuberay-default-pool-760cf690-0bkr",
+        "pod_ip": "10.20.1.15",
+        "kueue_flavor": null,
+        "model": null
+      },
+      "spatial": {
+        "x": -1.8,
+        "y": 0.65,
+        "z": -1.5,
+        "asset_type": "Cuboid_DaemonSet"
+      },
+      "raw_labels": {
+        "app.kubernetes.io/component": "probe",
+        "app.kubernetes.io/instance": "clustervis",
+        "app.kubernetes.io/name": "clustervis",
+        "controller-revision-hash": "668ccf7dc8",
+        "pod-template-generation": "1",
+        "topology.kubernetes.io/region": "us-central1",
+        "topology.kubernetes.io/zone": "us-central1-a"
+      },
+      "pod_geometry": null,
+      "autoscaling": null
+    },
+    {
+      "id": "pod/clustervis-system/clustervis-probe-w2",
+      "layer": "control-plane",
+      "kind": "DaemonSet",
+      "name": "clustervis-probe-w2",
+      "namespace": "clustervis-system",
+      "version": "3.11-slim",
+      "image": "python:3.11-slim",
+      "digest": "sha256:0dd364ba7e10242f07755449e3a3d0e35f9efd987952737b90def6709ab0c5ce",
+      "status": "Running",
+      "metrics": {
+        "cpu_request_cores": 0.005,
+        "memory_request_gib": 0.016,
+        "phase": "Running",
+        "pending": false,
+        "scheduled": true,
+        "host_node": "gke-clustervis-kuberay-default-pool-760cf690-j0f1",
+        "pod_ip": "10.20.0.7",
+        "kueue_flavor": null,
+        "model": null
+      },
+      "spatial": {
+        "x": 4.2,
+        "y": 0.65,
+        "z": -1.5,
+        "asset_type": "Cuboid_DaemonSet"
+      },
+      "raw_labels": {
+        "app.kubernetes.io/component": "probe",
+        "app.kubernetes.io/instance": "clustervis",
+        "app.kubernetes.io/name": "clustervis",
+        "controller-revision-hash": "668ccf7dc8",
+        "pod-template-generation": "1",
+        "topology.kubernetes.io/region": "us-central1",
+        "topology.kubernetes.io/zone": "us-central1-a"
+      },
+      "pod_geometry": null,
+      "autoscaling": null
+    },
+    {
+      "id": "pod/default/kuberay-operator",
+      "layer": "framework",
+      "kind": "KubeRayOperator",
+      "name": "kuberay-operator",
+      "namespace": "default",
+      "version": "v1.3.0 / Ray 2.56",
+      "image": "quay.io/kuberay/operator:v1.3.0",
+      "digest": "sha256:32deadb4246e5880c104c27dc1f417261560fe7492e363cf7999ee8744278494",
+      "status": "Running",
+      "metrics": {
+        "cpu_request_cores": 0.1,
+        "memory_request_gib": 0.5,
+        "phase": "Running",
+        "pending": false,
+        "scheduled": true,
+        "host_node": "gke-clustervis-kuberay-default-pool-760cf690-j0f1",
+        "pod_ip": "10.20.0.5",
+        "kueue_flavor": null,
+        "model": null
+      },
+      "spatial": {
+        "x": 4.0,
+        "y": 3.6,
+        "z": -1.2,
+        "asset_type": "Framework_Ray"
+      },
+      "raw_labels": {
+        "app.kubernetes.io/component": "kuberay-operator",
+        "app.kubernetes.io/instance": "kuberay-operator",
+        "app.kubernetes.io/name": "kuberay-operator",
+        "pod-template-hash": "cdd78fd6d",
+        "topology.kubernetes.io/region": "us-central1",
+        "topology.kubernetes.io/zone": "us-central1-a"
+      },
+      "pod_geometry": null,
+      "autoscaling": null
+    },
+    {
+      "id": "pod/default/llm-d-body-based-router",
+      "layer": "ingress",
+      "kind": "BodyBasedRouter",
+      "name": "llm-d-body-based-router",
+      "namespace": "default",
+      "version": "v1.4.0 (ext-proc)",
+      "image": "registry.k8s.io/pause:3.9",
+      "digest": "sha256:7031c1b283388d2c2e09b57badb803c05ebed362dc88d84b480cc47f72a21097",
+      "status": "Running",
+      "metrics": {
+        "cpu_request_cores": 0.05,
+        "memory_request_gib": 0.062,
+        "phase": "Running",
+        "pending": false,
+        "scheduled": true,
+        "host_node": "gke-clustervis-kuberay-default-pool-760cf690-0bkr",
+        "pod_ip": "10.20.1.25",
+        "kueue_flavor": null,
+        "model": null
+      },
+      "spatial": {
+        "x": 0.0,
+        "y": 8.5,
+        "z": 1.8,
+        "asset_type": "Cylinder_Service"
+      },
+      "raw_labels": {
+        "app.kubernetes.io/name": "llm-d-body-based-router",
+        "clustervis.io/component-kind": "BodyBasedRouter",
+        "clustervis.io/version": "v1.4.0",
+        "llm-d.ai/component": "body-based-router",
+        "pod-template-hash": "8597c6c7b7",
+        "topology.kubernetes.io/region": "us-central1",
+        "topology.kubernetes.io/zone": "us-central1-a"
+      },
+      "pod_geometry": {
+        "height": 0.478,
+        "radius": 0.2,
+        "color_tint": "#4FC3F7",
+        "is_pending": false,
+        "staging_track_x": null,
+        "karpenter_target_node_claim": null,
+        "kueue_workload": null
+      },
+      "autoscaling": null
+    },
+    {
+      "id": "pod/default/llm-d-epp-gemma-2b-it",
+      "layer": "ingress",
+      "kind": "InferencePool",
+      "name": "llm-d-epp-gemma-2b-it",
+      "namespace": "default",
+      "version": "v1.4.0 (InferencePool: gemma-2b-it)",
+      "image": "registry.k8s.io/pause:3.9",
+      "digest": "sha256:7031c1b283388d2c2e09b57badb803c05ebed362dc88d84b480cc47f72a21097",
+      "status": "Running",
+      "metrics": {
+        "cpu_request_cores": 0.05,
+        "memory_request_gib": 0.062,
+        "phase": "Running",
+        "pending": false,
+        "scheduled": true,
+        "host_node": "gke-clustervis-kuberay-default-pool-760cf690-0bkr",
+        "pod_ip": "10.20.1.26",
+        "kueue_flavor": null,
+        "model": "gemma-2b-it"
+      },
+      "spatial": {
+        "x": -3.0,
+        "y": 8.1,
+        "z": 2.0,
+        "asset_type": "Cylinder_Service"
+      },
+      "raw_labels": {
+        "app.kubernetes.io/name": "llm-d-epp-gemma-2b-it",
+        "clustervis.io/component-kind": "InferencePool",
+        "clustervis.io/version": "v1.4.0",
+        "llm-d.ai/component": "endpoint-picker",
+        "llm-d.ai/model": "gemma-2b-it",
+        "pod-template-hash": "69949655c",
+        "topology.kubernetes.io/region": "us-central1",
+        "topology.kubernetes.io/zone": "us-central1-a"
+      },
+      "pod_geometry": {
+        "height": 0.478,
+        "radius": 0.2,
+        "color_tint": "#4FC3F7",
+        "is_pending": false,
+        "staging_track_x": null,
+        "karpenter_target_node_claim": null,
+        "kueue_workload": null
+      },
+      "autoscaling": null
+    },
+    {
+      "id": "pod/default/llm-d-epp-qwen-2-5-3b",
+      "layer": "ingress",
+      "kind": "InferencePool",
+      "name": "llm-d-epp-qwen-2-5-3b",
+      "namespace": "default",
+      "version": "v1.4.0 (InferencePool: qwen-2.5-3b)",
+      "image": "registry.k8s.io/pause:3.9",
+      "digest": "sha256:7031c1b283388d2c2e09b57badb803c05ebed362dc88d84b480cc47f72a21097",
+      "status": "Running",
+      "metrics": {
+        "cpu_request_cores": 0.05,
+        "memory_request_gib": 0.062,
+        "phase": "Running",
+        "pending": false,
+        "scheduled": true,
+        "host_node": "gke-clustervis-kuberay-default-pool-760cf690-0bkr",
+        "pod_ip": "10.20.1.27",
+        "kueue_flavor": null,
+        "model": "qwen-2.5-3b"
+      },
+      "spatial": {
+        "x": 3.0,
+        "y": 8.1,
+        "z": 2.0,
+        "asset_type": "Cylinder_Service"
+      },
+      "raw_labels": {
+        "app.kubernetes.io/name": "llm-d-epp-qwen-2-5-3b",
+        "clustervis.io/component-kind": "InferencePool",
+        "clustervis.io/version": "v1.4.0",
+        "llm-d.ai/component": "endpoint-picker",
+        "llm-d.ai/model": "qwen-2.5-3b",
+        "pod-template-hash": "865c7bd8dd",
+        "topology.kubernetes.io/region": "us-central1",
+        "topology.kubernetes.io/zone": "us-central1-a"
+      },
+      "pod_geometry": {
+        "height": 0.478,
+        "radius": 0.2,
+        "color_tint": "#4FC3F7",
+        "is_pending": false,
+        "staging_track_x": null,
+        "karpenter_target_node_claim": null,
+        "kueue_workload": null
+      },
+      "autoscaling": null
+    },
+    {
+      "id": "pod/default/rayservice-gemma-2b-it-head",
+      "layer": "framework",
+      "kind": "RayHead",
+      "name": "rayservice-gemma-2b-it-head",
+      "namespace": "default",
+      "version": "ray-2.56.0 (K8s Events=ON)",
+      "image": "registry.k8s.io/pause:3.9",
+      "digest": "sha256:7031c1b283388d2c2e09b57badb803c05ebed362dc88d84b480cc47f72a21097",
+      "status": "Running",
+      "metrics": {
+        "cpu_request_cores": 0.1,
+        "memory_request_gib": 0.125,
+        "phase": "Running",
+        "pending": false,
+        "scheduled": true,
+        "host_node": "gke-clustervis-kuberay-default-pool-760cf690-0bkr",
+        "pod_ip": "10.20.1.28",
+        "kueue_flavor": "on-demand-gpu",
+        "model": "gemma-2b-it"
+      },
+      "spatial": {
+        "x": -3.0,
+        "y": 2.5,
+        "z": 0.8,
+        "asset_type": "Framework_Ray"
+      },
+      "raw_labels": {
+        "app": "rayservice-gemma-2b-it-head",
+        "clustervis.io/version": "ray-2.56.0",
+        "kueue.x-k8s.io/queue-name": "llm-inference-queue",
+        "kueue.x-k8s.io/resource-flavor": "on-demand-gpu",
+        "llm-d.ai/model": "gemma-2b-it",
+        "pod-template-hash": "6b4f549454",
+        "ray.io/cluster": "gemma-2b-it-raycluster",
+        "ray.io/node-type": "head",
+        "topology.kubernetes.io/region": "us-central1",
+        "topology.kubernetes.io/zone": "us-central1-a"
+      },
+      "pod_geometry": null,
+      "autoscaling": null
+    },
+    {
+      "id": "pod/default/rayservice-qwen-2-5-3b-head",
+      "layer": "framework",
+      "kind": "RayHead",
+      "name": "rayservice-qwen-2-5-3b-head",
+      "namespace": "default",
+      "version": "ray-2.56.0 (K8s Events=ON)",
+      "image": "registry.k8s.io/pause:3.9",
+      "digest": "sha256:7031c1b283388d2c2e09b57badb803c05ebed362dc88d84b480cc47f72a21097",
+      "status": "Running",
+      "metrics": {
+        "cpu_request_cores": 0.1,
+        "memory_request_gib": 0.125,
+        "phase": "Running",
+        "pending": false,
+        "scheduled": true,
+        "host_node": "gke-clustervis-kuberay-default-pool-760cf690-0bkr",
+        "pod_ip": "10.20.1.29",
+        "kueue_flavor": "on-demand-gpu",
+        "model": "qwen-2.5-3b"
+      },
+      "spatial": {
+        "x": 3.0,
+        "y": 2.5,
+        "z": 0.8,
+        "asset_type": "Framework_Ray"
+      },
+      "raw_labels": {
+        "app": "rayservice-qwen-2-5-3b-head",
+        "clustervis.io/version": "ray-2.56.0",
+        "kueue.x-k8s.io/queue-name": "llm-inference-queue",
+        "kueue.x-k8s.io/resource-flavor": "on-demand-gpu",
+        "llm-d.ai/model": "qwen-2.5-3b",
+        "pod-template-hash": "59b748df59",
+        "ray.io/cluster": "qwen-2-5-3b-raycluster",
+        "ray.io/node-type": "head",
+        "topology.kubernetes.io/region": "us-central1",
+        "topology.kubernetes.io/zone": "us-central1-a"
+      },
+      "pod_geometry": null,
+      "autoscaling": null
+    },
+    {
+      "id": "pod/default/vllm-gemma-2b-it-worker-1",
+      "layer": "workload",
+      "kind": "RayWorker",
+      "name": "vllm-gemma-2b-it-worker-1",
+      "namespace": "default",
+      "version": "vllm-0.7.3 (gemma-2b-it / on-demand-gpu)",
+      "image": "registry.k8s.io/pause:3.9",
+      "digest": "sha256:7031c1b283388d2c2e09b57badb803c05ebed362dc88d84b480cc47f72a21097",
+      "status": "Running",
+      "metrics": {
+        "cpu_request_cores": 4.0,
+        "memory_request_gib": 16.0,
+        "phase": "Running",
+        "pending": false,
+        "scheduled": true,
+        "host_node": "gke-clustervis-kuberay-default-pool-760cf690-j0f1",
+        "pod_ip": "10.20.0.17",
+        "kueue_flavor": "on-demand-gpu",
+        "model": "gemma-2b-it"
+      },
+      "spatial": {
+        "x": -4.2,
+        "y": 0.85,
+        "z": 0.6,
+        "asset_type": "Pod_Cylinder"
+      },
+      "raw_labels": {
+        "app": "vllm-gemma-2b-it-worker",
+        "clustervis.io/version": "vllm-0.7.3-gemma-2b-it",
+        "kueue.x-k8s.io/queue-name": "llm-inference-queue",
+        "kueue.x-k8s.io/resource-flavor": "on-demand-gpu",
+        "llm-d.ai/engine": "vllm",
+        "llm-d.ai/model": "gemma-2b-it",
+        "pod-template-hash": "549b97cb68",
+        "ray.io/cluster": "gemma-2b-it-raycluster",
+        "ray.io/node-type": "worker",
+        "topology.kubernetes.io/region": "us-central1",
+        "topology.kubernetes.io/zone": "us-central1-a"
+      },
+      "pod_geometry": {
+        "height": 1.1,
+        "radius": 0.62,
+        "color_tint": "#4FC3F7",
+        "is_pending": false,
+        "staging_track_x": null,
+        "karpenter_target_node_claim": null,
+        "kueue_workload": "wl-gemma-2b-it-ondemand"
+      },
+      "autoscaling": null
+    },
+    {
+      "id": "pod/default/vllm-gemma-2b-it-worker-2",
+      "layer": "workload",
+      "kind": "RayWorker",
+      "name": "vllm-gemma-2b-it-worker-2",
+      "namespace": "default",
+      "version": "vllm-0.7.3 (gemma-2b-it / on-demand-gpu)",
+      "image": "registry.k8s.io/pause:3.9",
+      "digest": "sha256:7031c1b283388d2c2e09b57badb803c05ebed362dc88d84b480cc47f72a21097",
+      "status": "Running",
+      "metrics": {
+        "cpu_request_cores": 4.0,
+        "memory_request_gib": 16.0,
+        "phase": "Running",
+        "pending": false,
+        "scheduled": true,
+        "host_node": "gke-clustervis-kuberay-default-pool-760cf690-0bkr",
+        "pod_ip": "10.20.1.30",
+        "kueue_flavor": "on-demand-gpu",
+        "model": "gemma-2b-it"
+      },
+      "spatial": {
+        "x": -2.8,
+        "y": 0.85,
+        "z": 0.6,
+        "asset_type": "Pod_Cylinder"
+      },
+      "raw_labels": {
+        "app": "vllm-gemma-2b-it-worker",
+        "clustervis.io/version": "vllm-0.7.3-gemma-2b-it",
+        "kueue.x-k8s.io/queue-name": "llm-inference-queue",
+        "kueue.x-k8s.io/resource-flavor": "on-demand-gpu",
+        "llm-d.ai/engine": "vllm",
+        "llm-d.ai/model": "gemma-2b-it",
+        "pod-template-hash": "549b97cb68",
+        "ray.io/cluster": "gemma-2b-it-raycluster",
+        "ray.io/node-type": "worker",
+        "topology.kubernetes.io/region": "us-central1",
+        "topology.kubernetes.io/zone": "us-central1-a"
+      },
+      "pod_geometry": {
+        "height": 1.1,
+        "radius": 0.62,
+        "color_tint": "#4FC3F7",
+        "is_pending": false,
+        "staging_track_x": null,
+        "karpenter_target_node_claim": null,
+        "kueue_workload": "wl-gemma-2b-it-ondemand"
+      },
+      "autoscaling": null
+    },
+    {
+      "id": "pod/default/vllm-qwen-2-5-3b-ondemand-1",
+      "layer": "workload",
+      "kind": "RayWorker",
+      "name": "vllm-qwen-2-5-3b-ondemand-1",
+      "namespace": "default",
+      "version": "vllm-0.7.3 (qwen-2.5-3b / on-demand-gpu)",
+      "image": "registry.k8s.io/pause:3.9",
+      "digest": "sha256:7031c1b283388d2c2e09b57badb803c05ebed362dc88d84b480cc47f72a21097",
+      "status": "Running",
+      "metrics": {
+        "cpu_request_cores": 4.0,
+        "memory_request_gib": 16.0,
+        "phase": "Running",
+        "pending": false,
+        "scheduled": true,
+        "host_node": "gke-clustervis-kuberay-default-pool-760cf690-j0f1",
+        "pod_ip": "10.20.0.18",
+        "kueue_flavor": "on-demand-gpu",
+        "model": "qwen-2.5-3b"
+      },
+      "spatial": {
+        "x": -4.2,
+        "y": 0.85,
+        "z": 1.8,
+        "asset_type": "Pod_Cylinder"
+      },
+      "raw_labels": {
+        "app": "vllm-qwen-2-5-3b-ondemand",
+        "clustervis.io/version": "vllm-0.7.3-qwen-2.5-3b-ondemand",
+        "kueue.x-k8s.io/queue-name": "llm-inference-queue",
+        "kueue.x-k8s.io/resource-flavor": "on-demand-gpu",
+        "llm-d.ai/engine": "vllm",
+        "llm-d.ai/model": "qwen-2.5-3b",
+        "pod-template-hash": "6444584647",
+        "ray.io/cluster": "qwen-2-5-3b-raycluster",
+        "ray.io/node-type": "worker",
+        "topology.kubernetes.io/region": "us-central1",
+        "topology.kubernetes.io/zone": "us-central1-a"
+      },
+      "pod_geometry": {
+        "height": 1.1,
+        "radius": 0.62,
+        "color_tint": "#4FC3F7",
+        "is_pending": false,
+        "staging_track_x": null,
+        "karpenter_target_node_claim": null,
+        "kueue_workload": "wl-qwen-2-5-3b-ondemand"
+      },
+      "autoscaling": null
+    },
+    {
+      "id": "pod/default/vllm-qwen-2-5-3b-ondemand-2",
+      "layer": "workload",
+      "kind": "RayWorker",
+      "name": "vllm-qwen-2-5-3b-ondemand-2",
+      "namespace": "default",
+      "version": "vllm-0.7.3 (qwen-2.5-3b / on-demand-gpu)",
+      "image": "registry.k8s.io/pause:3.9",
+      "digest": "sha256:7031c1b283388d2c2e09b57badb803c05ebed362dc88d84b480cc47f72a21097",
+      "status": "Running",
+      "metrics": {
+        "cpu_request_cores": 4.0,
+        "memory_request_gib": 16.0,
+        "phase": "Running",
+        "pending": false,
+        "scheduled": true,
+        "host_node": "gke-clustervis-kuberay-default-pool-760cf690-0bkr",
+        "pod_ip": "10.20.1.31",
+        "kueue_flavor": "on-demand-gpu",
+        "model": "qwen-2.5-3b"
+      },
+      "spatial": {
+        "x": -2.8,
+        "y": 0.85,
+        "z": 1.8,
+        "asset_type": "Pod_Cylinder"
+      },
+      "raw_labels": {
+        "app": "vllm-qwen-2-5-3b-ondemand",
+        "clustervis.io/version": "vllm-0.7.3-qwen-2.5-3b-ondemand",
+        "kueue.x-k8s.io/queue-name": "llm-inference-queue",
+        "kueue.x-k8s.io/resource-flavor": "on-demand-gpu",
+        "llm-d.ai/engine": "vllm",
+        "llm-d.ai/model": "qwen-2.5-3b",
+        "pod-template-hash": "6444584647",
+        "ray.io/cluster": "qwen-2-5-3b-raycluster",
+        "ray.io/node-type": "worker",
+        "topology.kubernetes.io/region": "us-central1",
+        "topology.kubernetes.io/zone": "us-central1-a"
+      },
+      "pod_geometry": {
+        "height": 1.1,
+        "radius": 0.62,
+        "color_tint": "#4FC3F7",
+        "is_pending": false,
+        "staging_track_x": null,
+        "karpenter_target_node_claim": null,
+        "kueue_workload": "wl-qwen-2-5-3b-ondemand"
+      },
+      "autoscaling": null
+    },
+    {
+      "id": "pod/default/vllm-qwen-2-5-3b-spot-burst-1",
+      "layer": "workload",
+      "kind": "RayWorker",
+      "name": "vllm-qwen-2-5-3b-spot-burst-1",
+      "namespace": "default",
+      "version": "vllm-0.7.3 (qwen-2.5-3b / spot-gpu burst)",
+      "image": "registry.k8s.io/pause:3.9",
+      "digest": "sha256:7031c1b283388d2c2e09b57badb803c05ebed362dc88d84b480cc47f72a21097",
+      "status": "Running",
+      "metrics": {
+        "cpu_request_cores": 6.0,
+        "memory_request_gib": 24.0,
+        "phase": "Running",
+        "pending": false,
+        "scheduled": true,
+        "host_node": "gke-clustervis-kuberay-default-pool-760cf690-j0f1",
+        "pod_ip": "10.20.0.19",
+        "kueue_flavor": "spot-gpu",
+        "model": "qwen-2.5-3b"
+      },
+      "spatial": {
+        "x": 2.2,
+        "y": 0.85,
+        "z": 1.2,
+        "asset_type": "Pod_Cylinder"
+      },
+      "raw_labels": {
+        "app": "vllm-qwen-2-5-3b-spot-burst",
+        "cloud.google.com/gke-spot": "true",
+        "clustervis.io/version": "vllm-0.7.3-qwen-2.5-3b-spot-gpu",
+        "kueue.x-k8s.io/queue-name": "llm-inference-queue",
+        "kueue.x-k8s.io/resource-flavor": "spot-gpu",
+        "llm-d.ai/engine": "vllm",
+        "llm-d.ai/model": "qwen-2.5-3b",
+        "pod-template-hash": "787788c9bb",
+        "ray.io/cluster": "qwen-2-5-3b-raycluster",
+        "ray.io/node-type": "worker",
+        "topology.kubernetes.io/region": "us-central1",
+        "topology.kubernetes.io/zone": "us-central1-a"
+      },
+      "pod_geometry": {
+        "height": 1.25,
+        "radius": 0.68,
+        "color_tint": "#4FC3F7",
+        "is_pending": false,
+        "staging_track_x": null,
+        "karpenter_target_node_claim": null,
+        "kueue_workload": "wl-qwen-2-5-3b-spot-burst"
+      },
+      "autoscaling": null
+    },
+    {
+      "id": "pod/default/vllm-qwen-2-5-3b-spot-burst-2",
+      "layer": "workload",
+      "kind": "RayWorker",
+      "name": "vllm-qwen-2-5-3b-spot-burst-2",
+      "namespace": "default",
+      "version": "vllm-0.7.3 (qwen-2.5-3b / spot-gpu burst)",
+      "image": "registry.k8s.io/pause:3.9",
+      "digest": "sha256:7031c1b283388d2c2e09b57badb803c05ebed362dc88d84b480cc47f72a21097",
+      "status": "Running",
+      "metrics": {
+        "cpu_request_cores": 6.0,
+        "memory_request_gib": 24.0,
+        "phase": "Running",
+        "pending": false,
+        "scheduled": true,
+        "host_node": "gke-clustervis-kuberay-default-pool-760cf690-0bkr",
+        "pod_ip": "10.20.1.32",
+        "kueue_flavor": "spot-gpu",
+        "model": "qwen-2.5-3b"
+      },
+      "spatial": {
+        "x": 3.8,
+        "y": 0.85,
+        "z": 1.2,
+        "asset_type": "Pod_Cylinder"
+      },
+      "raw_labels": {
+        "app": "vllm-qwen-2-5-3b-spot-burst",
+        "cloud.google.com/gke-spot": "true",
+        "clustervis.io/version": "vllm-0.7.3-qwen-2.5-3b-spot-gpu",
+        "kueue.x-k8s.io/queue-name": "llm-inference-queue",
+        "kueue.x-k8s.io/resource-flavor": "spot-gpu",
+        "llm-d.ai/engine": "vllm",
+        "llm-d.ai/model": "qwen-2.5-3b",
+        "pod-template-hash": "787788c9bb",
+        "ray.io/cluster": "qwen-2-5-3b-raycluster",
+        "ray.io/node-type": "worker",
+        "topology.kubernetes.io/region": "us-central1",
+        "topology.kubernetes.io/zone": "us-central1-a"
+      },
+      "pod_geometry": {
+        "height": 1.25,
+        "radius": 0.68,
+        "color_tint": "#4FC3F7",
+        "is_pending": false,
+        "staging_track_x": null,
+        "karpenter_target_node_claim": null,
+        "kueue_workload": "wl-qwen-2-5-3b-spot-burst"
+      },
+      "autoscaling": null
+    },
+    {
+      "id": "pod/kube-system/kube-proxy-w1",
+      "layer": "control-plane",
+      "kind": "DaemonSet",
+      "name": "kube-proxy-w1",
+      "namespace": "kube-system",
+      "version": "v1.36.4-gke.1495000",
+      "image": "us-central1-artifactregistry.gcr.io/gke-release/gke-release/kube-proxy:v1.36.4-gke.1495000",
+      "digest": null,
+      "status": "Running",
+      "metrics": {
+        "cpu_request_cores": 0.1,
+        "memory_request_gib": 1.0,
+        "phase": "Running",
+        "pending": false,
+        "scheduled": true,
+        "host_node": "gke-clustervis-kuberay-default-pool-760cf690-0bkr",
+        "pod_ip": "10.128.15.239",
+        "kueue_flavor": null,
+        "model": null
+      },
+      "spatial": {
+        "x": -1.0,
+        "y": 0.65,
+        "z": -1.5,
+        "asset_type": "Cuboid_DaemonSet"
+      },
+      "raw_labels": {
+        "component": "kube-proxy",
+        "tier": "node",
+        "topology.kubernetes.io/region": "us-central1",
+        "topology.kubernetes.io/zone": "us-central1-a"
+      },
+      "pod_geometry": null,
+      "autoscaling": null
+    },
+    {
+      "id": "pod/kube-system/kube-proxy-w2",
+      "layer": "control-plane",
+      "kind": "DaemonSet",
+      "name": "kube-proxy-w2",
+      "namespace": "kube-system",
+      "version": "v1.36.4-gke.1495000",
+      "image": "us-central1-artifactregistry.gcr.io/gke-release/gke-release/kube-proxy:v1.36.4-gke.1495000",
+      "digest": null,
+      "status": "Running",
+      "metrics": {
+        "cpu_request_cores": 0.1,
+        "memory_request_gib": 1.0,
+        "phase": "Running",
+        "pending": false,
+        "scheduled": true,
+        "host_node": "gke-clustervis-kuberay-default-pool-760cf690-j0f1",
+        "pod_ip": "10.128.15.238",
+        "kueue_flavor": null,
+        "model": null
+      },
+      "spatial": {
+        "x": 5.0,
+        "y": 0.65,
+        "z": -1.5,
+        "asset_type": "Cuboid_DaemonSet"
+      },
+      "raw_labels": {
+        "component": "kube-proxy",
+        "tier": "node",
+        "topology.kubernetes.io/region": "us-central1",
+        "topology.kubernetes.io/zone": "us-central1-a"
+      },
+      "pod_geometry": null,
+      "autoscaling": null
+    },
+    {
+      "id": "pod/kueue-system/kueue-controller-manager",
+      "layer": "framework",
+      "kind": "KueueOperator",
+      "name": "kueue-controller-manager",
+      "namespace": "kueue-system",
+      "version": "v0.10.2 (on-demand \u2192 spot-gpu)",
+      "image": "registry.k8s.io/pause:3.9",
+      "digest": "sha256:7031c1b283388d2c2e09b57badb803c05ebed362dc88d84b480cc47f72a21097",
+      "status": "Running",
+      "metrics": {
+        "cpu_request_cores": 0.05,
+        "memory_request_gib": 0.062,
+        "phase": "Running",
+        "pending": false,
+        "scheduled": true,
+        "host_node": "gke-clustervis-kuberay-default-pool-760cf690-0bkr",
+        "pod_ip": "10.20.1.24",
+        "kueue_flavor": null,
+        "model": null
+      },
+      "spatial": {
+        "x": -4.0,
+        "y": 3.6,
+        "z": -1.2,
+        "asset_type": "Cuboid_Supervisor"
+      },
+      "raw_labels": {
+        "app.kubernetes.io/name": "kueue",
+        "clustervis.io/component-kind": "KueueOperator",
+        "clustervis.io/version": "v0.10.2",
+        "control-plane": "controller-manager",
+        "pod-template-hash": "564b5967c",
+        "topology.kubernetes.io/region": "us-central1",
+        "topology.kubernetes.io/zone": "us-central1-a"
+      },
+      "pod_geometry": null,
+      "autoscaling": null
     }
   ],
   "edges": [
     {
-      "source": "control-plane/kube-system/kube-apiserver-cluster-beta-control-plane",
-      "target": "control-plane/kube-system/etcd-cluster-beta-control-plane",
-      "flow_type": "control_plane",
-      "protocol": "gRPC",
-      "direction": "unidirectional",
-      "animated": true,
-      "volume_label": "etcd writes"
-    },
-    {
-      "source": "control-plane/kube-system/kube-apiserver-cluster-beta-control-plane",
-      "target": "control-plane/kube-system/coredns-7d764666f9-sf62q",
-      "flow_type": "control_plane",
-      "protocol": "TCP",
-      "direction": "unidirectional",
-      "animated": false,
-      "volume_label": null
-    },
-    {
-      "source": "control-plane/kube-system/kube-apiserver-cluster-beta-control-plane",
-      "target": "control-plane/kube-system/coredns-7d764666f9-w8p9g",
-      "flow_type": "control_plane",
-      "protocol": "TCP",
-      "direction": "unidirectional",
-      "animated": false,
-      "volume_label": null
-    },
-    {
-      "source": "kind-cluster-beta/client-kubectl",
-      "target": "control-plane/kube-system/kube-apiserver-cluster-beta-control-plane",
+      "source": "client/kubectl-cli",
+      "target": "control-plane/kube-apiserver-0",
       "flow_type": "traffic",
       "protocol": "HTTPS/443",
       "direction": "unidirectional",
@@ -423,8 +1206,8 @@
       "volume_label": "list pods"
     },
     {
-      "source": "kind-cluster-beta/client-crd-watcher",
-      "target": "control-plane/kube-system/kube-apiserver-cluster-beta-control-plane",
+      "source": "client/crd-watcher",
+      "target": "control-plane/kube-apiserver-0",
       "flow_type": "traffic",
       "protocol": "HTTPS/443",
       "direction": "unidirectional",
@@ -432,8 +1215,8 @@
       "volume_label": "list pods"
     },
     {
-      "source": "control-plane/kube-system/kube-apiserver-cluster-beta-control-plane",
-      "target": "control-plane/kube-system/etcd-cluster-beta-control-plane",
+      "source": "control-plane/kube-apiserver-0",
+      "target": "control-plane/etcd-0",
       "flow_type": "control_plane",
       "protocol": "gRPC/2379",
       "direction": "bidirectional",
@@ -441,19 +1224,342 @@
       "volume_label": "raft KV"
     },
     {
-      "source": "node/cluster-beta-control-plane/kubelet",
-      "target": "control-plane/kube-system/kube-apiserver-cluster-beta-control-plane",
+      "source": "control-plane/kube-scheduler-0",
+      "target": "control-plane/kube-apiserver-0",
+      "flow_type": "control_plane",
+      "protocol": "HTTPS/6443",
+      "direction": "bidirectional",
+      "animated": true,
+      "volume_label": "reconcile loop"
+    },
+    {
+      "source": "control-plane/kube-controller-manager-0",
+      "target": "control-plane/kube-apiserver-0",
+      "flow_type": "control_plane",
+      "protocol": "HTTPS/6443",
+      "direction": "bidirectional",
+      "animated": true,
+      "volume_label": "reconcile loop"
+    },
+    {
+      "source": "pod/kueue-system/kueue-controller-manager",
+      "target": "control-plane/kube-apiserver-0",
+      "flow_type": "control_plane",
+      "protocol": "HTTPS/6443",
+      "direction": "bidirectional",
+      "animated": true,
+      "volume_label": "reconcile loop"
+    },
+    {
+      "source": "node/worker-1/kubelet",
+      "target": "control-plane/kube-apiserver-0",
       "flow_type": "control_plane",
       "protocol": "HTTPS/6443/Heartbeat",
       "direction": "unidirectional",
       "animated": true,
       "volume_label": "lease heartbeat"
+    },
+    {
+      "source": "node/worker-2/kubelet",
+      "target": "control-plane/kube-apiserver-0",
+      "flow_type": "control_plane",
+      "protocol": "HTTPS/6443/Heartbeat",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "lease heartbeat"
+    },
+    {
+      "source": "pod/default/rayservice-gemma-2b-it-head",
+      "target": "pod/default/kuberay-operator",
+      "flow_type": "framework_control",
+      "protocol": "gRPC/10001",
+      "direction": "bidirectional",
+      "animated": true,
+      "volume_label": "tensor bypass"
+    },
+    {
+      "source": "pod/default/rayservice-qwen-2-5-3b-head",
+      "target": "pod/default/kuberay-operator",
+      "flow_type": "framework_control",
+      "protocol": "gRPC/10001",
+      "direction": "bidirectional",
+      "animated": true,
+      "volume_label": "tensor bypass"
+    },
+    {
+      "source": "pod/clustervis-system/clustervis-probe-w1",
+      "target": "pod/clustervis-system/clustervis-probe-w2",
+      "flow_type": "traffic",
+      "protocol": "eBPF/Mesh",
+      "direction": "bidirectional",
+      "animated": true,
+      "volume_label": "lateral CNI mesh"
+    },
+    {
+      "source": "pod/clustervis-system/clustervis-probe-w1",
+      "target": "pod/kube-system/kube-proxy-w1",
+      "flow_type": "traffic",
+      "protocol": "eBPF/Mesh",
+      "direction": "bidirectional",
+      "animated": true,
+      "volume_label": "lateral CNI mesh"
+    },
+    {
+      "source": "pod/clustervis-system/clustervis-probe-w1",
+      "target": "pod/kube-system/kube-proxy-w2",
+      "flow_type": "traffic",
+      "protocol": "eBPF/Mesh",
+      "direction": "bidirectional",
+      "animated": true,
+      "volume_label": "lateral CNI mesh"
+    },
+    {
+      "source": "pod/clustervis-system/clustervis-probe-w2",
+      "target": "pod/kube-system/kube-proxy-w1",
+      "flow_type": "traffic",
+      "protocol": "eBPF/Mesh",
+      "direction": "bidirectional",
+      "animated": true,
+      "volume_label": "lateral CNI mesh"
+    },
+    {
+      "source": "pod/clustervis-system/clustervis-probe-w2",
+      "target": "pod/kube-system/kube-proxy-w2",
+      "flow_type": "traffic",
+      "protocol": "eBPF/Mesh",
+      "direction": "bidirectional",
+      "animated": true,
+      "volume_label": "lateral CNI mesh"
+    },
+    {
+      "source": "pod/kube-system/kube-proxy-w1",
+      "target": "pod/kube-system/kube-proxy-w2",
+      "flow_type": "traffic",
+      "protocol": "eBPF/Mesh",
+      "direction": "bidirectional",
+      "animated": true,
+      "volume_label": "lateral CNI mesh"
+    },
+    {
+      "source": "ingress/default/gke-inference-gateway",
+      "target": "pod/default/llm-d-body-based-router",
+      "flow_type": "traffic",
+      "protocol": "HTTP/80",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "inference /v1/chat/completions"
+    },
+    {
+      "source": "pod/default/llm-d-body-based-router",
+      "target": "pod/default/llm-d-epp-gemma-2b-it",
+      "flow_type": "traffic",
+      "protocol": "gRPC/ext-proc",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "inference model=gemma-2b-it"
+    },
+    {
+      "source": "pod/default/llm-d-body-based-router",
+      "target": "pod/default/llm-d-epp-qwen-2-5-3b",
+      "flow_type": "traffic",
+      "protocol": "gRPC/ext-proc",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "inference model=qwen-2.5-3b"
+    },
+    {
+      "source": "pod/default/llm-d-epp-gemma-2b-it",
+      "target": "pod/default/rayservice-gemma-2b-it-head",
+      "flow_type": "traffic",
+      "protocol": "HTTP/8000",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "inference KV-aware route"
+    },
+    {
+      "source": "pod/default/llm-d-epp-qwen-2-5-3b",
+      "target": "pod/default/rayservice-qwen-2-5-3b-head",
+      "flow_type": "traffic",
+      "protocol": "HTTP/8000",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "inference KV-aware route"
+    },
+    {
+      "source": "pod/default/rayservice-gemma-2b-it-head",
+      "target": "pod/default/vllm-gemma-2b-it-worker-1",
+      "flow_type": "framework_control",
+      "protocol": "gRPC/10001",
+      "direction": "bidirectional",
+      "animated": true,
+      "volume_label": "tensor vLLM gemma-2b-it"
+    },
+    {
+      "source": "pod/default/rayservice-gemma-2b-it-head",
+      "target": "pod/default/vllm-gemma-2b-it-worker-2",
+      "flow_type": "framework_control",
+      "protocol": "gRPC/10001",
+      "direction": "bidirectional",
+      "animated": true,
+      "volume_label": "tensor vLLM gemma-2b-it"
+    },
+    {
+      "source": "pod/default/rayservice-qwen-2-5-3b-head",
+      "target": "pod/default/vllm-qwen-2-5-3b-ondemand-1",
+      "flow_type": "framework_control",
+      "protocol": "gRPC/10001",
+      "direction": "bidirectional",
+      "animated": true,
+      "volume_label": "tensor vLLM qwen-2.5-3b on-demand"
+    },
+    {
+      "source": "pod/default/rayservice-qwen-2-5-3b-head",
+      "target": "pod/default/vllm-qwen-2-5-3b-ondemand-2",
+      "flow_type": "framework_control",
+      "protocol": "gRPC/10001",
+      "direction": "bidirectional",
+      "animated": true,
+      "volume_label": "tensor vLLM qwen-2.5-3b on-demand"
+    },
+    {
+      "source": "pod/default/rayservice-qwen-2-5-3b-head",
+      "target": "pod/default/vllm-qwen-2-5-3b-spot-burst-1",
+      "flow_type": "framework_control",
+      "protocol": "gRPC/10001",
+      "direction": "bidirectional",
+      "animated": true,
+      "volume_label": "tensor vLLM qwen-2.5-3b spot-gpu"
+    },
+    {
+      "source": "pod/default/rayservice-qwen-2-5-3b-head",
+      "target": "pod/default/vllm-qwen-2-5-3b-spot-burst-2",
+      "flow_type": "framework_control",
+      "protocol": "gRPC/10001",
+      "direction": "bidirectional",
+      "animated": true,
+      "volume_label": "tensor vLLM qwen-2.5-3b spot-gpu"
+    },
+    {
+      "source": "pod/kueue-system/kueue-controller-manager",
+      "target": "pod/default/vllm-qwen-2-5-3b-spot-burst-1",
+      "flow_type": "control_plane",
+      "protocol": "Kueue/SpotFallback",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "kueue quota spot-gpu"
+    },
+    {
+      "source": "pod/kueue-system/kueue-controller-manager",
+      "target": "pod/default/vllm-qwen-2-5-3b-spot-burst-2",
+      "flow_type": "control_plane",
+      "protocol": "Kueue/SpotFallback",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "kueue quota spot-gpu"
+    },
+    {
+      "source": "pod/default/kuberay-operator",
+      "target": "pod/default/rayservice-gemma-2b-it-head",
+      "flow_type": "control_plane",
+      "protocol": "CRD/RayService",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "kueue ray reconcile"
+    },
+    {
+      "source": "pod/default/kuberay-operator",
+      "target": "pod/default/rayservice-qwen-2-5-3b-head",
+      "flow_type": "control_plane",
+      "protocol": "CRD/RayService",
+      "direction": "unidirectional",
+      "animated": true,
+      "volume_label": "kueue ray reconcile"
     }
   ],
-  "diff_summary": {
-    "identical_nodes": 5,
-    "version_skew_nodes": 9,
-    "missing_in_target": 2,
-    "added_in_target": 8
-  }
+  "diff_summary": null,
+  "subterranean_resources": [],
+  "machine_shapes": [
+    {
+      "node_name": "worker-1 (on-demand-gpu)",
+      "provider": "gcp",
+      "instance_type": "g2-standard-24",
+      "compute_class": null,
+      "vcpus": 24,
+      "memory_gib": 96.0,
+      "capacity_type": "on-demand",
+      "zone": "us-central1-a",
+      "accelerator_type": "nvidia-l4",
+      "accelerator_count": 2,
+      "chassis_width": 4.91,
+      "chassis_depth": 5.34
+    },
+    {
+      "node_name": "worker-2 (spot-gpu)",
+      "provider": "gcp",
+      "instance_type": "g2-standard-24",
+      "compute_class": null,
+      "vcpus": 24,
+      "memory_gib": 96.0,
+      "capacity_type": "spot",
+      "zone": "us-central1-a",
+      "accelerator_type": "nvidia-l4",
+      "accelerator_count": 2,
+      "chassis_width": 4.91,
+      "chassis_depth": 5.34
+    }
+  ],
+  "kueue_workloads": [
+    {
+      "workload_uid": "wl-gemma-2b-it-ondemand",
+      "workload_name": "gemma-2b-it-vllm (on-demand-gpu)",
+      "namespace": "default",
+      "local_queue": "llm-inference-queue",
+      "cluster_queue": "on-demand-gpu",
+      "is_admitted": true,
+      "admission_checks": [],
+      "pod_uids": [
+        "pod/default/vllm-gemma-2b-it-worker-1",
+        "pod/default/vllm-gemma-2b-it-worker-2"
+      ],
+      "total_cpu_requested": 8.0,
+      "total_memory_gib_requested": 32.0,
+      "total_gpu_requested": 2,
+      "phase": "Admitted"
+    },
+    {
+      "workload_uid": "wl-qwen-2-5-3b-ondemand",
+      "workload_name": "qwen-2.5-3b-vllm (on-demand FULL)",
+      "namespace": "default",
+      "local_queue": "llm-inference-queue",
+      "cluster_queue": "on-demand-gpu",
+      "is_admitted": true,
+      "admission_checks": [],
+      "pod_uids": [
+        "pod/default/vllm-qwen-2-5-3b-ondemand-1",
+        "pod/default/vllm-qwen-2-5-3b-ondemand-2"
+      ],
+      "total_cpu_requested": 8.0,
+      "total_memory_gib_requested": 32.0,
+      "total_gpu_requested": 2,
+      "phase": "Admitted"
+    },
+    {
+      "workload_uid": "wl-qwen-2-5-3b-spot-burst",
+      "workload_name": "qwen-2.5-3b-burst (spot-gpu fallback)",
+      "namespace": "default",
+      "local_queue": "llm-inference-queue",
+      "cluster_queue": "spot-gpu",
+      "is_admitted": true,
+      "admission_checks": [],
+      "pod_uids": [
+        "pod/default/vllm-qwen-2-5-3b-spot-burst-1",
+        "pod/default/vllm-qwen-2-5-3b-spot-burst-2"
+      ],
+      "total_cpu_requested": 12.0,
+      "total_memory_gib_requested": 48.0,
+      "total_gpu_requested": 4,
+      "phase": "Admitted"
+    }
+  ],
+  "karpenter_node_claims": []
 }

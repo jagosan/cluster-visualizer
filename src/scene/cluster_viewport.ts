@@ -400,6 +400,10 @@ export class ClusterViewport {
       const kd = n.kind.toLowerCase();
       return (nm.includes('ray') || kd.includes('ray')) && !nm.includes('operator') && kd !== 'kuberayoperator';
     });
+    const hasAiInferenceStack = data.nodes.some((n) => {
+      const nm = n.name.toLowerCase();
+      return nm.includes('llm-d') || nm.includes('vllm') || nm.includes('kueue');
+    });
 
     // Build layered architectural trays and outer structural cage.
     // TASK-CV-903: feed the snapshot's machine_shapes so chassis footprints,
@@ -408,7 +412,7 @@ export class ClusterViewport {
     this.layerTrayManager.buildTowerTrays(workerCount, hasRay);
 
     // Build flank typographic billboard labels
-    this.flankLabelManager.buildLabels(workerCount, hasRay, hasRayCluster);
+    this.flankLabelManager.buildLabels(workerCount, hasRay, hasRayCluster, hasAiInferenceStack);
 
     const nodePositions = new Map<string, THREE.Vector3>();
 
@@ -468,11 +472,11 @@ export class ClusterViewport {
         ctype = 'heartbeat-riser';
       } else if (p.includes('2379') || v.includes('raft') || s.includes('apiserver') && edge.target.includes('etcd')) {
         ctype = 'etcd-backing';
-      } else if (s.includes('client') || v.includes('watch') || v.includes('list')) {
+      } else if (s.includes('client') || v.includes('watch') || v.includes('list') || s.includes('gateway') || s.includes('llm-d') || v.includes('inference')) {
         ctype = 'client-stream';
-      } else if (v.includes('peer') || (s.includes('apiserver') && edge.target.includes('apiserver'))) {
+      } else if (v.includes('peer') || v.includes('kueue') || v.includes('quota') || (s.includes('apiserver') && edge.target.includes('apiserver'))) {
         ctype = 'api-bridge';
-      } else if (edge.flow_type === 'framework_control' || v.includes('tensor') || s.includes('ray')) {
+      } else if (edge.flow_type === 'framework_control' || v.includes('tensor') || s.includes('ray') || edge.target.toLowerCase().includes('vllm')) {
         ctype = 'framework-bypass';
       }
 
@@ -1036,7 +1040,11 @@ export class ClusterViewport {
         kd !== 'kuberayoperator'
       );
     });
-    this.flankLabelManager.buildLabels(workerCount, hasRay, hasRayCluster);
+    const hasAiInferenceStack = nodes.some((n) => {
+      const nm = n.name.toLowerCase();
+      return nm.includes('llm-d') || nm.includes('vllm') || nm.includes('kueue');
+    });
+    this.flankLabelManager.buildLabels(workerCount, hasRay, hasRayCluster, hasAiInferenceStack);
   }
 
   public removeNode(nodeId: string): void {

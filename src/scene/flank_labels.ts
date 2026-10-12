@@ -45,7 +45,12 @@ export class FlankLabelManager {
   /**
    * Builds all flank labels based on worker count and extended cluster flag.
    */
-  buildLabels(workerCount: number, isExtended: boolean, hasRayCluster: boolean = isExtended): void {
+  buildLabels(
+    workerCount: number,
+    isExtended: boolean,
+    hasRayCluster: boolean = isExtended,
+    hasAiInferenceStack: boolean = false,
+  ): void {
     this.clear();
 
     const configs: LabelConfig[] = [];
@@ -104,32 +109,74 @@ export class FlankLabelManager {
       });
     }
 
-    // Right flank labels (extended cluster only)
-    if (isExtended) {
+    // Right flank labels (extended / AI inference stack)
+    if (hasAiInferenceStack) {
       configs.push({
-        text: 'KubeRay Operator',
-        subtitle: 'CRD/Operator',
+        text: 'GKE Inference Gateway (llm-d)',
+        subtitle: 'Body-Based Router + EPP',
+        accentColor: ACCENT_COLORS.cyan,
+        side: 'right',
+        y: 9.5,
+      });
+
+      configs.push({
+        text: 'Kueue Quota Manager',
+        subtitle: 'on-demand-gpu → spot-gpu',
+        accentColor: ACCENT_COLORS.amber,
+        side: 'right',
+        y: 6.5,
+      });
+
+      configs.push({
+        text: 'KubeRay Operator (Ray 2.56)',
+        subtitle: 'K8s Platform Events',
         accentColor: ACCENT_COLORS.violet,
         side: 'right',
         y: 4.5,
       });
-    }
-    if (hasRayCluster) {
+
       configs.push({
-        text: 'Plasma Shared Object Store',
-        subtitle: 'IPC/SharedMem',
-        accentColor: ACCENT_COLORS.amber,
+        text: 'Ray Serve + vLLM: Gemma-2B-IT',
+        subtitle: 'On-Demand L4 GPUs',
+        accentColor: ACCENT_COLORS.emerald,
         side: 'right',
         y: 2.5,
       });
 
       configs.push({
-        text: 'Raylet & GPU Workers',
-        subtitle: 'gRPC/10001',
-        accentColor: ACCENT_COLORS.emerald,
+        text: 'Ray Serve + vLLM: Qwen2.5-3B',
+        subtitle: 'On-Demand + Spot GPU Burst',
+        accentColor: ACCENT_COLORS.purple,
         side: 'right',
         y: 0.5,
       });
+    } else {
+      if (isExtended) {
+        configs.push({
+          text: 'KubeRay Operator',
+          subtitle: 'CRD/Operator',
+          accentColor: ACCENT_COLORS.violet,
+          side: 'right',
+          y: 4.5,
+        });
+      }
+      if (hasRayCluster) {
+        configs.push({
+          text: 'Plasma Shared Object Store',
+          subtitle: 'IPC/SharedMem',
+          accentColor: ACCENT_COLORS.amber,
+          side: 'right',
+          y: 2.5,
+        });
+
+        configs.push({
+          text: 'Raylet & GPU Workers',
+          subtitle: 'gRPC/10001',
+          accentColor: ACCENT_COLORS.emerald,
+          side: 'right',
+          y: 0.5,
+        });
+      }
     }
 
     // Create sprites for each config

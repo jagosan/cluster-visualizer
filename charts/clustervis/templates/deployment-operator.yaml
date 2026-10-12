@@ -27,6 +27,11 @@ spec:
         - name: operator
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["python3", "/app/operator_incluster.py"]
+          volumeMounts:
+            - name: runtime
+              mountPath: /app
+              readOnly: true
           ports:
             - name: http
               containerPort: 8080
@@ -82,3 +87,7 @@ spec:
             failureThreshold: 3
           resources:
             {{- toYaml .Values.operator.resources | nindent 12 }}
+      volumes:
+        - name: runtime
+          configMap:
+            name: {{ include "clustervis.fullname" . }}-runtime
