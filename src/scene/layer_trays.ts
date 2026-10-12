@@ -223,22 +223,28 @@ export class LayerTrayManager {
 
     // 1. Distant Clients Horizon Pad (Y=12.0)
     createTray(8.0, 5.0, 0.20, 0x38bdf8, 0x0284c7, 12.0);
+    this.assignTrayTier(this.trays.length - 1, 'clients');
 
     // 2. API Gateway & Aggregator Floor (Y=9.5)
     createTray(7.2, 4.6, 0.30, 0x0284c7, 0x38bdf8, 9.5);
+    this.assignTrayTier(this.trays.length - 1, 'ingress');
 
     // 3. Kube-API Server Executive Core (Y=7.0)
     createTray(7.2, 4.6, 0.30, 0x0369a1, 0x38bdf8, 7.0);
+    this.assignTrayTier(this.trays.length - 1, 'apiserver');
 
     // 4. etcd Consensus Vault (Y=5.5, Z=-3.5 - behind API servers)
     createTray(4.8, 3.2, 0.28, 0xd97706, 0xfbbf24, 5.5, -3.5);
+    this.assignTrayTier(this.trays.length - 1, 'etcd');
 
     // 5. Control Plane Supervisors Floor (Y=4.5)
     createTray(7.2, 4.6, 0.30, 0x6d28d9, 0xa78bfa, 4.5);
+    this.assignTrayTier(this.trays.length - 1, 'services');
 
     // 6. Optional Framework Floor for Ray / Spark (Y=2.5)
     if (hasRay) {
       createTray(7.2, 4.6, 0.30, 0x9333ea, 0xc084fc, 2.5);
+      this.assignTrayTier(this.trays.length - 1, 'framework');
     }
 
     // 7. Worker Node Floor Trays (Tier 0 at Y = 0.5)
@@ -252,6 +258,7 @@ export class LayerTrayManager {
     createTray(deckWidth, deckDepth, deckHeight, 0x047857, 0x34d399, 0.5, 0.0);
     // TASK-CV-1205: chassis plates on this deck must ride its spring offset
     this.workerDeckTrayIndex = this.trays.length - 1;
+    this.assignTrayTier(this.workerDeckTrayIndex, 'worker');
 
     // Create individual chassis plates on top of the wide deck.
     // TASK-CV-903: when machineShapes are provided, dimension each node chassis
@@ -743,11 +750,21 @@ export class LayerTrayManager {
    * continue mirroring their source deck.
    */
   public updateElevations(springEngine: LatencySpringEngine): void {
+    const stackMultiplier: Record<string, number> = {
+      worker: 0.0,
+      framework: 0.55,
+      services: 1.05,
+      etcd: 1.3,
+      apiserver: 1.65,
+      ingress: 2.15,
+      clients: 2.65,
+    };
     for (let i = 0; i < this.trays.length; i++) {
       if (this.trayFollowSources[i] !== undefined) continue; // followers mirror below
       const tierId = this.trayTierIds[i];
       if (tierId === undefined) continue;
-      this.setVerticalOffset(i, springEngine.getDisplacement(tierId));
+      const mult = stackMultiplier[tierId] ?? 1.0;
+      this.setVerticalOffset(i, springEngine.getDisplacement(tierId) * mult);
     }
     this.applyCageStretch();
   }
