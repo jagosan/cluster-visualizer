@@ -88,7 +88,8 @@ export function isPodComponent(node: ClusterNodeData): boolean {
     assetKey === 'Module_PodCapsule' ||
     assetKey === 'Database_Postgres' ||
     assetKey === 'Cache_Redis' ||
-    (node.layer === 'workload' && node.kind === 'Pod')
+    (node.layer === 'workload' && (node.kind === 'Pod' || node.kind === 'RayWorker')) ||
+    node.autoscaling?.has_vpa === true
   );
 }
 
@@ -690,6 +691,7 @@ export class ClusterViewport {
     this.autoscalingFx.clear();
     this.clearHpaReplicas();
 
+    let hasActiveInPlaceResize = false;
     for (const node of data.nodes) {
       const as = node.autoscaling;
       if (!as) continue;
@@ -702,13 +704,31 @@ export class ClusterViewport {
         const dims = vpaGhostDimensions(node);
         if (dims) {
           this.autoscalingFx.setGhost(node.id, pos, dims.height, dims.radius);
+          if (as.is_resizing_in_place === true) {
+            hasActiveInPlaceResize = true;
+            const obj = this.nodeMeshes.get(node.id);
+            const mesh = obj ? findCapsuleMesh(obj) : null;
+            if (mesh) {
+              const from = capsuleDimensionsOf(mesh);
+              this.autoscalingFx.startMorph(
+                mesh,
+                from.height,
+                from.radius,
+                dims.height,
+                dims.radius,
+                1400,
+              );
+            }
+          }
         }
         this.autoscalingFx.addAura(node.id, pos.clone().setY(pos.y - 0.32), 'vpa');
       } else if (managedHpa) {
         this.autoscalingFx.addAura(node.id, pos.clone().setY(pos.y - 0.32), 'hpa');
       }
     }
-    this.autoscalingFx.setRadarVisible(this.autoscalingFx.isRadarVisible());
+    this.autoscalingFx.setRadarVisible(
+      this.autoscalingFx.isRadarVisible() || hasActiveInPlaceResize,
+    );
   }
 
   /**

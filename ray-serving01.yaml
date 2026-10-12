@@ -1,0 +1,117 @@
+# Canonical KubeRay Sample 1: Multi-Stage Ray Serve Inference DAG with In-Place Pod Vertical Resizing
+# Apply to either cluster:
+#   kubectl --context gke_demo-fleet_us-central1-a_clustervis-kuberay apply -f ray-serving01.yaml
+#   kubectl --context gke_demo-fleet_us-central1-a_clustervis-vanilla apply -f ray-serving01.yaml
+apiVersion: ray.io/v1
+kind: RayService
+metadata:
+  name: ray-serving01
+  namespace: default
+  labels:
+    app.kubernetes.io/name: ray-serving01
+    app.kubernetes.io/part-of: demo-jago-ion
+    inference.networking.x-k8s.io/pool: multiplexed-llm-router
+    autoscaling.k8s.io/vpa-mode: in-place
+  annotations:
+    clustervis.io/vpa-target-cpu: "8"
+    clustervis.io/vpa-target-memory: "32Gi"
+    clustervis.io/in-place-resize: "true"
+spec:
+  serviceUnhealthySecondThreshold: 900
+  deploymentUnhealthySecondThreshold: 300
+  serveConfigV2: |
+    applications:
+      - name: multiplexed_inference_dag
+        import_path: fruit.deployment_graph
+        route_prefix: /v1/models
+        deployments:
+          - name: LLMRouterDeployment
+            num_replicas: 1
+            ray_actor_options:
+              num_cpus: 0.2
+          - name: TokenizerPreprocessor
+            num_replicas: 2
+            ray_actor_options:
+              num_cpus: 0.2
+          - name: VLLMReplicaPool
+            min_replicas: 1
+            max_replicas: 4
+            ray_actor_options:
+              num_cpus: 0.5
+  rayClusterSpec:
+    rayVersion: '2.9.0'
+    headGroupSpec:
+      rayStartParams:
+        dashboard-host: '0.0.0.0'
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: ray-serving01-head
+            ray.io/node-type: head
+            autoscaling.k8s.io/vpa-managed: "true"
+          annotations:
+            clustervis.io/vpa-target-cpu: "4"
+            clustervis.io/vpa-target-memory: "16Gi"
+        spec:
+          containers:
+            - name: ray-head
+              image: rayproject/ray:2.9.0
+              env:
+                - name: RAY_ENABLE_K8S_EVENTS
+                  value: "1"
+              resizePolicy:
+                - resourceName: cpu
+                  restartPolicy: NotRequired
+                - resourceName: memory
+                  restartPolicy: NotRequired
+              ports:
+                - containerPort: 6379
+                  name: gcs-server
+                - containerPort: 8265
+                  name: dashboard
+                - containerPort: 10001
+                  name: client
+                - containerPort: 8000
+                  name: serve
+              resources:
+                limits:
+                  cpu: "2"
+                  memory: 4Gi
+                requests:
+                  cpu: 250m
+                  memory: 512Mi
+    workerGroupSpecs:
+      - replicas: 2
+        minReplicas: 1
+        maxReplicas: 4
+        groupName: serve-dag-workers
+        rayStartParams: {}
+        template:
+          metadata:
+            labels:
+              app.kubernetes.io/name: ray-serving01-worker
+              ray.io/node-type: worker
+              autoscaling.k8s.io/vpa-managed: "true"
+              autoscaling.k8s.io/in-place-resize: "enabled"
+            annotations:
+              clustervis.io/vpa-target-cpu: "8"
+              clustervis.io/vpa-target-memory: "32Gi"
+          spec:
+            containers:
+              - name: ray-worker
+                image: rayproject/ray:2.9.0
+                env:
+                  - name: RAY_ENABLE_K8S_EVENTS
+                    value: "1"
+                resizePolicy:
+                  - resourceName: cpu
+                    restartPolicy: NotRequired
+                  - resourceName: memory
+                    restartPolicy: NotRequired
+                resources:
+                  limits:
+                    cpu: "2"
+                    memory: 4Gi
+                  requests:
+                    cpu: 250m
+                    memory: 512Mi

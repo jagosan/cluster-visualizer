@@ -4,7 +4,7 @@
     "cluster_name": "clustervis-kuberay",
     "kubernetes_version": "v1.36.4-gke.1495000",
     "distribution": "gke",
-    "timestamp": "2026-10-12T16:21:12.935180+00:00",
+    "timestamp": "2026-10-12T23:00:09.485149+00:00",
     "node_count": 2,
     "pod_count": 1
   },
@@ -405,7 +405,8 @@
         "host_node": "gke-clustervis-kuberay-default-pool-760cf690-j0f1",
         "pod_ip": "10.20.0.6",
         "kueue_flavor": null,
-        "model": null
+        "model": null,
+        "in_place_resize": false
       },
       "spatial": {
         "x": 2.4,
@@ -451,7 +452,8 @@
         "host_node": "gke-clustervis-kuberay-default-pool-760cf690-0bkr",
         "pod_ip": "10.20.1.15",
         "kueue_flavor": null,
-        "model": null
+        "model": null,
+        "in_place_resize": false
       },
       "spatial": {
         "x": -1.8,
@@ -490,7 +492,8 @@
         "host_node": "gke-clustervis-kuberay-default-pool-760cf690-j0f1",
         "pod_ip": "10.20.0.7",
         "kueue_flavor": null,
-        "model": null
+        "model": null,
+        "in_place_resize": false
       },
       "spatial": {
         "x": 4.2,
@@ -529,7 +532,8 @@
         "host_node": "gke-clustervis-kuberay-default-pool-760cf690-j0f1",
         "pod_ip": "10.20.0.5",
         "kueue_flavor": null,
-        "model": null
+        "model": null,
+        "in_place_resize": false
       },
       "spatial": {
         "x": 4.0,
@@ -567,7 +571,8 @@
         "host_node": "gke-clustervis-kuberay-default-pool-760cf690-0bkr",
         "pod_ip": "10.20.1.25",
         "kueue_flavor": null,
-        "model": null
+        "model": null,
+        "in_place_resize": false
       },
       "spatial": {
         "x": 0.0,
@@ -614,7 +619,8 @@
         "host_node": "gke-clustervis-kuberay-default-pool-760cf690-0bkr",
         "pod_ip": "10.20.1.26",
         "kueue_flavor": null,
-        "model": "gemma-2b-it"
+        "model": "gemma-2b-it",
+        "in_place_resize": false
       },
       "spatial": {
         "x": -3.0,
@@ -662,7 +668,8 @@
         "host_node": "gke-clustervis-kuberay-default-pool-760cf690-0bkr",
         "pod_ip": "10.20.1.27",
         "kueue_flavor": null,
-        "model": "qwen-2.5-3b"
+        "model": "qwen-2.5-3b",
+        "in_place_resize": false
       },
       "spatial": {
         "x": 3.0,
@@ -710,7 +717,8 @@
         "host_node": "gke-clustervis-kuberay-default-pool-760cf690-0bkr",
         "pod_ip": "10.20.1.28",
         "kueue_flavor": "on-demand-gpu",
-        "model": "gemma-2b-it"
+        "model": "gemma-2b-it",
+        "in_place_resize": false
       },
       "spatial": {
         "x": -3.0,
@@ -752,7 +760,8 @@
         "host_node": "gke-clustervis-kuberay-default-pool-760cf690-0bkr",
         "pod_ip": "10.20.1.29",
         "kueue_flavor": "on-demand-gpu",
-        "model": "qwen-2.5-3b"
+        "model": "qwen-2.5-3b",
+        "in_place_resize": false
       },
       "spatial": {
         "x": 3.0,
@@ -794,7 +803,8 @@
         "host_node": "gke-clustervis-kuberay-default-pool-760cf690-j0f1",
         "pod_ip": "10.20.0.17",
         "kueue_flavor": "on-demand-gpu",
-        "model": "gemma-2b-it"
+        "model": "gemma-2b-it",
+        "in_place_resize": true
       },
       "spatial": {
         "x": -4.2,
@@ -816,15 +826,24 @@
         "topology.kubernetes.io/zone": "us-central1-a"
       },
       "pod_geometry": {
-        "height": 1.1,
-        "radius": 0.62,
+        "height": 1.05,
+        "radius": 0.58,
         "color_tint": "#4FC3F7",
         "is_pending": false,
         "staging_track_x": null,
         "karpenter_target_node_claim": null,
         "kueue_workload": "wl-gemma-2b-it-ondemand"
       },
-      "autoscaling": null
+      "autoscaling": {
+        "has_vpa": true,
+        "vpa_target_cpu": "8",
+        "vpa_target_memory": "32Gi",
+        "is_resizing_in_place": true,
+        "has_hpa": true,
+        "current_replicas": 2,
+        "desired_replicas": 2,
+        "target_metric": "kv-cache: 74% (in-place VPA)"
+      }
     },
     {
       "id": "pod/default/vllm-gemma-2b-it-worker-2",
@@ -845,7 +864,8 @@
         "host_node": "gke-clustervis-kuberay-default-pool-760cf690-0bkr",
         "pod_ip": "10.20.1.30",
         "kueue_flavor": "on-demand-gpu",
-        "model": "gemma-2b-it"
+        "model": "gemma-2b-it",
+        "in_place_resize": true
       },
       "spatial": {
         "x": -2.8,
@@ -867,15 +887,24 @@
         "topology.kubernetes.io/zone": "us-central1-a"
       },
       "pod_geometry": {
-        "height": 1.1,
-        "radius": 0.62,
+        "height": 1.05,
+        "radius": 0.58,
         "color_tint": "#4FC3F7",
         "is_pending": false,
         "staging_track_x": null,
         "karpenter_target_node_claim": null,
         "kueue_workload": "wl-gemma-2b-it-ondemand"
       },
-      "autoscaling": null
+      "autoscaling": {
+        "has_vpa": true,
+        "vpa_target_cpu": "8",
+        "vpa_target_memory": "32Gi",
+        "is_resizing_in_place": true,
+        "has_hpa": true,
+        "current_replicas": 2,
+        "desired_replicas": 2,
+        "target_metric": "kv-cache: 74% (in-place VPA)"
+      }
     },
     {
       "id": "pod/default/vllm-qwen-2-5-3b-ondemand-1",
@@ -896,7 +925,8 @@
         "host_node": "gke-clustervis-kuberay-default-pool-760cf690-j0f1",
         "pod_ip": "10.20.0.18",
         "kueue_flavor": "on-demand-gpu",
-        "model": "qwen-2.5-3b"
+        "model": "qwen-2.5-3b",
+        "in_place_resize": true
       },
       "spatial": {
         "x": -4.2,
@@ -918,15 +948,24 @@
         "topology.kubernetes.io/zone": "us-central1-a"
       },
       "pod_geometry": {
-        "height": 1.1,
-        "radius": 0.62,
+        "height": 1.05,
+        "radius": 0.58,
         "color_tint": "#4FC3F7",
         "is_pending": false,
         "staging_track_x": null,
         "karpenter_target_node_claim": null,
         "kueue_workload": "wl-qwen-2-5-3b-ondemand"
       },
-      "autoscaling": null
+      "autoscaling": {
+        "has_vpa": true,
+        "vpa_target_cpu": "12",
+        "vpa_target_memory": "48Gi",
+        "is_resizing_in_place": true,
+        "has_hpa": true,
+        "current_replicas": 2,
+        "desired_replicas": 4,
+        "target_metric": "kv-cache: 89% (in-place VPA + spot burst)"
+      }
     },
     {
       "id": "pod/default/vllm-qwen-2-5-3b-ondemand-2",
@@ -947,7 +986,8 @@
         "host_node": "gke-clustervis-kuberay-default-pool-760cf690-0bkr",
         "pod_ip": "10.20.1.31",
         "kueue_flavor": "on-demand-gpu",
-        "model": "qwen-2.5-3b"
+        "model": "qwen-2.5-3b",
+        "in_place_resize": true
       },
       "spatial": {
         "x": -2.8,
@@ -969,15 +1009,24 @@
         "topology.kubernetes.io/zone": "us-central1-a"
       },
       "pod_geometry": {
-        "height": 1.1,
-        "radius": 0.62,
+        "height": 1.05,
+        "radius": 0.58,
         "color_tint": "#4FC3F7",
         "is_pending": false,
         "staging_track_x": null,
         "karpenter_target_node_claim": null,
         "kueue_workload": "wl-qwen-2-5-3b-ondemand"
       },
-      "autoscaling": null
+      "autoscaling": {
+        "has_vpa": true,
+        "vpa_target_cpu": "12",
+        "vpa_target_memory": "48Gi",
+        "is_resizing_in_place": true,
+        "has_hpa": true,
+        "current_replicas": 2,
+        "desired_replicas": 4,
+        "target_metric": "kv-cache: 89% (in-place VPA + spot burst)"
+      }
     },
     {
       "id": "pod/default/vllm-qwen-2-5-3b-spot-burst-1",
@@ -998,7 +1047,8 @@
         "host_node": "gke-clustervis-kuberay-default-pool-760cf690-j0f1",
         "pod_ip": "10.20.0.19",
         "kueue_flavor": "spot-gpu",
-        "model": "qwen-2.5-3b"
+        "model": "qwen-2.5-3b",
+        "in_place_resize": true
       },
       "spatial": {
         "x": 2.2,
@@ -1029,7 +1079,16 @@
         "karpenter_target_node_claim": null,
         "kueue_workload": "wl-qwen-2-5-3b-spot-burst"
       },
-      "autoscaling": null
+      "autoscaling": {
+        "has_vpa": true,
+        "vpa_target_cpu": "16",
+        "vpa_target_memory": "64Gi",
+        "is_resizing_in_place": true,
+        "has_hpa": true,
+        "current_replicas": 2,
+        "desired_replicas": 4,
+        "target_metric": "spot-gpu burst + in-place VPA"
+      }
     },
     {
       "id": "pod/default/vllm-qwen-2-5-3b-spot-burst-2",
@@ -1050,7 +1109,8 @@
         "host_node": "gke-clustervis-kuberay-default-pool-760cf690-0bkr",
         "pod_ip": "10.20.1.32",
         "kueue_flavor": "spot-gpu",
-        "model": "qwen-2.5-3b"
+        "model": "qwen-2.5-3b",
+        "in_place_resize": true
       },
       "spatial": {
         "x": 3.8,
@@ -1081,7 +1141,16 @@
         "karpenter_target_node_claim": null,
         "kueue_workload": "wl-qwen-2-5-3b-spot-burst"
       },
-      "autoscaling": null
+      "autoscaling": {
+        "has_vpa": true,
+        "vpa_target_cpu": "16",
+        "vpa_target_memory": "64Gi",
+        "is_resizing_in_place": true,
+        "has_hpa": true,
+        "current_replicas": 2,
+        "desired_replicas": 4,
+        "target_metric": "spot-gpu burst + in-place VPA"
+      }
     },
     {
       "id": "pod/kube-system/kube-proxy-w1",
@@ -1102,7 +1171,8 @@
         "host_node": "gke-clustervis-kuberay-default-pool-760cf690-0bkr",
         "pod_ip": "10.128.15.239",
         "kueue_flavor": null,
-        "model": null
+        "model": null,
+        "in_place_resize": false
       },
       "spatial": {
         "x": -1.0,
@@ -1138,7 +1208,8 @@
         "host_node": "gke-clustervis-kuberay-default-pool-760cf690-j0f1",
         "pod_ip": "10.128.15.238",
         "kueue_flavor": null,
-        "model": null
+        "model": null,
+        "in_place_resize": false
       },
       "spatial": {
         "x": 5.0,
@@ -1174,7 +1245,8 @@
         "host_node": "gke-clustervis-kuberay-default-pool-760cf690-0bkr",
         "pod_ip": "10.20.1.24",
         "kueue_flavor": null,
-        "model": null
+        "model": null,
+        "in_place_resize": false
       },
       "spatial": {
         "x": -4.0,
