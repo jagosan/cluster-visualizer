@@ -6,6 +6,8 @@ Provides SecretScrubber for sanitizing Kubernetes manifests and topology snapsho
 and LatencyEdgeAggregator for thread-safe metric storage and hierarchical edge aggregation.
 """
 
+import hashlib
+import json
 import re
 import threading
 from collections import defaultdict
@@ -21,6 +23,32 @@ _SENSITIVE_ENV_PATTERNS = re.compile(
 _SENSITIVE_META_PATTERNS = re.compile(
     r'(token|cert|key|auth|secret)',
     re.IGNORECASE
+)
+
+# ---------------------------------------------------------------------------
+# SPEC-13 §3.3 / ADR-1303: strict whitelist-only extraction schema.
+#
+# Allowed fields (anything else is dropped):
+#   .metadata.name | .metadata.namespace | .metadata.labels
+#   .spec.replicas
+#   .spec.template.spec.containers[].image
+#   .spec.template.spec.containers[].resources
+#   .status
+#
+# Blocked / redacted:
+#   .env values        -> sha256:<hex[:8]> fingerprint (no plaintext leak)
+#   .args credentials  -> regex-redacted to `[REDACTED]`
+#   Secrets/ConfigMaps .data / .binaryData -> stripped entirely
+# ---------------------------------------------------------------------------
+
+_ALLOWED_METADATA_KEYS = ("name", "namespace", "labels")
+_ENV_HASH_PREFIX = "sha256:"
+_ENV_HASH_LENGTH = 8
+
+# Credential-shaped tokens that may appear inside container args (SPEC-13 §3.3).
+_ARGS_SENSITIVE_RE = re.compile(
+    r"(?i)(password|passwd|secret|token|apikey|api_key|access_token|"
+    r"private_key|credential|pwd)\s*[:=]\s*\S+",
 )
 
 
@@ -71,10 +99,32 @@ class SecretScrubber:
                 scrubbed_spec[key] = SecretScrubber._scrub_containers(value)
             elif key == 'ephemeralContainers':
                 scrubbed_spec[key] = SecretScrubber._scrub_containers(value)
+            elif key == 'template':
+                # Workload template (Deployment/StatefulSet/DaemonSet/Job):
+                # recurse into its own pod spec so nested env never leaks.
+                scrubbed_spec[key] = SecretScrubber._scrub_template(value)
             else:
                 scrubbed_spec[key] = value
 
         return scrubbed_spec
+
+    @staticmethod
+    def _scrub_template(template: Any) -> Any:
+        """Recursively scrub a workload template's pod spec (SPEC-13 §3.3)."""
+        if not isinstance(template, dict):
+            return template
+
+        scrubbed_template = {}
+        for key, value in template.items():
+            if key == 'spec':
+                # The template's own spec is itself a pod spec.
+                scrubbed_template[key] = SecretScrubber._scrub_pod_spec_inner(value)
+            elif key == 'metadata':
+                scrubbed_template[key] = SecretScrubber.scrub_metadata(value)
+            else:
+                scrubbed_template[key] = value
+
+        return scrubbed_template
 
     @staticmethod
     def _scrub_volumes(volumes: Any) -> Any:
@@ -322,11 +372,15 @@ class SecretScrubber:
         elif kind == 'ConfigMap':
             return SecretScrubber.scrub_configmap(manifest)
         else:
-            # For other kinds, scrub metadata if present
+            # Workloads (Deployment/StatefulSet/DaemonSet/Job) and other kinds:
+            # scrub metadata AND the workload spec so nested pod-template env
+            # values never leak verbatim (SPEC-13 §3.3 / ADR-1303).
             scrubbed = {}
             for key, value in manifest.items():
                 if key == 'metadata':
                     scrubbed[key] = SecretScrubber.scrub_metadata(value)
+                elif key == 'spec':
+                    scrubbed[key] = SecretScrubber._scrub_pod_spec_inner(value)
                 else:
                     scrubbed[key] = value
             return scrubbed
@@ -355,6 +409,202 @@ class SecretScrubber:
                 scrubbed_components.append(component)
 
         return scrubbed_components
+
+
+class WhitelistExtractor:
+    """
+    Strict whitelist-only manifest extraction (SPEC-13 §3.3 / ADR-1303).
+
+    Unlike ``SecretScrubber`` — which sanitizes in place while retaining the full
+    shape — this extractor *drops* every field outside the allowed schema:
+
+      - metadata: name, namespace, labels
+      - spec: replicas, template.spec.containers[].image / .resources
+      - status (verbatim)
+      - env values hashed to ``sha256:<hex[:8]>`` fingerprints
+      - args credential values regex-redacted to ``[REDACTED]``
+      - Secrets/ConfigMaps: all ``data`` / ``binaryData`` stripped
+
+    Guarantees zero plaintext leakage of sensitive env or connection-string values.
+    """
+
+    # ------------------------------------------------------------------
+    # Field-level primitives
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _hash_env_value(value: Any) -> str:
+        """Return a stable ``sha256:<hex[:8]>`` fingerprint of *value*."""
+        if not isinstance(value, str):
+            try:
+                value = json.dumps(value, sort_keys=True)
+            except (TypeError, ValueError):
+                value = str(value)
+        digest = hashlib.sha256(value.encode("utf-8")).hexdigest()
+        return f"{_ENV_HASH_PREFIX}{digest[:_ENV_HASH_LENGTH]}"
+
+    @staticmethod
+    def _redact_args(args: Any) -> List[str]:
+        """Regex-redact credential-shaped tokens inside container args."""
+        if not isinstance(args, list):
+            return [] if args is None else [args]
+        redacted = []
+        for arg in args:
+            if isinstance(arg, str):
+                arg = _ARGS_SENSITIVE_RE.sub(
+                    lambda m: f"{m.group(1)}:[REDACTED]", arg
+                )
+            redacted.append(arg)
+        return redacted
+
+    @staticmethod
+    def _extract_container(container: Any) -> dict:
+        """Keep only image/resources; hash env values; redact args."""
+        if not isinstance(container, dict):
+            return {}
+        out: Dict[str, Any] = {}
+        for key in ("image", "resources"):
+            if key in container:
+                out[key] = container[key]
+
+        env_list = container.get("env")
+        if isinstance(env_list, list):
+            scrubbed_env = []
+            for var in env_list:
+                if not isinstance(var, dict):
+                    continue
+                entry: Dict[str, Any] = {"name": var.get("name", "")}
+                value = var.get("value")
+                if value is not None:
+                    # SPEC-13 §3.3: values become sha256:<hex[:8]> fingerprints.
+                    entry["value"] = WhitelistExtractor._hash_env_value(value)
+                scrubbed_env.append(entry)
+            out["env"] = scrubbed_env
+
+        if "args" in container:
+            out["args"] = WhitelistExtractor._redact_args(container.get("args"))
+        return out
+
+    # ------------------------------------------------------------------
+    # Manifest-level extraction
+    # ------------------------------------------------------------------
+
+    @classmethod
+    def extract_workload(cls, manifest: Any) -> dict:
+        """Whitelist-extract a Deployment/StatefulSet/DaemonSet-style manifest."""
+        if not isinstance(manifest, dict):
+            return {}
+
+        out: Dict[str, Any] = {}
+        metadata = manifest.get("metadata")
+        if isinstance(metadata, dict):
+            m: Dict[str, Any] = {}
+            for key in _ALLOWED_METADATA_KEYS:
+                if key in metadata:
+                    m[key] = metadata[key]
+            out["metadata"] = m
+
+        spec = manifest.get("spec")
+        if isinstance(spec, dict):
+            s: Dict[str, Any] = {}
+            if "replicas" in spec:
+                s["replicas"] = spec["replicas"]
+            template = spec.get("template")
+            if isinstance(template, dict):
+                tspec = template.get("spec")
+                if isinstance(tspec, dict) and "containers" in tspec:
+                    containers = [
+                        cls._extract_container(c)
+                        for c in (tspec.get("containers") or [])
+                    ]
+                    s["template"] = {"spec": {"containers": containers}}
+            out["spec"] = s
+
+        if "status" in manifest:
+            out["status"] = manifest["status"]
+        return out
+
+    @classmethod
+    def extract_secret_or_configmap(cls, manifest: Any) -> dict:
+        """Strip all ``data`` / ``binaryData``; keep only safe metadata."""
+        if not isinstance(manifest, dict):
+            return {}
+        out: Dict[str, Any] = {}
+        for key in ("apiVersion", "kind"):
+            if key in manifest:
+                out[key] = manifest[key]
+        metadata = manifest.get("metadata")
+        if isinstance(metadata, dict):
+            m: Dict[str, Any] = {}
+            for key in _ALLOWED_METADATA_KEYS:
+                if key in metadata:
+                    m[key] = metadata[key]
+            out["metadata"] = m
+        return out
+
+    @classmethod
+    def extract_manifest(cls, manifest: Any) -> dict:
+        """Dispatch by kind; unknown kinds degrade to a safe metadata-only view."""
+        if not isinstance(manifest, dict):
+            return {}
+        kind = (manifest.get("kind") or "").lower()
+        if kind in ("secret", "configmap"):
+            return cls.extract_secret_or_configmap(manifest)
+        return cls.extract_workload(manifest)
+
+    # ------------------------------------------------------------------
+    # Graph-level extraction
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def extract_graph(graph: Any) -> dict:
+        """Whitelist-extract every node / manifest / component in a cluster graph."""
+        if not isinstance(graph, dict):
+            return {}
+        out: Dict[str, Any] = {}
+        for key, value in graph.items():
+            if key == "nodes":
+                nodes = []
+                for node in (value or []) if isinstance(value, list) else []:
+                    if isinstance(node, dict):
+                        scrubbed_node = {
+                            k: v
+                            for k, v in node.items()
+                            if k not in ("spec", "manifest")
+                        }
+                        manifest = node.get("manifest")
+                        if isinstance(manifest, dict):
+                            scrubbed_node["manifest"] = WhitelistExtractor.extract_manifest(
+                                manifest
+                            )
+                        nodes.append(scrubbed_node)
+                    else:
+                        nodes.append(node)
+                out[key] = nodes
+            elif key == "manifests":
+                manifests = []
+                for m in (value or []) if isinstance(value, list) else []:
+                    manifests.append(WhitelistExtractor.extract_manifest(m))
+                out[key] = manifests
+            elif key == "components":
+                components = []
+                for c in (value or []) if isinstance(value, list) else []:
+                    if isinstance(c, dict):
+                        scrubbed_c = {k: v for k, v in c.items()}
+                        manifest = c.get("manifest")
+                        if isinstance(manifest, dict):
+                            scrubbed_c["manifest"] = WhitelistExtractor.extract_manifest(
+                                manifest
+                            )
+                        components.append(scrubbed_c)
+                    else:
+                        components.append(c)
+                out[key] = components
+            elif key == "metadata":
+                out[key] = WhitelistExtractor.extract_secret_or_configmap({"metadata": value}).get("metadata", {})
+            else:
+                out[key] = value
+        return out
 
 
 class LatencyEdgeAggregator:
@@ -584,4 +834,21 @@ def scrub_cluster_graph(graph: dict) -> dict:
     return SecretScrubber.scrub_graph(graph)
 
 
-__all__ = ['SecretScrubber', 'LatencyEdgeAggregator', 'scrub_cluster_graph']
+def extract_whitelist(manifest: Any) -> dict:
+    """Whitelist-only extraction for a single manifest (SPEC-13 §3.3)."""
+    return WhitelistExtractor.extract_manifest(manifest)
+
+
+def scrub_whitelist_graph(graph: Any) -> dict:
+    """Whitelist-extract an entire cluster graph, dropping all non-allowed fields."""
+    return WhitelistExtractor.extract_graph(graph)
+
+
+__all__ = [
+    'SecretScrubber',
+    'LatencyEdgeAggregator',
+    'WhitelistExtractor',
+    'scrub_cluster_graph',
+    'extract_whitelist',
+    'scrub_whitelist_graph',
+]

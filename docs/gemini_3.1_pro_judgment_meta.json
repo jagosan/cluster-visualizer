@@ -1,0 +1,17 @@
+{
+  "elapsed_seconds": 31.546069860458374,
+  "usageMetadata": {
+    "promptTokenCount": 8163,
+    "candidatesTokenCount": 1716,
+    "totalTokenCount": 11878,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 8163
+      }
+    ],
+    "thoughtsTokenCount": 1999,
+    "serviceTier": "standard"
+  },
+  "model": "gemini-3.1-pro-preview"
+}

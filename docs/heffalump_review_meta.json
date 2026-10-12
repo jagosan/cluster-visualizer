@@ -1,0 +1,8 @@
+{
+  "elapsed_seconds": 293.02614879608154,
+  "ttft_seconds": 12.976964235305786,
+  "prompt_tokens": 1673,
+  "completion_tokens": 3934,
+  "total_tokens": 5607,
+  "model": "deepseek-v4"
+}
