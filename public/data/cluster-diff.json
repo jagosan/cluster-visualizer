@@ -1,121 +1,210 @@
 {
-  "source_cluster": "kind-cluster-alpha",
-  "target_cluster": "kind-cluster-beta",
+  "source_cluster": "clustervis-vanilla",
+  "target_cluster": "clustervis-kuberay",
   "summary": {
-    "identical_nodes": 5,
-    "version_skew_nodes": 9,
-    "missing_in_target": 2,
-    "added_in_target": 1
+    "identical_nodes": 17,
+    "version_skew_nodes": 1,
+    "missing_in_target": 0,
+    "added_in_target": 13
   },
   "nodes": [
     {
-      "node_id": "pod/kube-system/metrics-server-6d89b4b6f8-qpvks",
+      "node_id": "pod/clustervis-system/clustervis-probe-w1",
+      "status": "identical",
+      "source_version": "3.11-slim",
+      "target_version": "3.11-slim",
+      "source_image": "python:3.11-slim",
+      "target_image": "python:3.11-slim",
+      "source_digest": "sha256:0dd364ba7e10242f07755449e3a3d0e35f9efd987952737b90def6709ab0c5ce",
+      "target_digest": "sha256:0dd364ba7e10242f07755449e3a3d0e35f9efd987952737b90def6709ab0c5ce",
+      "diff_details": []
+    },
+    {
+      "node_id": "pod/clustervis-system/clustervis-probe-w2",
+      "status": "identical",
+      "source_version": "3.11-slim",
+      "target_version": "3.11-slim",
+      "source_image": "python:3.11-slim",
+      "target_image": "python:3.11-slim",
+      "source_digest": "sha256:0dd364ba7e10242f07755449e3a3d0e35f9efd987952737b90def6709ab0c5ce",
+      "target_digest": "sha256:0dd364ba7e10242f07755449e3a3d0e35f9efd987952737b90def6709ab0c5ce",
+      "diff_details": []
+    },
+    {
+      "node_id": "control-plane/etcd-0",
+      "status": "identical",
+      "source_version": "v3.5.15",
+      "target_version": "v3.5.15",
+      "source_image": "registry.k8s.io/etcd:v3.5.15",
+      "target_image": "registry.k8s.io/etcd:v3.5.15",
+      "source_digest": null,
+      "target_digest": null,
+      "diff_details": []
+    },
+    {
+      "node_id": "control-plane/kube-apiserver-0",
+      "status": "identical",
+      "source_version": "v1.36.4-gke.1495000",
+      "target_version": "v1.36.4-gke.1495000",
+      "source_image": "registry.k8s.io/apiserver:v1.36.4-gke.1495000",
+      "target_image": "registry.k8s.io/apiserver:v1.36.4-gke.1495000",
+      "source_digest": null,
+      "target_digest": null,
+      "diff_details": []
+    },
+    {
+      "node_id": "control-plane/kube-controller-manager-0",
+      "status": "identical",
+      "source_version": "v1.36.4-gke.1495000",
+      "target_version": "v1.36.4-gke.1495000",
+      "source_image": "registry.k8s.io/controllermanager:v1.36.4-gke.1495000",
+      "target_image": "registry.k8s.io/controllermanager:v1.36.4-gke.1495000",
+      "source_digest": null,
+      "target_digest": null,
+      "diff_details": []
+    },
+    {
+      "node_id": "pod/kube-system/kube-proxy-w1",
+      "status": "identical",
+      "source_version": "v1.36.4-gke.1495000",
+      "target_version": "v1.36.4-gke.1495000",
+      "source_image": "us-central1-artifactregistry.gcr.io/gke-release/gke-release/kube-proxy:v1.36.4-gke.1495000",
+      "target_image": "us-central1-artifactregistry.gcr.io/gke-release/gke-release/kube-proxy:v1.36.4-gke.1495000",
+      "source_digest": null,
+      "target_digest": null,
+      "diff_details": []
+    },
+    {
+      "node_id": "pod/kube-system/kube-proxy-w2",
+      "status": "identical",
+      "source_version": "v1.36.4-gke.1495000",
+      "target_version": "v1.36.4-gke.1495000",
+      "source_image": "us-central1-artifactregistry.gcr.io/gke-release/gke-release/kube-proxy:v1.36.4-gke.1495000",
+      "target_image": "us-central1-artifactregistry.gcr.io/gke-release/gke-release/kube-proxy:v1.36.4-gke.1495000",
+      "source_digest": null,
+      "target_digest": null,
+      "diff_details": []
+    },
+    {
+      "node_id": "control-plane/kube-scheduler-0",
+      "status": "identical",
+      "source_version": "v1.36.4-gke.1495000",
+      "target_version": "v1.36.4-gke.1495000",
+      "source_image": "registry.k8s.io/scheduler:v1.36.4-gke.1495000",
+      "target_image": "registry.k8s.io/scheduler:v1.36.4-gke.1495000",
+      "source_digest": null,
+      "target_digest": null,
+      "diff_details": []
+    },
+    {
+      "node_id": "pod/default/kuberay-operator",
+      "status": "version_skew",
+      "source_version": "v1.3.0",
+      "target_version": "v1.3.0 / Ray 2.56",
+      "source_image": "quay.io/kuberay/operator:v1.3.0",
+      "target_image": "quay.io/kuberay/operator:v1.3.0",
+      "source_digest": "sha256:32deadb4246e5880c104c27dc1f417261560fe7492e363cf7999ee8744278494",
+      "target_digest": "sha256:32deadb4246e5880c104c27dc1f417261560fe7492e363cf7999ee8744278494",
+      "diff_details": [
+        "Version skew: 'v1.3.0' vs 'v1.3.0 / Ray 2.56'"
+      ]
+    },
+    {
+      "node_id": "pod/default/rayservice-gemma-2b-it-head",
       "status": "added",
       "source_version": null,
-      "target_version": "v0.7.2",
+      "target_version": "ray-2.56.0 (K8s Events=ON)",
       "source_image": null,
-      "target_image": "registry.k8s.io/metrics-server/metrics-server:v0.7.2",
+      "target_image": "registry.k8s.io/pause:3.9",
       "source_digest": null,
-      "target_digest": "sha256:00b76a52f0c5b6e7f8",
+      "target_digest": "sha256:7031c1b283388d2c2e09b57badb803c05ebed362dc88d84b480cc47f72a21097",
       "diff_details": [
-        "Absent in kind-cluster-alpha, present in kind-cluster-beta"
+        "Absent in clustervis-vanilla, present in clustervis-kuberay"
       ]
     },
     {
-      "node_id": "control-plane/kube-system/coredns-589f44dc88-6vkv7",
-      "status": "version_skew",
-      "source_version": "v1.14.2",
-      "target_version": "v1.13.1",
-      "source_image": "registry.k8s.io/coredns/coredns:v1.14.2",
-      "target_image": "registry.k8s.io/coredns/coredns:v1.13.1",
+      "node_id": "pod/default/rayservice-qwen-2-5-3b-head",
+      "status": "added",
+      "source_version": null,
+      "target_version": "ray-2.56.0 (K8s Events=ON)",
+      "source_image": null,
+      "target_image": "registry.k8s.io/pause:3.9",
       "source_digest": null,
-      "target_digest": null,
+      "target_digest": "sha256:7031c1b283388d2c2e09b57badb803c05ebed362dc88d84b480cc47f72a21097",
       "diff_details": [
-        "Version skew: 'v1.14.2' vs 'v1.13.1'",
-        "Image tag drift: 'registry.k8s.io/coredns/coredns:v1.14.2' vs 'registry.k8s.io/coredns/coredns:v1.13.1'"
+        "Absent in clustervis-vanilla, present in clustervis-kuberay"
       ]
     },
     {
-      "node_id": "control-plane/kube-system/coredns-589f44dc88-tn4zj",
-      "status": "version_skew",
-      "source_version": "v1.14.2",
-      "target_version": "v1.13.1",
-      "source_image": "registry.k8s.io/coredns/coredns:v1.14.2",
-      "target_image": "registry.k8s.io/coredns/coredns:v1.13.1",
+      "node_id": "pod/kueue-system/kueue-controller-manager",
+      "status": "added",
+      "source_version": null,
+      "target_version": "v0.10.2 (on-demand \u2192 spot-gpu)",
+      "source_image": null,
+      "target_image": "registry.k8s.io/pause:3.9",
       "source_digest": null,
-      "target_digest": null,
+      "target_digest": "sha256:7031c1b283388d2c2e09b57badb803c05ebed362dc88d84b480cc47f72a21097",
       "diff_details": [
-        "Version skew: 'v1.14.2' vs 'v1.13.1'",
-        "Image tag drift: 'registry.k8s.io/coredns/coredns:v1.14.2' vs 'registry.k8s.io/coredns/coredns:v1.13.1'"
+        "Absent in clustervis-vanilla, present in clustervis-kuberay"
       ]
     },
     {
-      "node_id": "control-plane/kube-system/etcd-cluster-alpha-control-plane",
-      "status": "version_skew",
-      "source_version": "3.6.8-0",
-      "target_version": "3.6.6-0",
-      "source_image": "registry.k8s.io/etcd:3.6.8-0",
-      "target_image": "registry.k8s.io/etcd:3.6.6-0",
+      "node_id": "pod/default/llm-d-body-based-router",
+      "status": "added",
+      "source_version": null,
+      "target_version": "v1.4.0 (ext-proc)",
+      "source_image": null,
+      "target_image": "registry.k8s.io/pause:3.9",
       "source_digest": null,
-      "target_digest": null,
+      "target_digest": "sha256:7031c1b283388d2c2e09b57badb803c05ebed362dc88d84b480cc47f72a21097",
       "diff_details": [
-        "Version skew: '3.6.8-0' vs '3.6.6-0'",
-        "Image tag drift: 'registry.k8s.io/etcd:3.6.8-0' vs 'registry.k8s.io/etcd:3.6.6-0'"
+        "Absent in clustervis-vanilla, present in clustervis-kuberay"
       ]
     },
     {
-      "node_id": "control-plane/kube-system/kindnet-j4v8g",
-      "status": "identical",
-      "source_version": "v20260820-69b56db7",
-      "target_version": "v20260820-69b56db7",
-      "source_image": "docker.io/kindest/kindnetd:v20260820-69b56db7",
-      "target_image": "docker.io/kindest/kindnetd:v20260820-69b56db7",
-      "source_digest": null,
-      "target_digest": null,
-      "diff_details": []
-    },
-    {
-      "node_id": "control-plane/kube-system/kube-apiserver-cluster-alpha-control-plane",
-      "status": "version_skew",
-      "source_version": "v1.36.4",
-      "target_version": "v1.35.8",
-      "source_image": "registry.k8s.io/kube-apiserver-amd64:v1.36.4",
-      "target_image": "registry.k8s.io/kube-apiserver-amd64:v1.35.8",
-      "source_digest": "sha256:2123d119ca32eb19622df2e6279e27bc028d2c33d0e4afb46f197ca134e5f687",
-      "target_digest": "sha256:8e41799cf8c3df55aa00caa3e0fca38e93616e3932cb027b84b49d668d5c5b3e",
-      "diff_details": [
-        "Version skew: 'v1.36.4' vs 'v1.35.8'",
-        "Image tag drift: 'registry.k8s.io/kube-apiserver-amd64:v1.36.4' vs 'registry.k8s.io/kube-apiserver-amd64:v1.35.8'",
-        "Image digest skew: sha256:2123d119c... vs sha256:8e41799cf..."
-      ]
-    },
-    {
-      "node_id": "kind-cluster-alpha/client-crd-watcher",
-      "status": "identical",
-      "source_version": "v1.0.0",
-      "target_version": "v1.0.0",
+      "node_id": "ingress/default/gke-inference-gateway",
+      "status": "added",
+      "source_version": null,
+      "target_version": "v1.4.0",
       "source_image": null,
       "target_image": null,
       "source_digest": null,
       "target_digest": null,
-      "diff_details": []
+      "diff_details": [
+        "Absent in clustervis-vanilla, present in clustervis-kuberay"
+      ]
     },
     {
-      "node_id": "kind-cluster-alpha/client-kubectl",
-      "status": "identical",
-      "source_version": "v1.31.0",
-      "target_version": "v1.31.0",
+      "node_id": "pod/default/llm-d-epp-gemma-2b-it",
+      "status": "added",
+      "source_version": null,
+      "target_version": "v1.4.0 (InferencePool: gemma-2b-it)",
       "source_image": null,
-      "target_image": null,
+      "target_image": "registry.k8s.io/pause:3.9",
       "source_digest": null,
-      "target_digest": null,
-      "diff_details": []
+      "target_digest": "sha256:7031c1b283388d2c2e09b57badb803c05ebed362dc88d84b480cc47f72a21097",
+      "diff_details": [
+        "Absent in clustervis-vanilla, present in clustervis-kuberay"
+      ]
     },
     {
-      "node_id": "node/cluster-alpha-control-plane/containerd",
+      "node_id": "pod/default/llm-d-epp-qwen-2-5-3b",
+      "status": "added",
+      "source_version": null,
+      "target_version": "v1.4.0 (InferencePool: qwen-2.5-3b)",
+      "source_image": null,
+      "target_image": "registry.k8s.io/pause:3.9",
+      "source_digest": null,
+      "target_digest": "sha256:7031c1b283388d2c2e09b57badb803c05ebed362dc88d84b480cc47f72a21097",
+      "diff_details": [
+        "Absent in clustervis-vanilla, present in clustervis-kuberay"
+      ]
+    },
+    {
+      "node_id": "client/crd-watcher",
       "status": "identical",
-      "source_version": "v1.7.20",
-      "target_version": "v1.7.20",
+      "source_version": "v1.36.4-gke.1495000",
+      "target_version": "v1.36.4-gke.1495000",
       "source_image": null,
       "target_image": null,
       "source_digest": null,
@@ -123,111 +212,169 @@
       "diff_details": []
     },
     {
-      "node_id": "node/cluster-alpha-control-plane/kubelet",
-      "status": "version_skew",
-      "source_version": "v1.36.4",
-      "target_version": "v1.35.8",
-      "source_image": null,
-      "target_image": null,
-      "source_digest": null,
-      "target_digest": null,
-      "diff_details": [
-        "Version skew: 'v1.36.4' vs 'v1.35.8'"
-      ]
-    },
-    {
-      "node_id": "node/cluster-alpha-control-plane",
-      "status": "version_skew",
-      "source_version": "v1.36.4",
-      "target_version": "v1.35.8",
-      "source_image": null,
-      "target_image": null,
-      "source_digest": null,
-      "target_digest": null,
-      "diff_details": [
-        "Version skew: 'v1.36.4' vs 'v1.35.8'"
-      ]
-    },
-    {
-      "node_id": "pod/local-path-storage/local-path-provisioner-56c4685b7c-vr6sh",
+      "node_id": "client/kubectl-cli",
       "status": "identical",
-      "source_version": "v20260820-69b56db7",
-      "target_version": "v20260820-69b56db7",
-      "source_image": "docker.io/kindest/local-path-provisioner:v20260820-69b56db7",
-      "target_image": "docker.io/kindest/local-path-provisioner:v20260820-69b56db7",
+      "source_version": "v1.36.4-gke.1495000",
+      "target_version": "v1.36.4-gke.1495000",
+      "source_image": null,
+      "target_image": null,
       "source_digest": null,
       "target_digest": null,
       "diff_details": []
     },
     {
-      "node_id": "pod/workloads/postgres-primary-0",
-      "status": "version_skew",
-      "source_version": "18.6",
-      "target_version": "17.11",
-      "source_image": "docker.io/library/postgres:18.6",
-      "target_image": "docker.io/library/postgres:17.11",
-      "source_digest": "sha256:5a5a84b19854a9ffaa54082c166ff4ec27473a361e496e5ea167f298f2da9722",
-      "target_digest": "sha256:d74eeac9a635390a49bc21bd49fccd973de707e2a53a76ac49b552b8712ec46f",
-      "diff_details": [
-        "Version skew: '18.6' vs '17.11'",
-        "Image tag drift: 'docker.io/library/postgres:18.6' vs 'docker.io/library/postgres:17.11'",
-        "Image digest skew: sha256:5a5a84b19... vs sha256:d74eeac9a..."
-      ]
-    },
-    {
-      "node_id": "pod/workloads/postgres-replica-0",
-      "status": "missing",
-      "source_version": "18.6",
-      "target_version": null,
-      "source_image": "docker.io/library/postgres:18.6",
+      "node_id": "node/worker-1/containerd",
+      "status": "identical",
+      "source_version": "v1.7.22",
+      "target_version": "v1.7.22",
+      "source_image": null,
       "target_image": null,
-      "source_digest": "sha256:5a5a84b19854a9ffaa54082c166ff4ec27473a361e496e5ea167f298f2da9722",
+      "source_digest": null,
       "target_digest": null,
-      "diff_details": [
-        "Present in kind-cluster-alpha, absent in kind-cluster-beta"
-      ]
+      "diff_details": []
     },
     {
-      "node_id": "pod/workloads/postgres-replica-1",
-      "status": "missing",
-      "source_version": "18.6",
-      "target_version": null,
-      "source_image": "docker.io/library/postgres:18.6",
+      "node_id": "node/worker-2/containerd",
+      "status": "identical",
+      "source_version": "v1.7.22",
+      "target_version": "v1.7.22",
+      "source_image": null,
       "target_image": null,
-      "source_digest": "sha256:5a5a84b19854a9ffaa54082c166ff4ec27473a361e496e5ea167f298f2da9722",
+      "source_digest": null,
       "target_digest": null,
+      "diff_details": []
+    },
+    {
+      "node_id": "node/worker-1/kubelet",
+      "status": "identical",
+      "source_version": "v1.36.4-gke.1495000",
+      "target_version": "v1.36.4-gke.1495000",
+      "source_image": null,
+      "target_image": null,
+      "source_digest": null,
+      "target_digest": null,
+      "diff_details": []
+    },
+    {
+      "node_id": "node/worker-2/kubelet",
+      "status": "identical",
+      "source_version": "v1.36.4-gke.1495000",
+      "target_version": "v1.36.4-gke.1495000",
+      "source_image": null,
+      "target_image": null,
+      "source_digest": null,
+      "target_digest": null,
+      "diff_details": []
+    },
+    {
+      "node_id": "node/worker-1",
+      "status": "identical",
+      "source_version": "v1.36.4-gke.1495000",
+      "target_version": "v1.36.4-gke.1495000",
+      "source_image": null,
+      "target_image": null,
+      "source_digest": null,
+      "target_digest": null,
+      "diff_details": []
+    },
+    {
+      "node_id": "node/worker-2",
+      "status": "identical",
+      "source_version": "v1.36.4-gke.1495000",
+      "target_version": "v1.36.4-gke.1495000",
+      "source_image": null,
+      "target_image": null,
+      "source_digest": null,
+      "target_digest": null,
+      "diff_details": []
+    },
+    {
+      "node_id": "pod/clustervis-system/clustervis-operator",
+      "status": "identical",
+      "source_version": "3.11-slim",
+      "target_version": "3.11-slim",
+      "source_image": "python:3.11-slim",
+      "target_image": "python:3.11-slim",
+      "source_digest": "sha256:0dd364ba7e10242f07755449e3a3d0e35f9efd987952737b90def6709ab0c5ce",
+      "target_digest": "sha256:0dd364ba7e10242f07755449e3a3d0e35f9efd987952737b90def6709ab0c5ce",
+      "diff_details": []
+    },
+    {
+      "node_id": "pod/default/vllm-gemma-2b-it-worker-1",
+      "status": "added",
+      "source_version": null,
+      "target_version": "vllm-0.7.3 (gemma-2b-it / on-demand-gpu)",
+      "source_image": null,
+      "target_image": "registry.k8s.io/pause:3.9",
+      "source_digest": null,
+      "target_digest": "sha256:7031c1b283388d2c2e09b57badb803c05ebed362dc88d84b480cc47f72a21097",
       "diff_details": [
-        "Present in kind-cluster-alpha, absent in kind-cluster-beta"
+        "Absent in clustervis-vanilla, present in clustervis-kuberay"
       ]
     },
     {
-      "node_id": "pod/workloads/redis-cluster-6587c5bb48-rshcr",
-      "status": "version_skew",
-      "source_version": "8.10.2",
-      "target_version": "7.4.2",
-      "source_image": "docker.io/library/redis:8.10.2",
-      "target_image": "docker.io/library/redis:7.4.2",
-      "source_digest": "sha256:6f81e8915c60b065a524e6967e0ad1c639ba6efa84d669f823683ea04d9150ee",
-      "target_digest": "sha256:fbdbaea47b9ae4ecc2082ecdb4e1cea81e32176ffb1dcf643d422ad07427e5d9",
+      "node_id": "pod/default/vllm-gemma-2b-it-worker-2",
+      "status": "added",
+      "source_version": null,
+      "target_version": "vllm-0.7.3 (gemma-2b-it / on-demand-gpu)",
+      "source_image": null,
+      "target_image": "registry.k8s.io/pause:3.9",
+      "source_digest": null,
+      "target_digest": "sha256:7031c1b283388d2c2e09b57badb803c05ebed362dc88d84b480cc47f72a21097",
       "diff_details": [
-        "Version skew: '8.10.2' vs '7.4.2'",
-        "Image tag drift: 'docker.io/library/redis:8.10.2' vs 'docker.io/library/redis:7.4.2'",
-        "Image digest skew: sha256:6f81e8915... vs sha256:fbdbaea47..."
+        "Absent in clustervis-vanilla, present in clustervis-kuberay"
       ]
     },
     {
-      "node_id": "pod/workloads/redis-cluster-6587c5bb48-wvv9g",
-      "status": "version_skew",
-      "source_version": "8.10.2",
-      "target_version": "7.4.2",
-      "source_image": "docker.io/library/redis:8.10.2",
-      "target_image": "docker.io/library/redis:7.4.2",
-      "source_digest": "sha256:6f81e8915c60b065a524e6967e0ad1c639ba6efa84d669f823683ea04d9150ee",
-      "target_digest": "sha256:fbdbaea47b9ae4ecc2082ecdb4e1cea81e32176ffb1dcf643d422ad07427e5d9",
+      "node_id": "pod/default/vllm-qwen-2-5-3b-ondemand-1",
+      "status": "added",
+      "source_version": null,
+      "target_version": "vllm-0.7.3 (qwen-2.5-3b / on-demand-gpu)",
+      "source_image": null,
+      "target_image": "registry.k8s.io/pause:3.9",
+      "source_digest": null,
+      "target_digest": "sha256:7031c1b283388d2c2e09b57badb803c05ebed362dc88d84b480cc47f72a21097",
       "diff_details": [
-        "Version skew: '8.10.2' vs '7.4.2'",
-        "Image tag drift: 'docker.io/library/redis:8.10.2' vs 'docker.io/library/redis:7.4.2'",
-        "Image digest skew: sha256:6f81e8915... vs sha256:fbdbaea47..."
+        "Absent in clustervis-vanilla, present in clustervis-kuberay"
+      ]
+    },
+    {
+      "node_id": "pod/default/vllm-qwen-2-5-3b-ondemand-2",
+      "status": "added",
+      "source_version": null,
+      "target_version": "vllm-0.7.3 (qwen-2.5-3b / on-demand-gpu)",
+      "source_image": null,
+      "target_image": "registry.k8s.io/pause:3.9",
+      "source_digest": null,
+      "target_digest": "sha256:7031c1b283388d2c2e09b57badb803c05ebed362dc88d84b480cc47f72a21097",
+      "diff_details": [
+        "Absent in clustervis-vanilla, present in clustervis-kuberay"
+      ]
+    },
+    {
+      "node_id": "pod/default/vllm-qwen-2-5-3b-spot-burst-1",
+      "status": "added",
+      "source_version": null,
+      "target_version": "vllm-0.7.3 (qwen-2.5-3b / spot-gpu burst)",
+      "source_image": null,
+      "target_image": "registry.k8s.io/pause:3.9",
+      "source_digest": null,
+      "target_digest": "sha256:7031c1b283388d2c2e09b57badb803c05ebed362dc88d84b480cc47f72a21097",
+      "diff_details": [
+        "Absent in clustervis-vanilla, present in clustervis-kuberay"
+      ]
+    },
+    {
+      "node_id": "pod/default/vllm-qwen-2-5-3b-spot-burst-2",
+      "status": "added",
+      "source_version": null,
+      "target_version": "vllm-0.7.3 (qwen-2.5-3b / spot-gpu burst)",
+      "source_image": null,
+      "target_image": "registry.k8s.io/pause:3.9",
+      "source_digest": null,
+      "target_digest": "sha256:7031c1b283388d2c2e09b57badb803c05ebed362dc88d84b480cc47f72a21097",
+      "diff_details": [
+        "Absent in clustervis-vanilla, present in clustervis-kuberay"
       ]
     }
   ],

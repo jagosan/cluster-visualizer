@@ -182,7 +182,7 @@ class ClusterVisualizerHandler(BaseHTTPRequestHandler):
         """Route GET requests."""
         path = self.path.split("?")[0]  # Strip query params
 
-        if path == "/api/v1/healthz":
+        if path in ("/api/v1/healthz", "/healthz"):
             self._handle_healthz()
         elif path in ["/api/v1/topology", "/api/v1/topology/snapshot", "/api/v1/topology/stream"]:
             if not self._check_auth():
@@ -582,7 +582,7 @@ def create_server(
     # Initialize Authenticator
     auth_type = os.environ.get("CLUSTERVIS_AUTH_TYPE", "none")
     authenticator = None
-    if Authenticator is not None:
+    if Authenticator is not None and auth_type.lower() not in ("", "none", "disabled", "false"):
         try:
             authenticator = Authenticator(mode=auth_type)
         except Exception as e:
@@ -660,14 +660,28 @@ def main() -> None:
     parser.add_argument(
         "--interval",
         type=float,
-        default=10.0,
-        help="Poll interval for topology updates in seconds (default: 10.0)",
+        default=float(os.environ.get("CLUSTERVIS_EXPORT_INTERVAL_SECONDS", "2.0")),
+        help="Poll interval for topology updates in seconds (default: 2.0)",
+    )
+    parser.add_argument(
+        "--context",
+        type=str,
+        default=os.environ.get("CLUSTERVIS_CONTEXT", ""),
+        help="Kubernetes context name to poll (empty for in-cluster ServiceAccount)",
+    )
+    parser.add_argument(
+        "--cluster-name",
+        type=str,
+        default=os.environ.get("CLUSTERVIS_CLUSTER_NAME", "in-cluster"),
+        help="Cluster display name in metadata",
     )
 
     args = parser.parse_args()
+    if args.context or os.environ.get("CLUSTERVIS_REAL_MODE", "").lower() in ("1", "true", "yes"):
+        args.mock = False
 
     # Create controller
-    controller = TopologyController()
+    controller = TopologyController(cluster_name=args.cluster_name, context_name=args.context)
     controller.start(mock=args.mock, poll_interval=args.interval)
 
     # Create server

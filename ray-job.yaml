@@ -1,0 +1,72 @@
+apiVersion: ray.io/v1
+kind: RayJob
+metadata:
+  name: rayjob-monte-carlo
+  namespace: default
+spec:
+  entrypoint: |
+    python3 -c "
+    import ray, time, math, random
+    ray.init()
+    print('Connected to Ray cluster! Resources:', ray.cluster_resources())
+
+    @ray.remote
+    def estimate_pi_chunk(samples: int, wave: int) -> float:
+        inside = 0
+        for _ in range(samples):
+            x, y = random.random(), random.random()
+            if x * x + y * y <= 1.0:
+                inside += 1
+        time.sleep(3.0)
+        return 4.0 * inside / samples
+
+    for wave in range(1, 16):
+        futures = [estimate_pi_chunk.remote(250_000, wave) for _ in range(8)]
+        results = ray.get(futures)
+        pi_est = sum(results) / len(results)
+        print(f'[Wave {wave}/15] Distributed Ray Monte Carlo Pi Estimate = {pi_est:.6f}')
+    print('RayJob completed successfully!')
+    "
+  shutdownAfterJobFinishes: false
+  rayClusterSpec:
+    rayVersion: '2.9.0'
+    headGroupSpec:
+      rayStartParams:
+        dashboard-host: '0.0.0.0'
+      template:
+        spec:
+          containers:
+            - name: ray-head
+              image: rayproject/ray:2.9.0
+              ports:
+                - containerPort: 6379
+                  name: gcs-server
+                - containerPort: 8265
+                  name: dashboard
+                - containerPort: 10001
+                  name: client
+              resources:
+                limits:
+                  cpu: "1"
+                  memory: 2Gi
+                requests:
+                  cpu: 500m
+                  memory: 1Gi
+    workerGroupSpecs:
+      - replicas: 2
+        minReplicas: 1
+        maxReplicas: 4
+        groupName: compute-workers
+        rayStartParams: {}
+        template:
+          spec:
+            containers:
+              - name: ray-worker
+                image: rayproject/ray:2.9.0
+                resources:
+                  limits:
+                    cpu: "1"
+                    memory: 2Gi
+                  requests:
+                    cpu: 500m
+                    memory: 1Gi

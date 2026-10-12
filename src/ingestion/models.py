@@ -3,7 +3,107 @@
 from __future__ import annotations
 from enum import Enum
 from typing import Any, Dict, List, Literal, Optional
-from pydantic import BaseModel, Field
+try:
+    from pydantic import BaseModel, Field
+except ImportError:
+    import copy
+    import json
+
+    class _FieldInfo:
+        def __init__(self, default=None, default_factory=None, alias=None, **kwargs):
+            self.default = default
+            self.default_factory = default_factory
+            self.alias = alias
+
+    def Field(default=None, *, default_factory=None, alias=None, **kwargs):
+        return _FieldInfo(default=default, default_factory=default_factory, alias=alias)
+
+    class BaseModel:
+        def __init__(self, **kwargs):
+            cls = self.__class__
+            annotations = {}
+            for base in reversed(cls.__mro__):
+                annotations.update(getattr(base, "__annotations__", {}))
+            alias_map = {}
+            for k in list(annotations.keys()) + [a for a in dir(cls) if not a.startswith("_")]:
+                v = getattr(cls, k, None)
+                if isinstance(v, _FieldInfo) and v.alias:
+                    alias_map[v.alias] = k
+            mapped = {}
+            for k, v in kwargs.items():
+                mapped[alias_map.get(k, k)] = v
+            for k in annotations:
+                val = getattr(cls, k, None)
+                if k in mapped:
+                    setattr(self, k, self._coerce_field(k, mapped.pop(k), annotations.get(k)))
+                elif isinstance(val, _FieldInfo):
+                    if val.default_factory is not None:
+                        setattr(self, k, val.default_factory())
+                    else:
+                        setattr(self, k, copy.deepcopy(val.default))
+                elif hasattr(cls, k):
+                    setattr(self, k, copy.deepcopy(val))
+                else:
+                    setattr(self, k, None)
+            for k, v in mapped.items():
+                setattr(self, k, v)
+
+        def _coerce_field(self, name, value, ann):
+            if value is None:
+                return None
+            ann_str = str(ann)
+            for g_cls in globals().values():
+                if isinstance(g_cls, type) and issubclass(g_cls, Enum) and g_cls is not Enum:
+                    if g_cls.__name__ in ann_str and not isinstance(value, g_cls):
+                        return g_cls(value)
+                if isinstance(g_cls, type) and issubclass(g_cls, BaseModel) and g_cls is not BaseModel:
+                    if g_cls.__name__ in ann_str:
+                        if isinstance(value, dict):
+                            return g_cls(**value)
+                        elif isinstance(value, list):
+                            return [g_cls(**x) if isinstance(x, dict) else x for x in value]
+            return value
+
+        def __eq__(self, other):
+            if not isinstance(other, self.__class__):
+                return False
+            return self.model_dump() == other.model_dump()
+
+        def model_dump(self, by_alias=False, mode=None, **kwargs):
+            cls = self.__class__
+            def _conv(v):
+                if isinstance(v, BaseModel):
+                    return v.model_dump(by_alias=by_alias, mode=mode)
+                if isinstance(v, Enum):
+                    return v.value
+                if isinstance(v, list):
+                    return [_conv(x) for x in v]
+                if isinstance(v, dict):
+                    return {k: _conv(val) for k, val in v.items()}
+                return v
+            out = {}
+            for k, v in self.__dict__.items():
+                key = k
+                if by_alias:
+                    f = getattr(cls, k, None)
+                    if isinstance(f, _FieldInfo) and f.alias:
+                        key = f.alias
+                out[key] = _conv(v)
+            return out
+
+        def model_dump_json(self, indent=None, by_alias=False, **kwargs):
+            return json.dumps(self.model_dump(by_alias=by_alias), indent=indent)
+
+        @classmethod
+        def model_validate(cls, data):
+            if isinstance(data, cls):
+                return data
+            return cls(**data)
+
+        @classmethod
+        def model_validate_json(cls, text):
+            return cls.model_validate(json.loads(text))
+
 
 
 class CloudProvider(str, Enum):

@@ -1,7 +1,7 @@
-# Default values for clustervis
+# Default values for clustervis (configured for GKE in-cluster execution)
 image:
-  repository: ghcr.io/jagosan/clustervis-operator
-  tag: "v1.0.0"
+  repository: python
+  tag: "3.11-slim"
   pullPolicy: IfNotPresent
 
 operator:
@@ -14,20 +14,18 @@ operator:
       cpu: 20m
       memory: 48Mi
   config:
-    exportIntervalSeconds: 5
-    defaultLayoutMode: "skyscraper" # "skyscraper" | "latency-force"
+    exportIntervalSeconds: 2
+    defaultLayoutMode: "skyscraper"
     scrubSecrets: true
     scrubConfigMaps: true
     excludedNamespaces:
-      - kube-system
-      - clustervis-system
-      - cert-manager
-      - local-path-storage
+      - kube-node-lease
+      - kube-public
 
 probe:
   enabled: true
-  repository: ghcr.io/jagosan/clustervis-probe
-  tag: "v1.0.0"
+  repository: python
+  tag: "3.11-slim"
   probeIntervalSeconds: 3
   probeTimeoutMs: 500
   sampleTargetLimit: 20
@@ -42,13 +40,13 @@ probe:
   resources:
     limits:
       cpu: 50m
-      memory: 32Mi
+      memory: 48Mi
     requests:
       cpu: 5m
-      memory: 12Mi
+      memory: 16Mi
 
 telemetry:
-  mode: "probe" # "probe" | "cilium" | "prometheus" | "synthetic"
+  mode: "probe"
   prometheus:
     url: "http://prometheus-k8s.monitoring.svc:9090"
     latencyQuery: 'histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket[2m])) by (le, source_workload, destination_workload))'
@@ -56,8 +54,8 @@ telemetry:
     hubbleRelayAddress: "hubble-relay.kube-system.svc:4245"
 
 auth:
-  enabled: true
-  type: "token" # "token" (K8s Bearer Token) | "oauth2-proxy" | "none"
+  enabled: false
+  type: "none"
   tokenValidation:
     audience: "clustervis"
     requireClusterAdmin: false

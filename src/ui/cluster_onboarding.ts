@@ -37,6 +37,7 @@ export interface LiveClusterConfig {
   token?: string;
   namespace?: string;
   enableLatencyProbe: boolean;
+  targetSlot?: ViewportSlotId;
 }
 
 /** Viewport slots offered for one-click sample hydration. */
@@ -487,6 +488,7 @@ export class ClusterOnboardingModal {
           authType: tokenInput.value.trim() ? 'token' : 'none',
           namespace: nsInput.value.trim() || 'clustervis-system',
           enableLatencyProbe: true,
+          targetSlot: this.selectedSlot,
         };
         if (!config.apiUrl) {
           probe.set('err', 'Operator URL is required.');
@@ -502,6 +504,31 @@ export class ClusterOnboardingModal {
       })();
     });
 
+    // Quick-connect presets for live GKE clusters in jmacleod-42
+    const quickBar = document.createElement('div');
+    quickBar.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 12px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.3);border-radius:8px;';
+    const quickLabel = document.createElement('span');
+    quickLabel.style.cssText = 'font-size:11px;font-weight:600;color:#10b981;text-transform:uppercase;letter-spacing:0.05em;';
+    quickLabel.textContent = '⚡ GKE Live Clusters (jmacleod-42):';
+    quickBar.appendChild(quickLabel);
+
+    const btnVanilla = this.btn('🟢 Connect clustervis-vanilla → Viewport A', 'Stream clustervis-vanilla (us-central1-a) into Viewport A');
+    const btnKuberay = this.btn('🟣 Connect clustervis-kuberay → Viewport B', 'Stream clustervis-kuberay (us-central1-a, KubeRay) into Viewport B');
+    btnVanilla.addEventListener('click', () => {
+      this.selectedSlot = 'a';
+      nameInput.value = 'clustervis-vanilla';
+      urlInput.value = `${window.location.origin}/clusters/vanilla`;
+      connectBtn.click();
+    });
+    btnKuberay.addEventListener('click', () => {
+      this.selectedSlot = 'b';
+      nameInput.value = 'clustervis-kuberay';
+      urlInput.value = `${window.location.origin}/clusters/kuberay`;
+      connectBtn.click();
+    });
+    quickBar.appendChild(btnVanilla);
+    quickBar.appendChild(btnKuberay);
+    pane.appendChild(quickBar);
     pane.appendChild(cmdRow);
     pane.appendChild(cmdBox);
     pane.appendChild(nameInput);
@@ -565,6 +592,7 @@ export class ClusterOnboardingModal {
         authType: localProxy ? 'kubeconfig-proxy' : (tokenInput.value.trim() ? 'token' : 'none'),
         namespace: undefined,
         enableLatencyProbe: false,
+        targetSlot: this.selectedSlot,
       };
       void (async () => {
         // TASK-CV-1103: Mode B extracts the whole topology client-side —

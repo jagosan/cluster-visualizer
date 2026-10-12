@@ -34,6 +34,11 @@ spec:
         - name: probe
           image: "{{ .Values.probe.repository }}:{{ .Values.probe.tag }}"
           imagePullPolicy: {{ default .Values.image.pullPolicy .Values.probe.pullPolicy }}
+          command: ["python3", "/app/probe.py"]
+          volumeMounts:
+            - name: runtime
+              mountPath: /app
+              readOnly: true
           ports:
             - name: http-metrics
               containerPort: 9102
@@ -60,7 +65,7 @@ spec:
           securityContext:
             runAsNonRoot: true
             allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: true
+            readOnlyRootFilesystem: false
             capabilities:
               drop:
                 - ALL
@@ -82,4 +87,8 @@ spec:
             failureThreshold: 3
           resources:
             {{- toYaml .Values.probe.resources | nindent 12 }}
+      volumes:
+        - name: runtime
+          configMap:
+            name: {{ include "clustervis.fullname" . }}-runtime
 {{- end }}
