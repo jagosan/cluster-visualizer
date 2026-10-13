@@ -23,6 +23,10 @@ export interface MachineShapeData {
 /** Internal normalized chassis placement spec. */
 interface ChassisSpec {
   name: string;
+  instanceType?: string;
+  computeClass?: string;
+  vcpus?: number;
+  memoryGib?: number;
   width: number;
   depth: number;
   capacityType: 'spot' | 'on-demand';
@@ -389,6 +393,44 @@ export class LayerTrayManager {
         chassisGroup.add(bay);
       }
 
+      // EK VM Runtime Vertical Node Resize visualization:
+      // Show the pre-resize inner baseline footprint (4.6w x 4.8d) + glowing cyan/emerald
+      // outer expansion frame when an EK VM has upsized in-place at runtime!
+      const isEkResized = Boolean(
+        spec.name.toLowerCase().includes('ek-resized') ||
+          spec.name.toLowerCase().includes('resized') ||
+          (spec.instanceType?.toLowerCase().includes('ek-standard-') && (spec.vcpus ?? 0) >= 48)
+      );
+      if (isEkResized) {
+        const innerGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(4.6, chassisHeight + 0.04, 4.8));
+        const innerMat = new THREE.LineBasicMaterial({
+          color: 0x38bdf8,
+          transparent: true,
+          opacity: 0.75,
+        });
+        const innerWire = new THREE.LineSegments(innerGeo, innerMat);
+        innerWire.position.y = 0.03;
+        chassisGroup.add(innerWire);
+
+        const outerExpandGeo = new THREE.EdgesGeometry(
+          new THREE.BoxGeometry(spec.width + 0.16, chassisHeight + 0.12, spec.depth + 0.16)
+        );
+        const outerExpandMat = new THREE.LineBasicMaterial({
+          color: 0x10b981,
+          transparent: true,
+          opacity: 0.95,
+        });
+        const outerExpandWire = new THREE.LineSegments(outerExpandGeo, outerExpandMat);
+        outerExpandWire.position.y = 0.04;
+        chassisGroup.add(outerExpandWire);
+      }
+
+      const badge = this.createChassisBadge(spec, isEkResized);
+      if (badge) {
+        badge.position.set(0, chassisHeight / 2 + 0.34, spec.depth / 2 + 0.25);
+        chassisGroup.add(badge);
+      }
+
       this.scene.add(chassisGroup);
       this.trays.push(chassisGroup);
       // TASK-CV-1205: chassis plates follow the worker deck's spring offset
@@ -528,6 +570,10 @@ export class LayerTrayManager {
       const { width, depth } = chassisFootprint(m);
       return {
         name: m.node_name,
+        instanceType: m.instance_type,
+        computeClass: m.compute_class,
+        vcpus: m.vcpus,
+        memoryGib: m.memory_gib,
         width,
         depth,
         capacityType: m.capacity_type === 'spot' ? 'spot' : 'on-demand',
@@ -535,6 +581,66 @@ export class LayerTrayManager {
         acceleratorCount: Math.max(m.accelerator_count ?? 0, 0),
       };
     });
+  }
+
+  private createChassisBadge(spec: ChassisSpec, isEkResized: boolean): THREE.Sprite | null {
+    if (typeof document === 'undefined' || !spec.instanceType) return null;
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 96;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+
+    const isAutoscaledNode = spec.name.toLowerCase().includes('worker-3');
+    ctx.fillStyle = isEkResized
+      ? 'rgba(6, 78, 59, 0.90)'
+      : isAutoscaledNode
+        ? 'rgba(69, 26, 3, 0.90)'
+        : 'rgba(15, 23, 42, 0.86)';
+    ctx.strokeStyle = isEkResized
+      ? '#10b981'
+      : isAutoscaledNode
+        ? '#f59e0b'
+        : spec.capacityType === 'spot'
+          ? '#f59e0b'
+          : '#22d3ee';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.roundRect(6, 6, 500, 84, 12);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 21px monospace';
+    ctx.fillStyle = isEkResized
+      ? '#6ee7b7'
+      : isAutoscaledNode
+        ? '#fde68a'
+        : '#e2e8f0';
+    const topLine = isEkResized
+      ? `⚡ EK VM RUNTIME RESIZE: ${spec.name.split(' ')[0]}`
+      : isAutoscaledNode
+        ? `⚡ AUTOSCALED NODE: ${spec.name.split(' ')[0]}`
+        : `${spec.name}`;
+    ctx.fillText(topLine.slice(0, 42), 256, 38);
+
+    ctx.font = 'bold 17px monospace';
+    ctx.fillStyle = isEkResized ? '#a7f3d0' : '#94a3b8';
+    const ccLabel = spec.computeClass ? ` • CC:${spec.computeClass}` : '';
+    const subLine = isEkResized
+      ? `${spec.instanceType} (16→${spec.vcpus ?? 48} vCPU / ${spec.memoryGib ?? 192}GiB${ccLabel})`
+      : `${spec.instanceType} (${spec.vcpus ?? 16} vCPU / ${spec.memoryGib ?? 64}GiB${ccLabel})`;
+    ctx.fillText(subLine.slice(0, 50), 256, 68);
+
+    const tex = new THREE.CanvasTexture(canvas);
+    const mat = new THREE.SpriteMaterial({
+      map: tex,
+      transparent: true,
+      depthTest: false,
+    });
+    const sprite = new THREE.Sprite(mat);
+    sprite.scale.set(3.8, 0.72, 1);
+    return sprite;
   }
 
   /**

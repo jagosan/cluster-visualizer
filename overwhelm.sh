@@ -45,9 +45,9 @@ else
   wait
   echo "✓ Overwhelm Surge active on both clusters!"
   echo "  • cv-kuberay (Viewport A): Unqueued batch stampede on 2 nodes -> floors heave apart (+6u ΔY, ~680ms p99)"
-  echo "  • cv-kuberay-kueue (Viewport B): Watch the 16-second ComputeClass + Cluster Autoscaler sequence:"
-  echo "      [0s–9s]   ft02 & ft03 held Inadmissible in Kueue Pallets + B1 Ghost Node (g2-standard-48) & Amber Tractor Beams"
-  echo "      [9s–13s]  Ghost Node ready -> Overhead Gantry Crane Lock & Spinning Amber Beacons (QuotaReserved)"
-  echo "      [13s–16s] High-Speed Emerald Mag-Rail Transit + Simultaneous Gang Deployment Burst"
-  echo "      [16s+]    Worker Deck scales out to 3 nodes (worker-3: g2-standard-48, 4x L4 GPU) + In-Place VPA Resizing (~10.4ms p99)"
+  echo "  • cv-kuberay-kueue (Viewport B): Watch Autopilot ComputeClass (EK VMs) + Cluster Autoscaler in action:"
+  echo "      [0s–6s]    ft02 & ft03 held Inadmissible in Kueue Pallets; CA starts resizing EK VM worker-2 & provisioning B1 Ghost Node worker-3"
+  echo "      [6s–11s]   ⚡ EK VM RUNTIME RESIZE: worker-2 expands in-place (ek-standard-16 -> ek-standard-48) & admits ft02! Meanwhile ft03 locks Gantry Crane (QuotaReserved)"
+  echo "      [11s–15s]  ⚡ HORIZONTAL SCALE-OUT: ft03 rides Emerald Mag-Rail onto newly provisioned worker-3 (ek-standard-32)"
+  echo "      [15s+]     Settled 3-node deck: worker-1 (16 vCPU) + EK-Resized worker-2 (48 vCPU) + Autoscaled worker-3 (32 vCPU)"
 fi

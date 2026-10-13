@@ -1,13 +1,22 @@
-# GKE Custom ComputeClass (Autopilot / Standard NAP + Cluster Autoscaler)
-# Automatically scales cv-kuberay-kueue vertically (up to g2-standard-48 with 4x NVIDIA L4 GPUs)
-# and horizontally (+1 worker-3 node) when Kueue workloads (ray-kueue-ft02 / ray-kueue-ft03)
-# arrive as Inadmissible due to spot-gpu quota exhaustion.
+# GKE Autopilot-Managed ComputeClass in Standard (EK VMs + Cluster Autoscaler)
+# Enables Autopilot ComputeClass mode (`spec.autopilot.enabled: true`) in GKE Standard:
+#   1. Runtime EK VM Vertical Node Resizing (`podFamily: general-purpose` -> `ek-standard-*` COCP VMs):
+#      Cluster Autoscaler dynamically upsizes existing EK VM nodes at runtime without workload
+#      disruption (shrinking `gke-system-balloon-pod`) before scaling out new nodes.
+#   2. Horizontal Node Auto-Provisioning (`nodePoolAutoCreation: enabled: true`):
+#      When existing EK VMs reach their max size ceiling, CA scales out new Spot nodes.
 apiVersion: cloud.google.com/v1
 kind: ComputeClass
 metadata:
   name: kueue-spot-burst-cc
 spec:
+  autopilot:
+    enabled: true
   priorities:
+    - podFamily: general-purpose
+      spot: true
+    - podFamily: general-purpose
+      spot: false
     - machineFamily: g2
       spot: true
       minCores: 24
@@ -15,19 +24,9 @@ spec:
       gpu:
         type: nvidia-l4
         count: 4
-    - machineFamily: g2
-      spot: false
-      minCores: 24
-      minMemoryGb: 96
-      gpu:
-        type: nvidia-l4
-        count: 2
-    - machineFamily: e2
-      spot: true
-      minCores: 4
   nodePoolAutoCreation:
     enabled: true
   whenUnsatisfiable: ScaleUpAnyway
   autoscalingPolicy:
-    consolidationDelayMinutes: 5
+    consolidationDelayMinutes: 1
     consolidationThreshold: 70
