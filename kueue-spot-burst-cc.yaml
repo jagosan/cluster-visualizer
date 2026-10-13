@@ -1,0 +1,33 @@
+# GKE Custom ComputeClass (Autopilot / Standard NAP + Cluster Autoscaler)
+# Automatically scales cv-kuberay-kueue vertically (up to g2-standard-48 with 4x NVIDIA L4 GPUs)
+# and horizontally (+1 worker-3 node) when Kueue workloads (ray-kueue-ft02 / ray-kueue-ft03)
+# arrive as Inadmissible due to spot-gpu quota exhaustion.
+apiVersion: cloud.google.com/v1
+kind: ComputeClass
+metadata:
+  name: kueue-spot-burst-cc
+spec:
+  priorities:
+    - machineFamily: g2
+      spot: true
+      minCores: 24
+      minMemoryGb: 96
+      gpu:
+        type: nvidia-l4
+        count: 4
+    - machineFamily: g2
+      spot: false
+      minCores: 24
+      minMemoryGb: 96
+      gpu:
+        type: nvidia-l4
+        count: 2
+    - machineFamily: e2
+      spot: true
+      minCores: 4
+  nodePoolAutoCreation:
+    enabled: true
+  whenUnsatisfiable: ScaleUpAnyway
+  autoscalingPolicy:
+    consolidationDelayMinutes: 5
+    consolidationThreshold: 70

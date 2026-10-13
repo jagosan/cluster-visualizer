@@ -74,6 +74,9 @@ class TopologyController:
         self.karpenter_node_claims: Dict[str, KarpenterNodeClaim] = {}
         # SPEC-09 §5.1-§5.3: Kueue Workload CRDs -> cargo containment pallets
         self.kueue_workloads: Dict[str, KueueWorkloadStatus] = {}
+        self.overwhelm_started_at: Optional[float] = None
+        self.last_surge_ts: Optional[str] = None
+        self.overwhelm_stage: int = 0
         self.listeners: List[queue.Queue] = []
         self.lock = threading.RLock()
         self.running = False
@@ -956,6 +959,43 @@ class TopologyController:
             for rp in raw_pods
         )
 
+        surge_ts = None
+        for rp in raw_pods:
+            rmeta = rp.get("metadata") or {}
+            rname = rmeta.get("name") or ""
+            if "ray-traffic-surge" in rname or "ray-kueue-ft02" in rname:
+                ranns = rmeta.get("annotations") or {}
+                if ranns.get("clustervis.io/surge-ts"):
+                    surge_ts = str(ranns["clustervis.io/surge-ts"])
+                    break
+                if surge_ts is None and rmeta.get("creationTimestamp"):
+                    surge_ts = str(rmeta["creationTimestamp"])
+
+        prev_overwhelm_stage = getattr(self, "overwhelm_stage", 0)
+        if not is_overwhelmed or not has_ai_stack:
+            self.overwhelm_started_at = None
+            self.last_surge_ts = None
+            self.overwhelm_stage = 0
+            cur_overwhelm_stage = 0
+        else:
+            if (
+                getattr(self, "overwhelm_started_at", None) is None
+                or (surge_ts and surge_ts != getattr(self, "last_surge_ts", None))
+            ):
+                self.overwhelm_started_at = time.time()
+                self.last_surge_ts = surge_ts
+                prev_overwhelm_stage = 0
+            elapsed_surge = time.time() - (self.overwhelm_started_at or time.time())
+            if elapsed_surge < 9.0:
+                cur_overwhelm_stage = 1
+            elif elapsed_surge < 13.0:
+                cur_overwhelm_stage = 2
+            elif elapsed_surge < 16.5:
+                cur_overwhelm_stage = 3
+            else:
+                cur_overwhelm_stage = 4
+            self.overwhelm_stage = cur_overwhelm_stage
+
         if has_ai_stack:
             new_shapes = {
                 "worker-1": MachineShape(
@@ -979,6 +1019,64 @@ class TopologyController:
                     accelerator_count=2,
                 ),
             }
+            if cur_overwhelm_stage == 4:
+                new_shapes["worker-3"] = MachineShape(
+                    node_name="worker-3 (ComputeClass: g2-standard-48-spot)",
+                    instance_type="g2-standard-48",
+                    compute_class="kueue-spot-burst-cc",
+                    vcpus=48,
+                    memory_gib=192.0,
+                    capacity_type="spot",
+                    zone="us-central1-a",
+                    accelerator_type="nvidia-l4",
+                    accelerator_count=4,
+                )
+                new_nodes["node/worker-3"] = NodeComponent(
+                    id="node/worker-3",
+                    layer="node",
+                    kind="Node",
+                    name="worker-3 (cc-g2-spot-48)",
+                    namespace="cluster",
+                    version=kube_ver,
+                    status="Healthy",
+                    metrics={
+                        "cpu_capacity": "48",
+                        "memory_capacity": "192Gi",
+                        "cpu_allocatable": "48",
+                        "memory_allocatable": "192Gi",
+                        "compute_class": "kueue-spot-burst-cc",
+                        "instance_type": "g2-standard-48",
+                        "accelerators": "4x nvidia-l4",
+                    },
+                    spatial=Spatial(asset_type="LayerTray_Worker"),
+                    raw_labels={
+                        "cloud.google.com/compute-class": "kueue-spot-burst-cc",
+                        "cloud.google.com/gke-spot": "true",
+                        "cloud.google.com/gke-accelerator": "nvidia-l4",
+                    },
+                )
+                new_nodes["node/worker-3/kubelet"] = NodeComponent(
+                    id="node/worker-3/kubelet",
+                    layer="node",
+                    kind="Kubelet",
+                    name="kubelet-worker-3",
+                    namespace="kube-system",
+                    version=kube_ver,
+                    status="Healthy",
+                    metrics={"component": "kubelet", "node": "worker-3 (cc-g2-spot-48)"},
+                    spatial=Spatial(asset_type="Cuboid_Kubelet"),
+                )
+                new_nodes["node/worker-3/containerd"] = NodeComponent(
+                    id="node/worker-3/containerd",
+                    layer="node",
+                    kind="Containerd",
+                    name="containerd-worker-3",
+                    namespace="kube-system",
+                    version="v1.7.22",
+                    status="Healthy",
+                    metrics={"runtime": "containerd", "node": "worker-3 (cc-g2-spot-48)"},
+                    spatial=Spatial(asset_type="Cuboid_Containerd"),
+                )
             new_nodes["ingress/default/gke-inference-gateway"] = NodeComponent(
                 id="ingress/default/gke-inference-gateway",
                 layer="ingress",
@@ -1148,25 +1246,53 @@ class TopologyController:
             elif "ray-kueue-ft02" in pname and "-head" in pname:
                 display_name = "ray-kueue-ft02-head"
                 pid = "pod/default/ray-kueue-ft02-head"
-                ver = "ray-2.9.0 (Queued by Kueue)" if has_ai_stack else "ray-2.9.0 (Unqueued Stampede!)"
+                if has_ai_stack:
+                    ver = (
+                        "ray-2.9.0 (Admitted on worker-3 / ComputeClass)"
+                        if cur_overwhelm_stage == 4
+                        else "ray-2.9.0 (Queued by Kueue)"
+                    )
+                else:
+                    ver = "ray-2.9.0 (Unqueued Stampede!)"
                 ft02_pod_uids.append(pid)
             elif "ray-kueue-ft02" in pname and "-worker" in pname:
                 ft02_w_idx += 1
                 display_name = f"ray-kueue-ft02-worker-{ft02_w_idx}"
                 pid = f"pod/default/ray-kueue-ft02-worker-{ft02_w_idx}"
-                ver = "ray-2.9.0 (Queued in Kueue Pallet)" if has_ai_stack else "ray-2.9.0 (Unqueued Batch Contention!)"
+                if has_ai_stack:
+                    ver = (
+                        "ray-2.9.0 (Admitted on worker-3 / In-Place VPA)"
+                        if cur_overwhelm_stage == 4
+                        else "ray-2.9.0 (Queued in Kueue Pallet)"
+                    )
+                else:
+                    ver = "ray-2.9.0 (Unqueued Batch Contention!)"
                 cpu_req, mem_req = 4.0, 16.0
                 ft02_pod_uids.append(pid)
             elif "ray-kueue-ft03" in pname and "-head" in pname:
                 display_name = "ray-kueue-ft03-head"
                 pid = "pod/default/ray-kueue-ft03-head"
-                ver = "ray-2.9.0 (Queued by Kueue)" if has_ai_stack else "ray-2.9.0 (Unqueued Stampede!)"
+                if has_ai_stack:
+                    ver = (
+                        "ray-2.9.0 (Admitted on worker-3 / ComputeClass)"
+                        if cur_overwhelm_stage == 4
+                        else "ray-2.9.0 (Queued by Kueue)"
+                    )
+                else:
+                    ver = "ray-2.9.0 (Unqueued Stampede!)"
                 ft03_pod_uids.append(pid)
             elif "ray-kueue-ft03" in pname and "-worker" in pname:
                 ft03_w_idx += 1
                 display_name = f"ray-kueue-ft03-worker-{ft03_w_idx}"
                 pid = f"pod/default/ray-kueue-ft03-worker-{ft03_w_idx}"
-                ver = "ray-2.9.0 (Queued in Kueue Pallet)" if has_ai_stack else "ray-2.9.0 (Unqueued Batch Contention!)"
+                if has_ai_stack:
+                    ver = (
+                        "ray-2.9.0 (Admitted on worker-3 / In-Place VPA)"
+                        if cur_overwhelm_stage == 4
+                        else "ray-2.9.0 (Queued in Kueue Pallet)"
+                    )
+                else:
+                    ver = "ray-2.9.0 (Unqueued Batch Contention!)"
                 cpu_req, mem_req = 4.0, 16.0
                 ft03_pod_uids.append(pid)
             elif "ray-traffic-surge" in pname:
@@ -1211,6 +1337,18 @@ class TopologyController:
                     current_replicas=2,
                     desired_replicas=4,
                     target_metric="spot-gpu burst + in-place VPA",
+                )
+            elif (
+                has_ai_stack
+                and cur_overwhelm_stage == 4
+                and ("ray-kueue-ft02-worker" in pname or "ray-kueue-ft03-worker" in pname)
+            ):
+                pod_autoscaling = AutoscalingStatus(
+                    has_vpa=True,
+                    vpa_target_cpu="12",
+                    vpa_target_memory="48Gi",
+                    is_resizing_in_place=True,
+                    target_metric="ComputeClass g2-standard-48 + in-place VPA",
                 )
             elif vpa_cpu or vpa_mem or has_resize_policy or labels.get("autoscaling.k8s.io/vpa-managed") == "true":
                 pod_autoscaling = AutoscalingStatus(
@@ -1264,7 +1402,11 @@ class TopologyController:
                 layer = "framework"
                 kind = "RayHead"
                 asset = "Framework_Ray"
-                if ("ray-kueue-ft02" in pname or "ray-kueue-ft03" in pname) and has_ai_stack:
+                if (
+                    ("ray-kueue-ft02" in pname or "ray-kueue-ft03" in pname)
+                    and has_ai_stack
+                    and cur_overwhelm_stage != 4
+                ):
                     pod_status = "Pending"
                     is_pending = True
                 else:
@@ -1281,7 +1423,11 @@ class TopologyController:
                 layer = "workload"
                 kind = "RayWorker"
                 asset = "Pod_Cylinder"
-                if ("ray-kueue-ft02" in pname or "ray-kueue-ft03" in pname) and has_ai_stack:
+                if (
+                    ("ray-kueue-ft02" in pname or "ray-kueue-ft03" in pname)
+                    and has_ai_stack
+                    and cur_overwhelm_stage != 4
+                ):
                     pod_status = "Pending"
                     is_pending = True
                 else:
@@ -1316,7 +1462,15 @@ class TopologyController:
                     "phase": phase,
                     "pending": is_pending,
                     "scheduled": not is_pending,
-                    "host_node": spec.get("nodeName"),
+                    "host_node": (
+                        "worker-3 (cc-g2-spot-48)"
+                        if (
+                            has_ai_stack
+                            and cur_overwhelm_stage == 4
+                            and ("ray-kueue-ft02" in pname or "ray-kueue-ft03" in pname)
+                        )
+                        else spec.get("nodeName")
+                    ),
                     "pod_ip": status.get("podIP"),
                     "kueue_flavor": labels.get("kueue.x-k8s.io/resource-flavor"),
                     "model": labels.get("llm-d.ai/model"),
@@ -1332,6 +1486,24 @@ class TopologyController:
             new_ids = set(new_nodes.keys())
             added_ids = sorted(new_ids - prev_ids)
             removed_ids = sorted(prev_ids - new_ids)
+
+            if has_ai_stack and cur_overwhelm_stage in (1, 2, 3) and (ft02_pod_uids or ft03_pod_uids):
+                self.karpenter_node_claims = {
+                    "worker-3 (ComputeClass: g2-standard-48-spot)": KarpenterNodeClaim(
+                        claim_name="worker-3 (ComputeClass: g2-standard-48-spot)",
+                        namespace="default",
+                        nodepool="kueue-spot-burst-cc",
+                        instance_type="g2-standard-48",
+                        capacity_type="spot",
+                        requested_cpu_cores=48.0,
+                        requested_memory_gib=192.0,
+                        requested_gpu_count=4,
+                        pending_pod_uids=list(ft02_pod_uids) + list(ft03_pod_uids),
+                        is_provisioned=(cur_overwhelm_stage >= 2),
+                    )
+                }
+            else:
+                self.karpenter_node_claims = {}
 
             if has_ai_stack:
                 self.kueue_workloads = {
@@ -1403,44 +1575,104 @@ class TopologyController:
                 )
 
             if has_ai_stack and ft02_pod_uids:
-                self.kueue_workloads["wl-kueue-lora-ft02"] = KueueWorkloadStatus(
-                    workload_uid="wl-kueue-lora-ft02",
-                    workload_name="ray-kueue-ft02 (QUEUED BY KUEUE)",
-                    namespace="default",
-                    local_queue="llm-inference-queue",
-                    cluster_queue="spot-gpu",
-                    is_admitted=False,
-                    admission_checks=[{
-                        "type": "QuotaCheck",
-                        "status": "False",
-                        "reason": "Held by Kueue — Protecting Serving SLA (spot-gpu full)",
-                    }],
-                    pod_uids=list(ft02_pod_uids),
-                    total_cpu_requested=16.0,
-                    total_memory_gib_requested=64.0,
-                    total_gpu_requested=4,
-                    phase="Inadmissible",
-                )
+                if cur_overwhelm_stage == 4:
+                    self.kueue_workloads["wl-kueue-lora-ft02"] = KueueWorkloadStatus(
+                        workload_uid="wl-kueue-lora-ft02",
+                        workload_name="ray-kueue-ft02 (Admitted -> worker-3)",
+                        namespace="default",
+                        local_queue="llm-inference-queue",
+                        cluster_queue="spot-gpu",
+                        is_admitted=True,
+                        pod_uids=list(ft02_pod_uids),
+                        total_cpu_requested=16.0,
+                        total_memory_gib_requested=64.0,
+                        total_gpu_requested=4,
+                        phase="Admitted",
+                    )
+                elif cur_overwhelm_stage in (2, 3):
+                    self.kueue_workloads["wl-kueue-lora-ft02"] = KueueWorkloadStatus(
+                        workload_uid="wl-kueue-lora-ft02",
+                        workload_name="ray-kueue-ft02 (QUOTA RESERVED -> worker-3)",
+                        namespace="default",
+                        local_queue="llm-inference-queue",
+                        cluster_queue="spot-gpu",
+                        is_admitted=False,
+                        admission_checks=[],
+                        pod_uids=list(ft02_pod_uids),
+                        total_cpu_requested=16.0,
+                        total_memory_gib_requested=64.0,
+                        total_gpu_requested=4,
+                        phase="Admissible",
+                    )
+                else:
+                    self.kueue_workloads["wl-kueue-lora-ft02"] = KueueWorkloadStatus(
+                        workload_uid="wl-kueue-lora-ft02",
+                        workload_name="ray-kueue-ft02 (SCALING COMPUTECLASS)",
+                        namespace="default",
+                        local_queue="llm-inference-queue",
+                        cluster_queue="spot-gpu",
+                        is_admitted=False,
+                        admission_checks=[{
+                            "type": "QuotaCheck",
+                            "status": "False",
+                            "reason": "ComputeClass kueue-spot-burst-cc scaling +1 Node (g2-48)",
+                        }],
+                        pod_uids=list(ft02_pod_uids),
+                        total_cpu_requested=16.0,
+                        total_memory_gib_requested=64.0,
+                        total_gpu_requested=4,
+                        phase="Inadmissible",
+                    )
 
             if has_ai_stack and ft03_pod_uids:
-                self.kueue_workloads["wl-kueue-dpo-ft03"] = KueueWorkloadStatus(
-                    workload_uid="wl-kueue-dpo-ft03",
-                    workload_name="ray-kueue-ft03 (QUEUED BY KUEUE)",
-                    namespace="default",
-                    local_queue="llm-inference-queue",
-                    cluster_queue="spot-gpu",
-                    is_admitted=False,
-                    admission_checks=[{
-                        "type": "QuotaCheck",
-                        "status": "False",
-                        "reason": "Held by Kueue — Protecting Serving SLA (spot-gpu full)",
-                    }],
-                    pod_uids=list(ft03_pod_uids),
-                    total_cpu_requested=16.0,
-                    total_memory_gib_requested=64.0,
-                    total_gpu_requested=4,
-                    phase="Inadmissible",
-                )
+                if cur_overwhelm_stage == 4:
+                    self.kueue_workloads["wl-kueue-dpo-ft03"] = KueueWorkloadStatus(
+                        workload_uid="wl-kueue-dpo-ft03",
+                        workload_name="ray-kueue-ft03 (Admitted -> worker-3)",
+                        namespace="default",
+                        local_queue="llm-inference-queue",
+                        cluster_queue="spot-gpu",
+                        is_admitted=True,
+                        pod_uids=list(ft03_pod_uids),
+                        total_cpu_requested=16.0,
+                        total_memory_gib_requested=64.0,
+                        total_gpu_requested=4,
+                        phase="Admitted",
+                    )
+                elif cur_overwhelm_stage in (2, 3):
+                    self.kueue_workloads["wl-kueue-dpo-ft03"] = KueueWorkloadStatus(
+                        workload_uid="wl-kueue-dpo-ft03",
+                        workload_name="ray-kueue-ft03 (QUOTA RESERVED -> worker-3)",
+                        namespace="default",
+                        local_queue="llm-inference-queue",
+                        cluster_queue="spot-gpu",
+                        is_admitted=False,
+                        admission_checks=[],
+                        pod_uids=list(ft03_pod_uids),
+                        total_cpu_requested=16.0,
+                        total_memory_gib_requested=64.0,
+                        total_gpu_requested=4,
+                        phase="Admissible",
+                    )
+                else:
+                    self.kueue_workloads["wl-kueue-dpo-ft03"] = KueueWorkloadStatus(
+                        workload_uid="wl-kueue-dpo-ft03",
+                        workload_name="ray-kueue-ft03 (SCALING COMPUTECLASS)",
+                        namespace="default",
+                        local_queue="llm-inference-queue",
+                        cluster_queue="spot-gpu",
+                        is_admitted=False,
+                        admission_checks=[{
+                            "type": "QuotaCheck",
+                            "status": "False",
+                            "reason": "ComputeClass kueue-spot-burst-cc scaling +1 Node (g2-48)",
+                        }],
+                        pod_uids=list(ft03_pod_uids),
+                        total_cpu_requested=16.0,
+                        total_memory_gib_requested=64.0,
+                        total_gpu_requested=4,
+                        phase="Inadmissible",
+                    )
 
             nodes_list = list(new_nodes.values())
             nodes_list, _ = enrich_framework_components(nodes_list, [])
@@ -1472,9 +1704,30 @@ class TopologyController:
                 "pod/default/ray-traffic-surge-1": (-2.2, 11.8, 1.5, "Client_Slab"),
                 "pod/default/ray-traffic-surge-2": (2.2, 11.8, 1.5, "Client_Slab"),
             }
-            if has_ai_stack:
-                # On cv-kuberay-kueue (Viewport B), Kueue holds ft02 & ft03 inside the left-flank
-                # Cargo Containment Pallets (X = -9.8) so they never stampede the Worker Deck!
+            if has_ai_stack and cur_overwhelm_stage == 4:
+                # Stage 4: ComputeClass + Cluster Autoscaler has scaled out worker-3 (g2-standard-48)
+                # on the right flank (X ≈ +5.7), and Kueue has gang-admitted ft02 & ft03 onto worker-3!
+                custom_coords.update({
+                    "pod/default/vllm-gemma-2b-it-worker-1": (-6.8, 0.85, 0.6, "Pod_Cylinder"),
+                    "pod/default/vllm-gemma-2b-it-worker-2": (-5.2, 0.85, 0.6, "Pod_Cylinder"),
+                    "pod/default/vllm-qwen-2-5-3b-ondemand-1": (-6.8, 0.85, 1.8, "Pod_Cylinder"),
+                    "pod/default/vllm-qwen-2-5-3b-ondemand-2": (-5.2, 0.85, 1.8, "Pod_Cylinder"),
+                    "pod/default/ray-serving01-worker-1": (-6.6, 0.85, 2.5, "Pod_Cylinder"),
+                    "pod/default/ray-serving01-worker-2": (-4.8, 0.85, 2.5, "Pod_Cylinder"),
+                    "pod/default/vllm-qwen-2-5-3b-spot-burst-1": (-1.2, 0.85, 1.2, "Pod_Cylinder"),
+                    "pod/default/vllm-qwen-2-5-3b-spot-burst-2": (0.5, 0.85, 1.2, "Pod_Cylinder"),
+                    "pod/default/ray-kueue-ft01-worker-1": (-1.2, 0.85, -0.4, "Pod_Cylinder"),
+                    "pod/default/ray-kueue-ft01-worker-2": (0.5, 0.85, -0.4, "Pod_Cylinder"),
+                    "pod/default/ray-kueue-ft02-head": (3.8, 2.5, -0.6, "Framework_Ray"),
+                    "pod/default/ray-kueue-ft02-worker-1": (4.6, 0.85, -0.3, "Pod_Cylinder"),
+                    "pod/default/ray-kueue-ft02-worker-2": (6.4, 0.85, -0.3, "Pod_Cylinder"),
+                    "pod/default/ray-kueue-ft03-head": (5.2, 2.5, -0.6, "Framework_Ray"),
+                    "pod/default/ray-kueue-ft03-worker-1": (4.6, 0.85, 1.3, "Pod_Cylinder"),
+                    "pod/default/ray-kueue-ft03-worker-2": (6.4, 0.85, 1.3, "Pod_Cylinder"),
+                })
+            elif has_ai_stack:
+                # Stages 1-3 on cv-kuberay-kueue (Viewport B): Kueue holds ft02 & ft03 inside
+                # the left-flank Cargo Containment Pallets (X = -9.8) while ComputeClass scales worker-3.
                 custom_coords.update({
                     "pod/default/ray-kueue-ft02-head": (-10.6, 1.4, 2.0, "Framework_Ray"),
                     "pod/default/ray-kueue-ft02-worker-1": (-9.8, 1.4, 2.6, "Pod_Cylinder"),
@@ -1504,8 +1757,10 @@ class TopologyController:
                 "pod/default/vllm-qwen-2-5-3b-spot-burst-2": "wl-qwen-2-5-3b-spot-burst",
                 "pod/default/ray-kueue-ft01-worker-1": "wl-kueue-lora-ft01",
                 "pod/default/ray-kueue-ft01-worker-2": "wl-kueue-lora-ft01",
+                "pod/default/ray-kueue-ft02-head": "wl-kueue-lora-ft02",
                 "pod/default/ray-kueue-ft02-worker-1": "wl-kueue-lora-ft02",
                 "pod/default/ray-kueue-ft02-worker-2": "wl-kueue-lora-ft02",
+                "pod/default/ray-kueue-ft03-head": "wl-kueue-dpo-ft03",
                 "pod/default/ray-kueue-ft03-worker-1": "wl-kueue-dpo-ft03",
                 "pod/default/ray-kueue-ft03-worker-2": "wl-kueue-dpo-ft03",
             }
@@ -1516,7 +1771,15 @@ class TopologyController:
                     n.spatial.y = cy
                     n.spatial.z = cz
                     n.spatial.asset_type = casset
-                    if (
+                    if "ray-kueue-ft02-head" in n.id or "ray-kueue-ft03-head" in n.id:
+                        is_queued_in_kueue = has_ai_stack and cur_overwhelm_stage != 4
+                        n.pod_geometry = PodGeometrySpec(
+                            height=0.85,
+                            radius=0.45,
+                            is_pending=is_queued_in_kueue,
+                            kueue_workload=wl_map.get(n.id),
+                        )
+                    elif (
                         n.id.startswith("pod/default/vllm-")
                         or "ray-serving01-worker" in n.id
                         or "ray-kueue-ft01-worker" in n.id
@@ -1525,8 +1788,16 @@ class TopologyController:
                     ):
                         n.kind = "RayWorker"
                         n.layer = "workload"
-                        is_spot = "spot" in n.id
-                        is_queued_in_kueue = has_ai_stack and ("ft02" in n.id or "ft03" in n.id)
+                        is_spot = "spot" in n.id or (
+                            has_ai_stack
+                            and cur_overwhelm_stage == 4
+                            and ("ft02" in n.id or "ft03" in n.id)
+                        )
+                        is_queued_in_kueue = (
+                            has_ai_stack
+                            and cur_overwhelm_stage != 4
+                            and ("ft02" in n.id or "ft03" in n.id)
+                        )
                         n.pod_geometry = PodGeometrySpec(
                             height=0.85 if is_queued_in_kueue else (1.25 if is_spot else 1.05),
                             radius=0.45 if is_queued_in_kueue else (0.68 if is_spot else 0.58),
@@ -1561,6 +1832,17 @@ class TopologyController:
                         )
                     )
                 ]
+                ft_kueue_proto = "Kueue/GangAdmit" if cur_overwhelm_stage == 4 else "Kueue/QuotaHold"
+                ft_kueue_label_02 = (
+                    "kueue admit ft02 -> worker-3"
+                    if cur_overwhelm_stage == 4
+                    else "kueue hold ft02 (scaling node)"
+                )
+                ft_kueue_label_03 = (
+                    "kueue admit ft03 -> worker-3"
+                    if cur_overwhelm_stage == 4
+                    else "kueue hold ft03 (scaling node)"
+                )
                 ai_edges = [
                     ("pod/default/ray-traffic-surge-1", "ingress/default/gke-inference-gateway", "traffic", "HTTP/80", "unidirectional", "2,500 QPS burst"),
                     ("pod/default/ray-traffic-surge-2", "ingress/default/gke-inference-gateway", "traffic", "HTTP/80", "unidirectional", "2,500 QPS burst"),
@@ -1590,8 +1872,8 @@ class TopologyController:
                     ("pod/kueue-system/kueue-controller-manager", "pod/default/vllm-qwen-2-5-3b-spot-burst-1", "control_plane", "Kueue/SpotFallback", "unidirectional", "kueue quota spot-gpu"),
                     ("pod/kueue-system/kueue-controller-manager", "pod/default/vllm-qwen-2-5-3b-spot-burst-2", "control_plane", "Kueue/SpotFallback", "unidirectional", "kueue quota spot-gpu"),
                     ("pod/kueue-system/kueue-controller-manager", "pod/default/ray-kueue-ft01-head", "control_plane", "Kueue/GangAdmit", "unidirectional", "kueue admit ft01"),
-                    ("pod/kueue-system/kueue-controller-manager", "pod/default/ray-kueue-ft02-head", "control_plane", "Kueue/QuotaHold", "unidirectional", "kueue hold ft02 (queued)"),
-                    ("pod/kueue-system/kueue-controller-manager", "pod/default/ray-kueue-ft03-head", "control_plane", "Kueue/QuotaHold", "unidirectional", "kueue hold ft03 (queued)"),
+                    ("pod/kueue-system/kueue-controller-manager", "pod/default/ray-kueue-ft02-head", "control_plane", ft_kueue_proto, "unidirectional", ft_kueue_label_02),
+                    ("pod/kueue-system/kueue-controller-manager", "pod/default/ray-kueue-ft03-head", "control_plane", ft_kueue_proto, "unidirectional", ft_kueue_label_03),
                     ("pod/default/kuberay-operator", "pod/default/rayservice-gemma-2b-it-head", "control_plane", "CRD/RayService", "unidirectional", "kueue ray reconcile"),
                     ("pod/default/kuberay-operator", "pod/default/rayservice-qwen-2-5-3b-head", "control_plane", "CRD/RayService", "unidirectional", "kueue ray reconcile"),
                     ("pod/default/kuberay-operator", "pod/default/ray-serving01-head", "control_plane", "CRD/RayService", "unidirectional", "kueue ray reconcile"),
@@ -1630,12 +1912,71 @@ class TopologyController:
             self.edges = new_edges
             self.machine_shapes = new_shapes
 
-            if broadcast and (added_ids or removed_ids or changed_ids):
+            if broadcast:
                 ts = datetime.now(timezone.utc).isoformat()
-                for rid in removed_ids:
-                    self.broadcast_event("node_removed", {"node_id": rid, "nodeId": rid, "timestamp": ts})
-                snap = self.get_snapshot()
-                self.broadcast_event("initial_snapshot", snap)
+                if cur_overwhelm_stage == 3:
+                    # Stage 3: Emit live Emerald Mag-Rail transit + Gang Deployment Burst events
+                    # without resetting the scene via initial_snapshot!
+                    if prev_overwhelm_stage != 3:
+                        for wuid, wname, z_from, z_to, targets in [
+                            (
+                                "wl-kueue-lora-ft02",
+                                "ray-kueue-ft02 (Admitted -> worker-3)",
+                                2.3,
+                                0.8,
+                                [[3.8, 2.5, -0.6], [4.6, 0.85, -0.3], [6.4, 0.85, -0.3]],
+                            ),
+                            (
+                                "wl-kueue-dpo-ft03",
+                                "ray-kueue-ft03 (Admitted -> worker-3)",
+                                -2.3,
+                                -0.8,
+                                [[5.2, 2.5, -0.6], [4.6, 0.85, 1.3], [6.4, 0.85, 1.3]],
+                            ),
+                        ]:
+                            self.broadcast_event("kueue_admission_admitted", {
+                                "workload_uid": wuid,
+                                "workload_name": wname,
+                                "magrail": {
+                                    "from": [-9.8, 1.5, z_from],
+                                    "to": [-5.8, 1.2, z_to],
+                                },
+                                "transit_duration_ms": 1400,
+                                "timestamp": ts,
+                            })
+                            self.broadcast_event("kueue_gang_deployed", {
+                                "workload_uid": wuid,
+                                "workload_name": wname,
+                                "pod_uids": (
+                                    list(ft02_pod_uids)
+                                    if "ft02" in wuid
+                                    else list(ft03_pod_uids)
+                                ),
+                                "targets": targets,
+                                "burst_duration_ms": 1200,
+                                "timestamp": ts,
+                            })
+                elif (
+                    added_ids
+                    or removed_ids
+                    or changed_ids
+                    or cur_overwhelm_stage != prev_overwhelm_stage
+                ):
+                    for rid in removed_ids:
+                        self.broadcast_event("node_removed", {"node_id": rid, "nodeId": rid, "timestamp": ts})
+                    snap = self.get_snapshot()
+                    self.broadcast_event("initial_snapshot", snap)
+                    if cur_overwhelm_stage == 2 and prev_overwhelm_stage != 2:
+                        for wuid, wname in [
+                            ("wl-kueue-lora-ft02", "ray-kueue-ft02 (QUOTA RESERVED -> worker-3)"),
+                            ("wl-kueue-dpo-ft03", "ray-kueue-ft03 (QUOTA RESERVED -> worker-3)"),
+                        ]:
+                            self.broadcast_event("kueue_quota_reserved", {
+                                "workload_uid": wuid,
+                                "workload_name": wname,
+                                "lock_duration_ms": 1200,
+                                "timestamp": ts,
+                            })
 
     def _run_real_loop(self, interval: float) -> None:
         self._poll_real_cluster(broadcast=False)
