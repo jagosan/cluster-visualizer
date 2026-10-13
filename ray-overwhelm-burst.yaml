@@ -32,6 +32,7 @@ spec:
         ray.io/node-type: head
         kueue.x-k8s.io/queue-name: llm-inference-queue
         kueue.x-k8s.io/resource-flavor: spot-gpu
+        clustervis.io/compute-class: autopilot-spot
         clustervis.io/overwhelm-gang: ft02
         clustervis.io/version: ray-2.9.0
     spec:
@@ -72,6 +73,7 @@ spec:
         ray.io/node-type: worker
         kueue.x-k8s.io/queue-name: llm-inference-queue
         kueue.x-k8s.io/resource-flavor: spot-gpu
+        clustervis.io/compute-class: autopilot-spot
         clustervis.io/overwhelm-gang: ft02
         clustervis.io/version: ray-2.9.0
     spec:
@@ -112,6 +114,7 @@ spec:
         ray.io/node-type: head
         kueue.x-k8s.io/queue-name: llm-inference-queue
         kueue.x-k8s.io/resource-flavor: spot-gpu
+        clustervis.io/compute-class: kueue-spot-burst-cc
         clustervis.io/overwhelm-gang: ft03
         clustervis.io/version: ray-2.9.0
     spec:
@@ -152,6 +155,7 @@ spec:
         ray.io/node-type: worker
         kueue.x-k8s.io/queue-name: llm-inference-queue
         kueue.x-k8s.io/resource-flavor: spot-gpu
+        clustervis.io/compute-class: kueue-spot-burst-cc
         clustervis.io/overwhelm-gang: ft03
         clustervis.io/version: ray-2.9.0
     spec:
