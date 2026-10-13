@@ -166,50 +166,60 @@ export class GridController {
   }
 
   public updateSkewMatrixHUD(): void {
-    if (!this.hudContainer) {
-      return;
+    if (this.hudContainer) {
+      this.hudContainer.innerHTML = '';
+    }
+
+    for (const s of this.slots) {
+      s.container?.querySelectorAll('.skew-matrix-card').forEach((el) => el.remove());
     }
 
     const activeSlots = this.getActiveSlots();
-    this.hudContainer.innerHTML = '';
 
     for (const slot of activeSlots) {
       const card = document.createElement('div');
       card.className = 'skew-matrix-card';
       card.style.cssText = `
-        background: rgba(0, 0, 0, 0.8);
-        border: 1px solid #333;
-        border-radius: 4px;
-        padding: 8px;
-        margin: 4px;
-        color: #fff;
+        position: absolute;
+        top: 48px;
+        left: 16px;
+        z-index: 40;
+        pointer-events: none;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: rgba(17, 24, 39, 0.85);
+        backdrop-filter: blur(8px);
+        border: 1px solid #1f2937;
+        border-radius: 6px;
+        padding: 4px 10px;
+        color: #e5e7eb;
         font-family: monospace;
-        font-size: 12px;
-        min-width: 150px;
+        font-size: 11px;
       `;
 
-      const titleDiv = document.createElement('div');
-      titleDiv.style.cssText = 'font-weight: bold; margin-bottom: 4px;';
+      const titleDiv = document.createElement('span');
+      titleDiv.style.cssText = 'font-weight: 700; color: #f3f4f6;';
       titleDiv.textContent = slot.title;
 
       const channelBadge = document.createElement('span');
       channelBadge.style.cssText = `
         display: inline-block;
-        padding: 2px 6px;
+        padding: 1px 6px;
         border-radius: 3px;
         font-size: 10px;
-        margin-left: 4px;
+        font-weight: 700;
         background: ${slot.channel === 'Rapid' ? '#ff9800' : slot.channel === 'Regular' ? '#4caf50' : '#9e9e9e'};
         color: #000;
       `;
       channelBadge.textContent = slot.channel ?? 'Unknown';
 
-      const versionDiv = document.createElement('div');
-      versionDiv.style.cssText = 'margin-bottom: 4px;';
+      const versionDiv = document.createElement('span');
+      versionDiv.style.cssText = 'color: #9ca3af;';
       versionDiv.textContent = `v${slot.k8sVersion ?? 'unknown'}`;
 
-      const deprecatedDiv = document.createElement('div');
-      deprecatedDiv.style.cssText = 'margin-bottom: 4px; color: #ff5252;';
+      const deprecatedDiv = document.createElement('span');
+      deprecatedDiv.style.cssText = 'color: #ff5252;';
       if (slot.k8sVersion === '1.37') {
         deprecatedDiv.textContent = '⚠ flowcontrol.apiserver.k8s.io/v1beta2';
       } else {
@@ -217,13 +227,14 @@ export class GridController {
         deprecatedDiv.style.color = '#4caf50';
       }
 
-      const streamPill = document.createElement('div');
+      const streamPill = document.createElement('span');
       const isLive = !!slot.streamUrl;
       streamPill.style.cssText = `
         display: inline-block;
-        padding: 2px 8px;
+        padding: 1px 8px;
         border-radius: 10px;
         font-size: 10px;
+        font-weight: 600;
         background: ${isLive ? '#2196f3' : '#616161'};
         color: #fff;
       `;
@@ -235,7 +246,11 @@ export class GridController {
       card.appendChild(deprecatedDiv);
       card.appendChild(streamPill);
 
-      this.hudContainer.appendChild(card);
+      if (slot.container) {
+        slot.container.appendChild(card);
+      } else if (this.hudContainer) {
+        this.hudContainer.appendChild(card);
+      }
     }
   }
 
