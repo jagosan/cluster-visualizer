@@ -1,7 +1,7 @@
 # Canonical KubeRay + Kueue Sample 2: Distributed Ray Data + Ray Train LoRA Fine-Tuning Pipeline
-# Apply to either cluster:
-#   kubectl --context gke_jmacleod-42_us-central1-a_clustervis-kuberay apply -f ray-kueue-ft01.yaml
-#   kubectl --context gke_jmacleod-42_us-central1-a_clustervis-vanilla apply -f ray-kueue-ft01.yaml
+# Apply to both clusters via ./ft.sh or:
+#   kubectl --context cv-kuberay apply -f ray-kueue-ft01.yaml
+#   kubectl --context cv-kuberay-kueue apply -f ray-kueue-ft01.yaml
 apiVersion: ray.io/v1
 kind: RayJob
 metadata:
@@ -89,8 +89,8 @@ spec:
                   cpu: "2"
                   memory: 4Gi
                 requests:
-                  cpu: 250m
-                  memory: 512Mi
+                  cpu: 100m
+                  memory: 256Mi
     workerGroupSpecs:
       - replicas: 2
         minReplicas: 1

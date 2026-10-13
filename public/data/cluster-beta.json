@@ -1,7 +1,7 @@
 {
   "schema_url": "https://cluster-vis.jagosan.com/schemas/cluster-graph-v1.json",
   "metadata": {
-    "cluster_name": "clustervis-kuberay",
+    "cluster_name": "cv-kuberay-kueue",
     "kubernetes_version": "v1.36.4-gke.1495000",
     "distribution": "gke",
     "timestamp": "2026-10-12T23:00:09.485149+00:00",
@@ -25,7 +25,7 @@
         "cpu_allocatable": "3920m",
         "memory_allocatable": "13591652Ki",
         "os_image": "Container-Optimized OS from Google",
-        "gke_node_name": "gke-clustervis-kuberay-default-pool-760cf690-0bkr"
+        "gke_node_name": "gke-cv-kuberay-kueue-default-pool-760cf690-0bkr"
       },
       "spatial": {
         "x": -3.0,
@@ -57,7 +57,7 @@
         "failure-domain.beta.kubernetes.io/region": "us-central1",
         "failure-domain.beta.kubernetes.io/zone": "us-central1-a",
         "kubernetes.io/arch": "amd64",
-        "kubernetes.io/hostname": "gke-clustervis-kuberay-default-pool-760cf690-0bkr",
+        "kubernetes.io/hostname": "gke-cv-kuberay-kueue-default-pool-760cf690-0bkr",
         "kubernetes.io/os": "linux",
         "node.kubernetes.io/instance-type": "e2-standard-4",
         "topology.gke.io/zone": "us-central1-a",
@@ -79,7 +79,7 @@
       "status": "Healthy",
       "metrics": {
         "component": "kubelet",
-        "node": "gke-clustervis-kuberay-default-pool-760cf690-0bkr"
+        "node": "gke-cv-kuberay-kueue-default-pool-760cf690-0bkr"
       },
       "spatial": {
         "x": -4.8,
@@ -103,7 +103,7 @@
       "status": "Healthy",
       "metrics": {
         "runtime": "containerd",
-        "node": "gke-clustervis-kuberay-default-pool-760cf690-0bkr"
+        "node": "gke-cv-kuberay-kueue-default-pool-760cf690-0bkr"
       },
       "spatial": {
         "x": -3.8,
@@ -131,7 +131,7 @@
         "cpu_allocatable": "3920m",
         "memory_allocatable": "13591652Ki",
         "os_image": "Container-Optimized OS from Google",
-        "gke_node_name": "gke-clustervis-kuberay-default-pool-760cf690-j0f1"
+        "gke_node_name": "gke-cv-kuberay-kueue-default-pool-760cf690-j0f1"
       },
       "spatial": {
         "x": 3.0,
@@ -163,7 +163,7 @@
         "failure-domain.beta.kubernetes.io/region": "us-central1",
         "failure-domain.beta.kubernetes.io/zone": "us-central1-a",
         "kubernetes.io/arch": "amd64",
-        "kubernetes.io/hostname": "gke-clustervis-kuberay-default-pool-760cf690-j0f1",
+        "kubernetes.io/hostname": "gke-cv-kuberay-kueue-default-pool-760cf690-j0f1",
         "kubernetes.io/os": "linux",
         "node.kubernetes.io/instance-type": "e2-standard-4",
         "topology.gke.io/zone": "us-central1-a",
@@ -185,7 +185,7 @@
       "status": "Healthy",
       "metrics": {
         "component": "kubelet",
-        "node": "gke-clustervis-kuberay-default-pool-760cf690-j0f1"
+        "node": "gke-cv-kuberay-kueue-default-pool-760cf690-j0f1"
       },
       "spatial": {
         "x": 1.2,
@@ -209,7 +209,7 @@
       "status": "Healthy",
       "metrics": {
         "runtime": "containerd",
-        "node": "gke-clustervis-kuberay-default-pool-760cf690-j0f1"
+        "node": "gke-cv-kuberay-kueue-default-pool-760cf690-j0f1"
       },
       "spatial": {
         "x": 2.2,
@@ -402,7 +402,7 @@
         "phase": "Running",
         "pending": false,
         "scheduled": true,
-        "host_node": "gke-clustervis-kuberay-default-pool-760cf690-j0f1",
+        "host_node": "gke-cv-kuberay-kueue-default-pool-760cf690-j0f1",
         "pod_ip": "10.20.0.6",
         "kueue_flavor": null,
         "model": null,
@@ -449,7 +449,7 @@
         "phase": "Running",
         "pending": false,
         "scheduled": true,
-        "host_node": "gke-clustervis-kuberay-default-pool-760cf690-0bkr",
+        "host_node": "gke-cv-kuberay-kueue-default-pool-760cf690-0bkr",
         "pod_ip": "10.20.1.15",
         "kueue_flavor": null,
         "model": null,
@@ -489,7 +489,7 @@
         "phase": "Running",
         "pending": false,
         "scheduled": true,
-        "host_node": "gke-clustervis-kuberay-default-pool-760cf690-j0f1",
+        "host_node": "gke-cv-kuberay-kueue-default-pool-760cf690-j0f1",
         "pod_ip": "10.20.0.7",
         "kueue_flavor": null,
         "model": null,
@@ -529,7 +529,7 @@
         "phase": "Running",
         "pending": false,
         "scheduled": true,
-        "host_node": "gke-clustervis-kuberay-default-pool-760cf690-j0f1",
+        "host_node": "gke-cv-kuberay-kueue-default-pool-760cf690-j0f1",
         "pod_ip": "10.20.0.5",
         "kueue_flavor": null,
         "model": null,
@@ -568,7 +568,7 @@
         "phase": "Running",
         "pending": false,
         "scheduled": true,
-        "host_node": "gke-clustervis-kuberay-default-pool-760cf690-0bkr",
+        "host_node": "gke-cv-kuberay-kueue-default-pool-760cf690-0bkr",
         "pod_ip": "10.20.1.25",
         "kueue_flavor": null,
         "model": null,
@@ -616,7 +616,7 @@
         "phase": "Running",
         "pending": false,
         "scheduled": true,
-        "host_node": "gke-clustervis-kuberay-default-pool-760cf690-0bkr",
+        "host_node": "gke-cv-kuberay-kueue-default-pool-760cf690-0bkr",
         "pod_ip": "10.20.1.26",
         "kueue_flavor": null,
         "model": "gemma-2b-it",
@@ -665,7 +665,7 @@
         "phase": "Running",
         "pending": false,
         "scheduled": true,
-        "host_node": "gke-clustervis-kuberay-default-pool-760cf690-0bkr",
+        "host_node": "gke-cv-kuberay-kueue-default-pool-760cf690-0bkr",
         "pod_ip": "10.20.1.27",
         "kueue_flavor": null,
         "model": "qwen-2.5-3b",
@@ -714,7 +714,7 @@
         "phase": "Running",
         "pending": false,
         "scheduled": true,
-        "host_node": "gke-clustervis-kuberay-default-pool-760cf690-0bkr",
+        "host_node": "gke-cv-kuberay-kueue-default-pool-760cf690-0bkr",
         "pod_ip": "10.20.1.28",
         "kueue_flavor": "on-demand-gpu",
         "model": "gemma-2b-it",
@@ -757,7 +757,7 @@
         "phase": "Running",
         "pending": false,
         "scheduled": true,
-        "host_node": "gke-clustervis-kuberay-default-pool-760cf690-0bkr",
+        "host_node": "gke-cv-kuberay-kueue-default-pool-760cf690-0bkr",
         "pod_ip": "10.20.1.29",
         "kueue_flavor": "on-demand-gpu",
         "model": "qwen-2.5-3b",
@@ -800,7 +800,7 @@
         "phase": "Running",
         "pending": false,
         "scheduled": true,
-        "host_node": "gke-clustervis-kuberay-default-pool-760cf690-j0f1",
+        "host_node": "gke-cv-kuberay-kueue-default-pool-760cf690-j0f1",
         "pod_ip": "10.20.0.17",
         "kueue_flavor": "on-demand-gpu",
         "model": "gemma-2b-it",
@@ -861,7 +861,7 @@
         "phase": "Running",
         "pending": false,
         "scheduled": true,
-        "host_node": "gke-clustervis-kuberay-default-pool-760cf690-0bkr",
+        "host_node": "gke-cv-kuberay-kueue-default-pool-760cf690-0bkr",
         "pod_ip": "10.20.1.30",
         "kueue_flavor": "on-demand-gpu",
         "model": "gemma-2b-it",
@@ -922,7 +922,7 @@
         "phase": "Running",
         "pending": false,
         "scheduled": true,
-        "host_node": "gke-clustervis-kuberay-default-pool-760cf690-j0f1",
+        "host_node": "gke-cv-kuberay-kueue-default-pool-760cf690-j0f1",
         "pod_ip": "10.20.0.18",
         "kueue_flavor": "on-demand-gpu",
         "model": "qwen-2.5-3b",
@@ -983,7 +983,7 @@
         "phase": "Running",
         "pending": false,
         "scheduled": true,
-        "host_node": "gke-clustervis-kuberay-default-pool-760cf690-0bkr",
+        "host_node": "gke-cv-kuberay-kueue-default-pool-760cf690-0bkr",
         "pod_ip": "10.20.1.31",
         "kueue_flavor": "on-demand-gpu",
         "model": "qwen-2.5-3b",
@@ -1044,7 +1044,7 @@
         "phase": "Running",
         "pending": false,
         "scheduled": true,
-        "host_node": "gke-clustervis-kuberay-default-pool-760cf690-j0f1",
+        "host_node": "gke-cv-kuberay-kueue-default-pool-760cf690-j0f1",
         "pod_ip": "10.20.0.19",
         "kueue_flavor": "spot-gpu",
         "model": "qwen-2.5-3b",
@@ -1106,7 +1106,7 @@
         "phase": "Running",
         "pending": false,
         "scheduled": true,
-        "host_node": "gke-clustervis-kuberay-default-pool-760cf690-0bkr",
+        "host_node": "gke-cv-kuberay-kueue-default-pool-760cf690-0bkr",
         "pod_ip": "10.20.1.32",
         "kueue_flavor": "spot-gpu",
         "model": "qwen-2.5-3b",
@@ -1168,7 +1168,7 @@
         "phase": "Running",
         "pending": false,
         "scheduled": true,
-        "host_node": "gke-clustervis-kuberay-default-pool-760cf690-0bkr",
+        "host_node": "gke-cv-kuberay-kueue-default-pool-760cf690-0bkr",
         "pod_ip": "10.128.15.239",
         "kueue_flavor": null,
         "model": null,
@@ -1205,7 +1205,7 @@
         "phase": "Running",
         "pending": false,
         "scheduled": true,
-        "host_node": "gke-clustervis-kuberay-default-pool-760cf690-j0f1",
+        "host_node": "gke-cv-kuberay-kueue-default-pool-760cf690-j0f1",
         "pod_ip": "10.128.15.238",
         "kueue_flavor": null,
         "model": null,
@@ -1242,7 +1242,7 @@
         "phase": "Running",
         "pending": false,
         "scheduled": true,
-        "host_node": "gke-clustervis-kuberay-default-pool-760cf690-0bkr",
+        "host_node": "gke-cv-kuberay-kueue-default-pool-760cf690-0bkr",
         "pod_ip": "10.20.1.24",
         "kueue_flavor": null,
         "model": null,

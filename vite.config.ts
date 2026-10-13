@@ -12,15 +12,27 @@ export default defineConfig({
     allowedHosts: true,
     proxy: {
       '/clusters/vanilla': {
-        target: 'http://35.193.124.181:5180',
+        target: 'http://127.0.0.1:8081',
         changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/clusters\/vanilla/, ''),
+      },
+      '/clusters/cv-kuberay-kueue': {
+        target: 'http://127.0.0.1:8082',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/clusters\/cv-kuberay-kueue/, ''),
+      },
+      '/clusters/cv-kuberay': {
+        target: 'http://127.0.0.1:8081',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/clusters\/cv-kuberay/, ''),
       },
       '/clusters/kuberay': {
-        target: 'http://35.193.124.181:5180',
+        target: 'http://127.0.0.1:8082',
         changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/clusters\/kuberay/, ''),
       },
       '/api/v1': {
-        target: 'http://35.193.124.181:5180/clusters/kuberay',
+        target: 'http://127.0.0.1:8082',
         changeOrigin: true,
       },
     },
