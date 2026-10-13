@@ -271,7 +271,12 @@ export class ClusterViewport {
   public layoutController: LayoutTransitionController = new LayoutTransitionController();
 
   // SPEC-11 / TASK-CV-1205: Load-driven latency spring engine for floor separation.
-  public springEngine: LatencySpringEngine = new LatencySpringEngine();
+  // Critically damped (zeta = 0.96, omegaN = 2.6) so floors smoothly converge
+  // to a stable target altitude without bouncy overshoot.
+  public springEngine: LatencySpringEngine = new LatencySpringEngine({
+    zeta: 0.96,
+    omegaN: 2.6,
+  });
   
   // Diff focus tween state for highlighting component differences.
   private diffFocusTween: {
@@ -1555,45 +1560,59 @@ export class ClusterViewport {
           n.name.includes('ray-kueue-ft03') ||
           n.name.includes('ray-traffic-surge'),
       );
-      let p99ReadoutMs = 8.4;
+      const hasActiveWorkload = this.clusterData.nodes.some(
+        (n) =>
+          n.name.includes('ray-serving01') ||
+          n.name.includes('ray-kueue-ft01'),
+      );
+      // Subtle organic micro-breathing (-1..+1) around a stable converged altitude
+      const microBreath = Math.sin(time * 0.85);
+      let p99ReadoutMs = 8.5;
       if (hasLlmdGateway) {
-        const calmWave = 0.5 + 0.5 * Math.sin(time * 1.4);
-        p99ReadoutMs = hasOverwhelmSurge ? 10.8 + 3.6 * calmWave : 7.2 + 3.4 * calmWave;
-        this.springEngine.setTierLatency('worker', hasOverwhelmSurge ? 6.0 : 5.2);
-        this.springEngine.setTierLatency('framework', (hasOverwhelmSurge ? 7.8 : 6.4) + 1.8 * calmWave);
-        this.springEngine.setTierLatency('services', (hasOverwhelmSurge ? 8.4 : 6.8) + 2.0 * calmWave);
-        this.springEngine.setTierLatency('etcd', (hasOverwhelmSurge ? 8.8 : 7.0) + 2.2 * calmWave);
-        this.springEngine.setTierLatency('apiserver', (hasOverwhelmSurge ? 9.5 : 7.5) + 2.6 * calmWave);
+        p99ReadoutMs = (hasOverwhelmSurge ? 12.2 : 8.5) + 0.35 * microBreath;
+        this.springEngine.setTierLatency('worker', hasOverwhelmSurge ? 5.8 : 5.2);
+        this.springEngine.setTierLatency('framework', (hasOverwhelmSurge ? 7.6 : 6.4) + 0.15 * microBreath);
+        this.springEngine.setTierLatency('services', (hasOverwhelmSurge ? 8.2 : 6.9) + 0.18 * microBreath);
+        this.springEngine.setTierLatency('etcd', (hasOverwhelmSurge ? 8.6 : 7.2) + 0.2 * microBreath);
+        this.springEngine.setTierLatency('apiserver', (hasOverwhelmSurge ? 9.4 : 7.8) + 0.25 * microBreath);
         this.springEngine.setTierLatency('ingress', p99ReadoutMs);
-        this.springEngine.setTierLatency('clients', p99ReadoutMs + 1.2);
+        this.springEngine.setTierLatency('clients', p99ReadoutMs + 1.0);
       } else if (hasOverwhelmSurge) {
-        // Unqueued batch stampede (3/3 gangs on Worker Deck) + unrouted 2,500 QPS flood
-        const surge = Math.pow(0.5 + 0.5 * Math.sin(time * 1.65), 1.2);
-        p99ReadoutMs = 540.0 + 340.0 * surge;
-        this.springEngine.setTierLatency('worker', 35.0 + 55.0 * surge);
-        this.springEngine.setTierLatency('framework', 160.0 + 210.0 * surge);
-        this.springEngine.setTierLatency('services', 260.0 + 280.0 * surge);
-        this.springEngine.setTierLatency('etcd', 320.0 + 310.0 * surge);
-        this.springEngine.setTierLatency('apiserver', 420.0 + 390.0 * surge);
-        this.springEngine.setTierLatency('ingress', p99ReadoutMs);
-        this.springEngine.setTierLatency('clients', p99ReadoutMs * 1.35);
-      } else {
-        // Periodic KV-cache miss & head-of-line queuing surge on vanilla Round-Robin cluster
-        const surge = Math.pow(0.5 + 0.5 * Math.sin(time * 1.15), 1.6);
-        p99ReadoutMs = 28.0 + 310.0 * surge;
-        this.springEngine.setTierLatency('worker', 8.0 + 18.0 * surge);
-        this.springEngine.setTierLatency('framework', 18.0 + 95.0 * surge);
-        this.springEngine.setTierLatency('services', 24.0 + 150.0 * surge);
-        this.springEngine.setTierLatency('etcd', 28.0 + 185.0 * surge);
-        this.springEngine.setTierLatency('apiserver', 35.0 + 250.0 * surge);
+        // Stable high-separation altitude under overwhelm (680ms ± 12ms micro-breath)
+        p99ReadoutMs = 680.0 + 12.0 * microBreath;
+        this.springEngine.setTierLatency('worker', 24.0 + 0.8 * microBreath);
+        this.springEngine.setTierLatency('framework', 145.0 + 3.0 * microBreath);
+        this.springEngine.setTierLatency('services', 235.0 + 5.0 * microBreath);
+        this.springEngine.setTierLatency('etcd', 290.0 + 6.0 * microBreath);
+        this.springEngine.setTierLatency('apiserver', 420.0 + 8.0 * microBreath);
         this.springEngine.setTierLatency('ingress', p99ReadoutMs);
         this.springEngine.setTierLatency('clients', p99ReadoutMs * 1.15);
+      } else if (hasActiveWorkload) {
+        // Stable elevated altitude when serve.sh or ft.sh is active on cv-kuberay (165ms ± 5ms)
+        p99ReadoutMs = 165.0 + 5.0 * microBreath;
+        this.springEngine.setTierLatency('worker', 12.0 + 0.4 * microBreath);
+        this.springEngine.setTierLatency('framework', 48.0 + 1.5 * microBreath);
+        this.springEngine.setTierLatency('services', 78.0 + 2.2 * microBreath);
+        this.springEngine.setTierLatency('etcd', 95.0 + 2.8 * microBreath);
+        this.springEngine.setTierLatency('apiserver', 128.0 + 3.5 * microBreath);
+        this.springEngine.setTierLatency('ingress', p99ReadoutMs);
+        this.springEngine.setTierLatency('clients', p99ReadoutMs * 1.12);
+      } else {
+        // Stable baseline altitude on cv-kuberay when idle (42ms ± 1.8ms)
+        p99ReadoutMs = 42.0 + 1.8 * microBreath;
+        this.springEngine.setTierLatency('worker', 7.5 + 0.2 * microBreath);
+        this.springEngine.setTierLatency('framework', 16.0 + 0.6 * microBreath);
+        this.springEngine.setTierLatency('services', 22.0 + 0.8 * microBreath);
+        this.springEngine.setTierLatency('etcd', 26.0 + 1.0 * microBreath);
+        this.springEngine.setTierLatency('apiserver', 33.0 + 1.3 * microBreath);
+        this.springEngine.setTierLatency('ingress', p99ReadoutMs);
+        this.springEngine.setTierLatency('clients', p99ReadoutMs * 1.1);
       }
 
       this.springEngine.update(delta);
       this.layerTrayManager.updateElevations(this.springEngine);
 
-      const multScale = !hasLlmdGateway && hasOverwhelmSurge ? 1.55 : 1.0;
+      const multScale = !hasLlmdGateway && hasOverwhelmSurge ? 1.15 : 1.0;
       const tierOffsetForY = (baseY: number): number => {
         if (baseY >= 11.0) return this.springEngine.getDisplacement('clients') * 2.65 * multScale;
         if (baseY >= 8.0) return this.springEngine.getDisplacement('ingress') * 2.15 * multScale;
