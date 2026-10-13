@@ -455,6 +455,13 @@ async function bootstrap() {
       if (n.kind === 'Node') return `node:Node:${name.split(' ')[0]}`;
       return `node:${n.kind}:${name}`;
     }
+    if (
+      name.startsWith('ray-serving01') ||
+      name.startsWith('ray-kueue-ft') ||
+      name.startsWith('ray-traffic-surge')
+    ) {
+      return `${n.layer}:${n.namespace}:${n.kind}:${name}`;
+    }
     const parts = name.split('-');
     let base = name;
     if (parts.length >= 3 && parts[parts.length - 1]!.length >= 4 && parts[parts.length - 2]!.length >= 5) {
@@ -498,14 +505,24 @@ async function bootstrap() {
           const diffs: string[] = [];
           if (na.version !== nb.version) diffs.push(`Version skew: '${na.version}' vs '${nb.version}'`);
           if (na.image && nb.image && na.image !== nb.image) diffs.push(`Image drift: '${na.image}' vs '${nb.image}'`);
-          const st = diffs.length > 0 ? 'version_skew' : 'identical';
-          if (st === 'version_skew') skew++;
+          const isOverwhelmedA = Boolean(na.metrics?.overwhelmed);
+          if (isOverwhelmedA) {
+            diffs.push(
+              String(
+                na.metrics?.contention_reason ||
+                  'Unqueued batch contention on cv-kuberay (Queued safely by Kueue on cv-kuberay-kueue)',
+              ),
+            );
+          }
+          const stA = diffs.length > 0 ? 'version_skew' : 'identical';
+          const stB = isOverwhelmedA ? 'identical' : stA;
+          if (stA === 'version_skew') skew++;
           else identical++;
-          mapA.set(na.id, { status: st, diffDetails: diffs });
-          mapB.set(nb.id, { status: st, diffDetails: diffs });
+          mapA.set(na.id, { status: stA, diffDetails: diffs });
+          mapB.set(nb.id, { status: stB, diffDetails: isOverwhelmedA ? ['Protected by Kueue + llm-d'] : diffs });
           liveNodeDiffs.push({
             node_id: nb.id,
-            status: st,
+            status: stA,
             source_version: na.version,
             target_version: nb.version,
             diff_details: diffs,

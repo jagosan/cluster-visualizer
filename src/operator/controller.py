@@ -943,14 +943,20 @@ class TopologyController:
                 spatial=Spatial(asset_type=cpasset),
             )
 
+        from src.ingestion.models import KueueWorkloadStatus, PodGeometrySpec
         has_ai_stack = any(
             "llm-d" in ((rp.get("metadata") or {}).get("name") or "")
-            or "kueue" in ((rp.get("metadata") or {}).get("name") or "")
+            or "kueue-controller" in ((rp.get("metadata") or {}).get("name") or "")
+            for rp in raw_pods
+        )
+        is_overwhelmed = any(
+            "ray-kueue-ft02" in ((rp.get("metadata") or {}).get("name") or "")
+            or "ray-kueue-ft03" in ((rp.get("metadata") or {}).get("name") or "")
+            or "ray-traffic-surge" in ((rp.get("metadata") or {}).get("name") or "")
             for rp in raw_pods
         )
 
         if has_ai_stack:
-            from src.ingestion.models import KueueWorkloadStatus, PodGeometrySpec
             new_shapes = {
                 "worker-1": MachineShape(
                     node_name="worker-1 (on-demand-gpu)",
@@ -992,7 +998,12 @@ class TopologyController:
         qwen_spot_idx = 0
         serve01_w_idx = 0
         ft01_w_idx = 0
+        ft02_w_idx = 0
+        ft03_w_idx = 0
+        surge_idx = 0
         ft01_pod_uids: List[str] = []
+        ft02_pod_uids: List[str] = []
+        ft03_pod_uids: List[str] = []
 
         for rp in raw_pods:
             meta = rp.get("metadata", {}) or {}
@@ -1134,6 +1145,35 @@ class TopologyController:
                 display_name = "ray-kueue-ft01-submitter"
                 pid = "pod/default/ray-kueue-ft01-submitter"
                 ver = "ray-2.9.0 (LoRA Job Submitter)"
+            elif "ray-kueue-ft02" in pname and "-head" in pname:
+                display_name = "ray-kueue-ft02-head"
+                pid = "pod/default/ray-kueue-ft02-head"
+                ver = "ray-2.9.0 (Queued by Kueue)" if has_ai_stack else "ray-2.9.0 (Unqueued Stampede!)"
+                ft02_pod_uids.append(pid)
+            elif "ray-kueue-ft02" in pname and "-worker" in pname:
+                ft02_w_idx += 1
+                display_name = f"ray-kueue-ft02-worker-{ft02_w_idx}"
+                pid = f"pod/default/ray-kueue-ft02-worker-{ft02_w_idx}"
+                ver = "ray-2.9.0 (Queued in Kueue Pallet)" if has_ai_stack else "ray-2.9.0 (Unqueued Batch Contention!)"
+                cpu_req, mem_req = 4.0, 16.0
+                ft02_pod_uids.append(pid)
+            elif "ray-kueue-ft03" in pname and "-head" in pname:
+                display_name = "ray-kueue-ft03-head"
+                pid = "pod/default/ray-kueue-ft03-head"
+                ver = "ray-2.9.0 (Queued by Kueue)" if has_ai_stack else "ray-2.9.0 (Unqueued Stampede!)"
+                ft03_pod_uids.append(pid)
+            elif "ray-kueue-ft03" in pname and "-worker" in pname:
+                ft03_w_idx += 1
+                display_name = f"ray-kueue-ft03-worker-{ft03_w_idx}"
+                pid = f"pod/default/ray-kueue-ft03-worker-{ft03_w_idx}"
+                ver = "ray-2.9.0 (Queued in Kueue Pallet)" if has_ai_stack else "ray-2.9.0 (Unqueued Batch Contention!)"
+                cpu_req, mem_req = 4.0, 16.0
+                ft03_pod_uids.append(pid)
+            elif "ray-traffic-surge" in pname:
+                surge_idx += 1
+                display_name = f"ray-traffic-surge-{surge_idx}"
+                pid = f"pod/default/ray-traffic-surge-{surge_idx}"
+                ver = "v1.4.0 (2,500 QPS Inference Flood)"
 
             has_resize_policy = any(bool(c.get("resizePolicy")) for c in containers)
             vpa_cpu = annotations.get("clustervis.io/vpa-target-cpu")
@@ -1209,18 +1249,43 @@ class TopologyController:
                 kind = "KubeRayOperator"
                 asset = "Framework_Ray"
                 pod_status = "Running"
-            elif ("rayservice-" in pname or "ray-serving01" in pname or "ray-kueue-ft01" in pname) and "-head" in pname:
+            elif "ray-traffic-surge" in pname:
+                layer = "ingress"
+                kind = "Client"
+                asset = "Client_Slab"
+                pod_status = "Running"
+            elif (
+                "rayservice-" in pname
+                or "ray-serving01" in pname
+                or "ray-kueue-ft01" in pname
+                or "ray-kueue-ft02" in pname
+                or "ray-kueue-ft03" in pname
+            ) and "-head" in pname:
                 layer = "framework"
                 kind = "RayHead"
                 asset = "Framework_Ray"
-                pod_status = "Pending" if is_pending else "Running"
+                if ("ray-kueue-ft02" in pname or "ray-kueue-ft03" in pname) and has_ai_stack:
+                    pod_status = "Pending"
+                    is_pending = True
+                else:
+                    pod_status = "Pending" if is_pending else "Running"
             elif "vllm-" in pname or (
-                ("ray-serving01" in pname or "ray-kueue-ft01" in pname) and "-worker" in pname
+                (
+                    "ray-serving01" in pname
+                    or "ray-kueue-ft01" in pname
+                    or "ray-kueue-ft02" in pname
+                    or "ray-kueue-ft03" in pname
+                )
+                and "-worker" in pname
             ):
                 layer = "workload"
                 kind = "RayWorker"
                 asset = "Pod_Cylinder"
-                pod_status = "Pending" if is_pending else "Running"
+                if ("ray-kueue-ft02" in pname or "ray-kueue-ft03" in pname) and has_ai_stack:
+                    pod_status = "Pending"
+                    is_pending = True
+                else:
+                    pod_status = "Pending" if is_pending else "Running"
             elif is_ray:
                 layer = "framework"
                 kind = "Pod"
@@ -1337,6 +1402,46 @@ class TopologyController:
                     phase="Admitted",
                 )
 
+            if has_ai_stack and ft02_pod_uids:
+                self.kueue_workloads["wl-kueue-lora-ft02"] = KueueWorkloadStatus(
+                    workload_uid="wl-kueue-lora-ft02",
+                    workload_name="ray-kueue-ft02 (QUEUED BY KUEUE)",
+                    namespace="default",
+                    local_queue="llm-inference-queue",
+                    cluster_queue="spot-gpu",
+                    is_admitted=False,
+                    admission_checks=[{
+                        "type": "QuotaCheck",
+                        "status": "False",
+                        "reason": "Held by Kueue — Protecting Serving SLA (spot-gpu full)",
+                    }],
+                    pod_uids=list(ft02_pod_uids),
+                    total_cpu_requested=16.0,
+                    total_memory_gib_requested=64.0,
+                    total_gpu_requested=4,
+                    phase="Inadmissible",
+                )
+
+            if has_ai_stack and ft03_pod_uids:
+                self.kueue_workloads["wl-kueue-dpo-ft03"] = KueueWorkloadStatus(
+                    workload_uid="wl-kueue-dpo-ft03",
+                    workload_name="ray-kueue-ft03 (QUEUED BY KUEUE)",
+                    namespace="default",
+                    local_queue="llm-inference-queue",
+                    cluster_queue="spot-gpu",
+                    is_admitted=False,
+                    admission_checks=[{
+                        "type": "QuotaCheck",
+                        "status": "False",
+                        "reason": "Held by Kueue — Protecting Serving SLA (spot-gpu full)",
+                    }],
+                    pod_uids=list(ft03_pod_uids),
+                    total_cpu_requested=16.0,
+                    total_memory_gib_requested=64.0,
+                    total_gpu_requested=4,
+                    phase="Inadmissible",
+                )
+
             nodes_list = list(new_nodes.values())
             nodes_list, _ = enrich_framework_components(nodes_list, [])
             nodes_list = apply_spatial_layout(nodes_list, list(self.kueue_workloads.values()))
@@ -1364,7 +1469,32 @@ class TopologyController:
                 "pod/default/ray-serving01-worker-2": (-0.2, 0.85, 2.4, "Pod_Cylinder"),
                 "pod/default/ray-kueue-ft01-worker-1": (1.4, 0.85, -0.4, "Pod_Cylinder"),
                 "pod/default/ray-kueue-ft01-worker-2": (2.8, 0.85, -0.4, "Pod_Cylinder"),
+                "pod/default/ray-traffic-surge-1": (-2.2, 11.8, 1.5, "Client_Slab"),
+                "pod/default/ray-traffic-surge-2": (2.2, 11.8, 1.5, "Client_Slab"),
             }
+            if has_ai_stack:
+                # On cv-kuberay-kueue (Viewport B), Kueue holds ft02 & ft03 inside the left-flank
+                # Cargo Containment Pallets (X = -9.8) so they never stampede the Worker Deck!
+                custom_coords.update({
+                    "pod/default/ray-kueue-ft02-head": (-10.6, 1.4, 2.0, "Framework_Ray"),
+                    "pod/default/ray-kueue-ft02-worker-1": (-9.8, 1.4, 2.6, "Pod_Cylinder"),
+                    "pod/default/ray-kueue-ft02-worker-2": (-9.0, 1.4, 2.6, "Pod_Cylinder"),
+                    "pod/default/ray-kueue-ft03-head": (-10.6, 1.4, -2.8, "Framework_Ray"),
+                    "pod/default/ray-kueue-ft03-worker-1": (-9.8, 1.4, -2.2, "Pod_Cylinder"),
+                    "pod/default/ray-kueue-ft03-worker-2": (-9.0, 1.4, -2.2, "Pod_Cylinder"),
+                })
+            else:
+                # On cv-kuberay (Viewport A), there is NO Kueue admission control ->
+                # ft02 & ft03 barge straight onto the Framework & Worker floors in a stampede!
+                custom_coords.update({
+                    "pod/default/ray-kueue-ft02-head": (-3.2, 2.5, -0.6, "Framework_Ray"),
+                    "pod/default/ray-kueue-ft02-worker-1": (-4.4, 0.85, -0.4, "Pod_Cylinder"),
+                    "pod/default/ray-kueue-ft02-worker-2": (-3.1, 0.85, -0.4, "Pod_Cylinder"),
+                    "pod/default/ray-kueue-ft03-head": (3.5, 2.5, -0.6, "Framework_Ray"),
+                    "pod/default/ray-kueue-ft03-worker-1": (4.0, 0.85, -0.4, "Pod_Cylinder"),
+                    "pod/default/ray-kueue-ft03-worker-2": (5.2, 0.85, -0.4, "Pod_Cylinder"),
+                })
+
             wl_map = {
                 "pod/default/vllm-gemma-2b-it-worker-1": "wl-gemma-2b-it-ondemand",
                 "pod/default/vllm-gemma-2b-it-worker-2": "wl-gemma-2b-it-ondemand",
@@ -1374,6 +1504,10 @@ class TopologyController:
                 "pod/default/vllm-qwen-2-5-3b-spot-burst-2": "wl-qwen-2-5-3b-spot-burst",
                 "pod/default/ray-kueue-ft01-worker-1": "wl-kueue-lora-ft01",
                 "pod/default/ray-kueue-ft01-worker-2": "wl-kueue-lora-ft01",
+                "pod/default/ray-kueue-ft02-worker-1": "wl-kueue-lora-ft02",
+                "pod/default/ray-kueue-ft02-worker-2": "wl-kueue-lora-ft02",
+                "pod/default/ray-kueue-ft03-worker-1": "wl-kueue-dpo-ft03",
+                "pod/default/ray-kueue-ft03-worker-2": "wl-kueue-dpo-ft03",
             }
             for n in nodes_list:
                 if n.id in custom_coords:
@@ -1386,28 +1520,52 @@ class TopologyController:
                         n.id.startswith("pod/default/vllm-")
                         or "ray-serving01-worker" in n.id
                         or "ray-kueue-ft01-worker" in n.id
+                        or "ray-kueue-ft02-worker" in n.id
+                        or "ray-kueue-ft03-worker" in n.id
                     ):
                         n.kind = "RayWorker"
                         n.layer = "workload"
                         is_spot = "spot" in n.id
+                        is_queued_in_kueue = has_ai_stack and ("ft02" in n.id or "ft03" in n.id)
                         n.pod_geometry = PodGeometrySpec(
-                            height=1.25 if is_spot else 1.05,
-                            radius=0.68 if is_spot else 0.58,
-                            is_pending=False,
+                            height=0.85 if is_queued_in_kueue else (1.25 if is_spot else 1.05),
+                            radius=0.45 if is_queued_in_kueue else (0.68 if is_spot else 0.58),
+                            is_pending=is_queued_in_kueue,
                             kueue_workload=wl_map.get(n.id),
                         )
+                    if not has_ai_stack and is_overwhelmed and (
+                        "ray-serving01" in n.id
+                        or "ray-kueue-ft01" in n.id
+                        or "ray-kueue-ft02" in n.id
+                        or "ray-kueue-ft03" in n.id
+                    ):
+                        n.metrics["overwhelmed"] = True
+                        n.metrics["contention_reason"] = "No Kueue Admission Control: 3/3 Batch Gangs Flooded Worker Deck + KV-Cache Thrashing"
+                        n.status = "Degraded"
 
             new_edges = generate_skyscraper_edges(nodes_list)
-            if has_ai_stack or ft01_pod_uids or serve01_w_idx > 0:
+            if has_ai_stack or ft01_pod_uids or serve01_w_idx > 0 or is_overwhelmed:
                 # Replace broadcast Ray Head <-> all Ray Workers edges with model-specific conduits
                 new_edges = [
                     e for e in new_edges
                     if not (
-                        (e.source.startswith("pod/default/rayservice-") or "ray-serving01" in e.source or "ray-kueue-ft01" in e.source)
-                        and (e.target.startswith("pod/default/vllm-") or "ray-serving01" in e.target or "ray-kueue-ft01" in e.target)
+                        (
+                            e.source.startswith("pod/default/rayservice-")
+                            or "ray-serving01" in e.source
+                            or "ray-kueue-ft" in e.source
+                        )
+                        and (
+                            e.target.startswith("pod/default/vllm-")
+                            or "ray-serving01" in e.target
+                            or "ray-kueue-ft" in e.target
+                        )
                     )
                 ]
                 ai_edges = [
+                    ("pod/default/ray-traffic-surge-1", "ingress/default/gke-inference-gateway", "traffic", "HTTP/80", "unidirectional", "2,500 QPS burst"),
+                    ("pod/default/ray-traffic-surge-2", "ingress/default/gke-inference-gateway", "traffic", "HTTP/80", "unidirectional", "2,500 QPS burst"),
+                    ("pod/default/ray-traffic-surge-1", "pod/default/ray-serving01-head", "traffic", "HTTP/8000", "unidirectional", "unrouted flood!"),
+                    ("pod/default/ray-traffic-surge-2", "pod/default/ray-serving01-head", "traffic", "HTTP/8000", "unidirectional", "unrouted flood!"),
                     ("ingress/default/gke-inference-gateway", "pod/default/llm-d-body-based-router", "traffic", "HTTP/80", "unidirectional", "inference /v1/chat/completions"),
                     ("pod/default/llm-d-body-based-router", "pod/default/llm-d-epp-gemma-2b-it", "traffic", "gRPC/ext-proc", "unidirectional", "inference model=gemma-2b-it"),
                     ("pod/default/llm-d-body-based-router", "pod/default/llm-d-epp-qwen-2-5-3b", "traffic", "gRPC/ext-proc", "unidirectional", "inference model=qwen-2.5-3b"),
@@ -1425,13 +1583,21 @@ class TopologyController:
                     ("pod/default/ray-kueue-ft01-submitter", "pod/default/ray-kueue-ft01-head", "framework_control", "HTTP/8265", "unidirectional", "ray job submit"),
                     ("pod/default/ray-kueue-ft01-head", "pod/default/ray-kueue-ft01-worker-1", "framework_control", "gRPC/10001", "bidirectional", "ray train LoRA rank-0"),
                     ("pod/default/ray-kueue-ft01-head", "pod/default/ray-kueue-ft01-worker-2", "framework_control", "gRPC/10001", "bidirectional", "ray train LoRA rank-1"),
+                    ("pod/default/ray-kueue-ft02-head", "pod/default/ray-kueue-ft02-worker-1", "framework_control", "gRPC/10001", "bidirectional", "ray train ft02 rank-0"),
+                    ("pod/default/ray-kueue-ft02-head", "pod/default/ray-kueue-ft02-worker-2", "framework_control", "gRPC/10001", "bidirectional", "ray train ft02 rank-1"),
+                    ("pod/default/ray-kueue-ft03-head", "pod/default/ray-kueue-ft03-worker-1", "framework_control", "gRPC/10001", "bidirectional", "ray train ft03 rank-0"),
+                    ("pod/default/ray-kueue-ft03-head", "pod/default/ray-kueue-ft03-worker-2", "framework_control", "gRPC/10001", "bidirectional", "ray train ft03 rank-1"),
                     ("pod/kueue-system/kueue-controller-manager", "pod/default/vllm-qwen-2-5-3b-spot-burst-1", "control_plane", "Kueue/SpotFallback", "unidirectional", "kueue quota spot-gpu"),
                     ("pod/kueue-system/kueue-controller-manager", "pod/default/vllm-qwen-2-5-3b-spot-burst-2", "control_plane", "Kueue/SpotFallback", "unidirectional", "kueue quota spot-gpu"),
                     ("pod/kueue-system/kueue-controller-manager", "pod/default/ray-kueue-ft01-head", "control_plane", "Kueue/GangAdmit", "unidirectional", "kueue admit ft01"),
+                    ("pod/kueue-system/kueue-controller-manager", "pod/default/ray-kueue-ft02-head", "control_plane", "Kueue/QuotaHold", "unidirectional", "kueue hold ft02 (queued)"),
+                    ("pod/kueue-system/kueue-controller-manager", "pod/default/ray-kueue-ft03-head", "control_plane", "Kueue/QuotaHold", "unidirectional", "kueue hold ft03 (queued)"),
                     ("pod/default/kuberay-operator", "pod/default/rayservice-gemma-2b-it-head", "control_plane", "CRD/RayService", "unidirectional", "kueue ray reconcile"),
                     ("pod/default/kuberay-operator", "pod/default/rayservice-qwen-2-5-3b-head", "control_plane", "CRD/RayService", "unidirectional", "kueue ray reconcile"),
                     ("pod/default/kuberay-operator", "pod/default/ray-serving01-head", "control_plane", "CRD/RayService", "unidirectional", "kueue ray reconcile"),
                     ("pod/default/kuberay-operator", "pod/default/ray-kueue-ft01-head", "control_plane", "CRD/RayJob", "unidirectional", "kueue ray reconcile"),
+                    ("pod/default/kuberay-operator", "pod/default/ray-kueue-ft02-head", "control_plane", "CRD/RayJob", "unidirectional", "kueue ray reconcile"),
+                    ("pod/default/kuberay-operator", "pod/default/ray-kueue-ft03-head", "control_plane", "CRD/RayJob", "unidirectional", "kueue ray reconcile"),
                 ]
                 present_ids = {n.id for n in nodes_list}
                 for src, dst, ftype, proto, direc, vlabel in ai_edges:

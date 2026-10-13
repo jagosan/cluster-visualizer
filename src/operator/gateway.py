@@ -68,12 +68,14 @@ class GatewayRequestHandler(BaseHTTPRequestHandler):
 
     def _resolve_controller_and_subpath(self, raw_path: str) -> tuple[Optional[TopologyController], str]:
         srv: GatewayServer = self.server  # type: ignore[assignment]
-        if raw_path.startswith("/clusters/vanilla"):
-            sub = raw_path[len("/clusters/vanilla"):] or "/"
-            return srv.controller_vanilla, sub
-        if raw_path.startswith("/clusters/kuberay"):
-            sub = raw_path[len("/clusters/kuberay"):] or "/"
-            return srv.controller_kuberay, sub
+        for pfx in ("/clusters/cv-kuberay-kueue", "/clusters/kuberay"):
+            if raw_path.startswith(pfx):
+                sub = raw_path[len(pfx):] or "/"
+                return srv.controller_kuberay, sub
+        for pfx in ("/clusters/cv-kuberay", "/clusters/vanilla"):
+            if raw_path.startswith(pfx):
+                sub = raw_path[len(pfx):] or "/"
+                return srv.controller_vanilla, sub
         if raw_path.startswith("/api/v1/") or raw_path == "/healthz":
             return srv.controller_kuberay, raw_path
         return None, raw_path
@@ -211,13 +213,13 @@ def main() -> None:
     kuberay_ctx = os.environ.get("KUBERAY_CONTEXT", "")
 
     ctrl_vanilla = TopologyController(
-        cluster_name="clustervis-vanilla",
+        cluster_name="cv-kuberay",
         context_name=vanilla_ctx,
         api_url=vanilla_url,
         bearer_token=vanilla_token,
     )
     ctrl_kuberay = TopologyController(
-        cluster_name="clustervis-kuberay",
+        cluster_name="cv-kuberay-kueue",
         context_name=kuberay_ctx,
         api_url=kuberay_url,
         bearer_token=kuberay_token,

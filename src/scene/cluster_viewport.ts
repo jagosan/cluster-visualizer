@@ -1549,17 +1549,34 @@ export class ClusterViewport {
           n.kind === 'BodyBasedRouter' ||
           n.name.toLowerCase().includes('llm-d'),
       );
+      const hasOverwhelmSurge = this.clusterData.nodes.some(
+        (n) =>
+          n.name.includes('ray-kueue-ft02') ||
+          n.name.includes('ray-kueue-ft03') ||
+          n.name.includes('ray-traffic-surge'),
+      );
       let p99ReadoutMs = 8.4;
       if (hasLlmdGateway) {
         const calmWave = 0.5 + 0.5 * Math.sin(time * 1.4);
-        p99ReadoutMs = 7.2 + 3.4 * calmWave;
-        this.springEngine.setTierLatency('worker', 5.2);
-        this.springEngine.setTierLatency('framework', 6.4 + 1.8 * calmWave);
-        this.springEngine.setTierLatency('services', 6.8 + 2.0 * calmWave);
-        this.springEngine.setTierLatency('etcd', 7.0 + 2.2 * calmWave);
-        this.springEngine.setTierLatency('apiserver', 7.5 + 2.6 * calmWave);
+        p99ReadoutMs = hasOverwhelmSurge ? 10.8 + 3.6 * calmWave : 7.2 + 3.4 * calmWave;
+        this.springEngine.setTierLatency('worker', hasOverwhelmSurge ? 6.0 : 5.2);
+        this.springEngine.setTierLatency('framework', (hasOverwhelmSurge ? 7.8 : 6.4) + 1.8 * calmWave);
+        this.springEngine.setTierLatency('services', (hasOverwhelmSurge ? 8.4 : 6.8) + 2.0 * calmWave);
+        this.springEngine.setTierLatency('etcd', (hasOverwhelmSurge ? 8.8 : 7.0) + 2.2 * calmWave);
+        this.springEngine.setTierLatency('apiserver', (hasOverwhelmSurge ? 9.5 : 7.5) + 2.6 * calmWave);
         this.springEngine.setTierLatency('ingress', p99ReadoutMs);
         this.springEngine.setTierLatency('clients', p99ReadoutMs + 1.2);
+      } else if (hasOverwhelmSurge) {
+        // Unqueued batch stampede (3/3 gangs on Worker Deck) + unrouted 2,500 QPS flood
+        const surge = Math.pow(0.5 + 0.5 * Math.sin(time * 1.65), 1.2);
+        p99ReadoutMs = 540.0 + 340.0 * surge;
+        this.springEngine.setTierLatency('worker', 35.0 + 55.0 * surge);
+        this.springEngine.setTierLatency('framework', 160.0 + 210.0 * surge);
+        this.springEngine.setTierLatency('services', 260.0 + 280.0 * surge);
+        this.springEngine.setTierLatency('etcd', 320.0 + 310.0 * surge);
+        this.springEngine.setTierLatency('apiserver', 420.0 + 390.0 * surge);
+        this.springEngine.setTierLatency('ingress', p99ReadoutMs);
+        this.springEngine.setTierLatency('clients', p99ReadoutMs * 1.35);
       } else {
         // Periodic KV-cache miss & head-of-line queuing surge on vanilla Round-Robin cluster
         const surge = Math.pow(0.5 + 0.5 * Math.sin(time * 1.15), 1.6);
@@ -1576,13 +1593,14 @@ export class ClusterViewport {
       this.springEngine.update(delta);
       this.layerTrayManager.updateElevations(this.springEngine);
 
+      const multScale = !hasLlmdGateway && hasOverwhelmSurge ? 1.55 : 1.0;
       const tierOffsetForY = (baseY: number): number => {
-        if (baseY >= 11.0) return this.springEngine.getDisplacement('clients') * 2.65;
-        if (baseY >= 8.0) return this.springEngine.getDisplacement('ingress') * 2.15;
-        if (baseY >= 6.2) return this.springEngine.getDisplacement('apiserver') * 1.65;
-        if (baseY >= 5.1) return this.springEngine.getDisplacement('etcd') * 1.3;
-        if (baseY >= 3.3) return this.springEngine.getDisplacement('services') * 1.05;
-        if (baseY >= 1.8) return this.springEngine.getDisplacement('framework') * 0.55;
+        if (baseY >= 11.0) return this.springEngine.getDisplacement('clients') * 2.65 * multScale;
+        if (baseY >= 8.0) return this.springEngine.getDisplacement('ingress') * 2.15 * multScale;
+        if (baseY >= 6.2) return this.springEngine.getDisplacement('apiserver') * 1.65 * multScale;
+        if (baseY >= 5.1) return this.springEngine.getDisplacement('etcd') * 1.3 * multScale;
+        if (baseY >= 3.3) return this.springEngine.getDisplacement('services') * 1.05 * multScale;
+        if (baseY >= 1.8) return this.springEngine.getDisplacement('framework') * 0.55 * multScale;
         return 0;
       };
 
@@ -1597,14 +1615,33 @@ export class ClusterViewport {
       const titleEl = this.container.querySelector('.viewport-title') as HTMLElement | null;
       if (titleEl && this.clusterData.metadata?.cluster_name) {
         const slotPrefix = titleEl.innerText.split('(')[0]?.trim() || 'Cluster';
-        const topDeltaY = this.springEngine.getDisplacement('clients') * 2.65;
-        const badge = hasLlmdGateway
-          ? `⚡ llm-d KV-Cache: ${p99ReadoutMs.toFixed(1)}ms [Calm] · Floor ΔY +${topDeltaY.toFixed(2)}u`
-          : `🔥 Naive Round-Robin: ${Math.round(p99ReadoutMs)}ms [KV Miss Surge] · Floor ΔY +${topDeltaY.toFixed(2)}u`;
+        const topDeltaY = this.springEngine.getDisplacement('clients') * 2.65 * multScale;
+        let badge: string;
+        if (hasLlmdGateway && hasOverwhelmSurge) {
+          badge = `🛡️ PROTECTED [Kueue Queued 2 Gangs · llm-d KV 94%]: ${p99ReadoutMs.toFixed(1)}ms · Floor ΔY +${topDeltaY.toFixed(2)}u`;
+          titleEl.style.borderColor = '#10b981';
+          titleEl.style.color = '#6ee7b7';
+        } else if (!hasLlmdGateway && hasOverwhelmSurge) {
+          badge = `🚨 OVERWHELMED [No Kueue · 3/3 Batch Flooded]: ${Math.round(p99ReadoutMs)}ms · Floor ΔY +${topDeltaY.toFixed(2)}u`;
+          titleEl.style.borderColor = '#ef4444';
+          titleEl.style.color = '#fca5a5';
+        } else if (hasLlmdGateway) {
+          badge = `⚡ llm-d + Kueue: ${p99ReadoutMs.toFixed(1)}ms [Calm] · Floor ΔY +${topDeltaY.toFixed(2)}u`;
+          titleEl.style.borderColor = '';
+          titleEl.style.color = '';
+        } else {
+          badge = `🔥 Naive Round-Robin: ${Math.round(p99ReadoutMs)}ms [KV Miss Surge] · Floor ΔY +${topDeltaY.toFixed(2)}u`;
+          titleEl.style.borderColor = '';
+          titleEl.style.color = '';
+        }
         titleEl.innerText = `${slotPrefix} (${this.clusterData.metadata.cluster_name} · ${badge})`;
       }
 
-      const speedBoost = hasLlmdGateway ? 1.35 : Math.max(0.35, 1.0 - 0.55 * ((p99ReadoutMs - 28.0) / 310.0));
+      const speedBoost = hasLlmdGateway
+        ? (hasOverwhelmSurge ? 1.45 : 1.35)
+        : hasOverwhelmSurge
+          ? 0.2
+          : Math.max(0.35, 1.0 - 0.55 * ((p99ReadoutMs - 28.0) / 310.0));
       this.flowSystem.update(delta, speedMultiplier * speedBoost);
     } else {
       this.flowSystem.update(delta, speedMultiplier);

@@ -1,0 +1,202 @@
+# Canonical KubeRay + Kueue Overwhelm Burst Manifest
+# Deploys two competing GPU fine-tuning gangs (ray-kueue-ft02, ray-kueue-ft03)
+# plus a high-QPS inference traffic surge (ray-traffic-surge) to both clusters
+# using lightweight container requests (15m CPU / 32Mi RAM) so neither GKE
+# cluster is physically crushed while clearly exposing the architectural delta:
+#   - cv-kuberay (Viewport A): No Kueue & no llm-d -> all batch gangs flood
+#     the Worker Deck simultaneously, starving serving pods and spiking latency.
+#   - cv-kuberay-kueue (Viewport B): Kueue holds ft02 & ft03 in Staging Cargo
+#     Pallets while llm-d routes serving traffic across warm KV-cache replicas.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ray-kueue-ft02-head
+  namespace: default
+  labels:
+    app.kubernetes.io/name: ray-kueue-ft02
+    ray.io/node-type: head
+    kueue.x-k8s.io/queue-name: llm-inference-queue
+    kueue.x-k8s.io/resource-flavor: spot-gpu
+    clustervis.io/overwhelm-gang: ft02
+    clustervis.io/version: ray-2.9.0
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ray-kueue-ft02-head
+  template:
+    metadata:
+      labels:
+        app: ray-kueue-ft02-head
+        app.kubernetes.io/name: ray-kueue-ft02
+        ray.io/node-type: head
+        kueue.x-k8s.io/queue-name: llm-inference-queue
+        kueue.x-k8s.io/resource-flavor: spot-gpu
+        clustervis.io/overwhelm-gang: ft02
+        clustervis.io/version: ray-2.9.0
+    spec:
+      containers:
+        - name: ray-head
+          image: python:3.11-slim
+          command: ["python3", "-c", "import time; time.sleep(86400)"]
+          resources:
+            requests:
+              cpu: 15m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ray-kueue-ft02-worker
+  namespace: default
+  labels:
+    app.kubernetes.io/name: ray-kueue-ft02
+    ray.io/node-type: worker
+    kueue.x-k8s.io/queue-name: llm-inference-queue
+    kueue.x-k8s.io/resource-flavor: spot-gpu
+    clustervis.io/overwhelm-gang: ft02
+    clustervis.io/version: ray-2.9.0
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: ray-kueue-ft02-worker
+  template:
+    metadata:
+      labels:
+        app: ray-kueue-ft02-worker
+        app.kubernetes.io/name: ray-kueue-ft02
+        ray.io/node-type: worker
+        kueue.x-k8s.io/queue-name: llm-inference-queue
+        kueue.x-k8s.io/resource-flavor: spot-gpu
+        clustervis.io/overwhelm-gang: ft02
+        clustervis.io/version: ray-2.9.0
+    spec:
+      containers:
+        - name: ray-worker
+          image: python:3.11-slim
+          command: ["python3", "-c", "import time; time.sleep(86400)"]
+          resources:
+            requests:
+              cpu: 15m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ray-kueue-ft03-head
+  namespace: default
+  labels:
+    app.kubernetes.io/name: ray-kueue-ft03
+    ray.io/node-type: head
+    kueue.x-k8s.io/queue-name: llm-inference-queue
+    kueue.x-k8s.io/resource-flavor: spot-gpu
+    clustervis.io/overwhelm-gang: ft03
+    clustervis.io/version: ray-2.9.0
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ray-kueue-ft03-head
+  template:
+    metadata:
+      labels:
+        app: ray-kueue-ft03-head
+        app.kubernetes.io/name: ray-kueue-ft03
+        ray.io/node-type: head
+        kueue.x-k8s.io/queue-name: llm-inference-queue
+        kueue.x-k8s.io/resource-flavor: spot-gpu
+        clustervis.io/overwhelm-gang: ft03
+        clustervis.io/version: ray-2.9.0
+    spec:
+      containers:
+        - name: ray-head
+          image: python:3.11-slim
+          command: ["python3", "-c", "import time; time.sleep(86400)"]
+          resources:
+            requests:
+              cpu: 15m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ray-kueue-ft03-worker
+  namespace: default
+  labels:
+    app.kubernetes.io/name: ray-kueue-ft03
+    ray.io/node-type: worker
+    kueue.x-k8s.io/queue-name: llm-inference-queue
+    kueue.x-k8s.io/resource-flavor: spot-gpu
+    clustervis.io/overwhelm-gang: ft03
+    clustervis.io/version: ray-2.9.0
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: ray-kueue-ft03-worker
+  template:
+    metadata:
+      labels:
+        app: ray-kueue-ft03-worker
+        app.kubernetes.io/name: ray-kueue-ft03
+        ray.io/node-type: worker
+        kueue.x-k8s.io/queue-name: llm-inference-queue
+        kueue.x-k8s.io/resource-flavor: spot-gpu
+        clustervis.io/overwhelm-gang: ft03
+        clustervis.io/version: ray-2.9.0
+    spec:
+      containers:
+        - name: ray-worker
+          image: python:3.11-slim
+          command: ["python3", "-c", "import time; time.sleep(86400)"]
+          resources:
+            requests:
+              cpu: 15m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ray-traffic-surge
+  namespace: default
+  labels:
+    app.kubernetes.io/name: ray-traffic-surge
+    clustervis.io/overwhelm-surge: "true"
+    clustervis.io/version: v1.4.0
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: ray-traffic-surge
+  template:
+    metadata:
+      labels:
+        app: ray-traffic-surge
+        app.kubernetes.io/name: ray-traffic-surge
+        clustervis.io/overwhelm-surge: "true"
+        clustervis.io/version: v1.4.0
+    spec:
+      containers:
+        - name: burst-loadgen
+          image: python:3.11-slim
+          command: ["python3", "-c", "import time; time.sleep(86400)"]
+          resources:
+            requests:
+              cpu: 15m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi

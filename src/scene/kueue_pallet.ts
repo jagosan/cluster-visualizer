@@ -655,8 +655,15 @@ export class KueuePalletManager {
     const ordered = [...workloads].sort((a, b) =>
       (a.workload_name ?? '').localeCompare(b.workload_name ?? ''),
     );
+    let queuedLiveIdx = 0;
     ordered.forEach((workload, index) => {
-      const anchor = kueuePalletAnchor(index);
+      const isQueuedLive =
+        !workload.is_admitted &&
+        workload.phase !== 'Admitted' &&
+        (workload.workload_uid ?? '').startsWith('wl-kueue-');
+      const anchor = isQueuedLive
+        ? new THREE.Vector3(-9.8, 1.5, 2.3 - queuedLiveIdx++ * 4.6)
+        : kueuePalletAnchor(index);
       const record = this.buildPallet(workload, this.hudFromWorkload(workload), anchor);
       this.settleStateForWorkload(record);
     });

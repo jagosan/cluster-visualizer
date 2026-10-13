@@ -1,6 +1,6 @@
 {
-  "source_cluster": "clustervis-vanilla",
-  "target_cluster": "clustervis-kuberay",
+  "source_cluster": "cv-kuberay",
+  "target_cluster": "cv-kuberay-kueue",
   "summary": {
     "identical_nodes": 17,
     "version_skew_nodes": 1,
@@ -119,7 +119,7 @@
       "source_digest": null,
       "target_digest": "sha256:7031c1b283388d2c2e09b57badb803c05ebed362dc88d84b480cc47f72a21097",
       "diff_details": [
-        "Absent in clustervis-vanilla, present in clustervis-kuberay"
+        "Absent in cv-kuberay, present in cv-kuberay-kueue"
       ]
     },
     {
@@ -132,7 +132,7 @@
       "source_digest": null,
       "target_digest": "sha256:7031c1b283388d2c2e09b57badb803c05ebed362dc88d84b480cc47f72a21097",
       "diff_details": [
-        "Absent in clustervis-vanilla, present in clustervis-kuberay"
+        "Absent in cv-kuberay, present in cv-kuberay-kueue"
       ]
     },
     {
@@ -145,7 +145,7 @@
       "source_digest": null,
       "target_digest": "sha256:7031c1b283388d2c2e09b57badb803c05ebed362dc88d84b480cc47f72a21097",
       "diff_details": [
-        "Absent in clustervis-vanilla, present in clustervis-kuberay"
+        "Absent in cv-kuberay, present in cv-kuberay-kueue"
       ]
     },
     {
@@ -158,7 +158,7 @@
       "source_digest": null,
       "target_digest": "sha256:7031c1b283388d2c2e09b57badb803c05ebed362dc88d84b480cc47f72a21097",
       "diff_details": [
-        "Absent in clustervis-vanilla, present in clustervis-kuberay"
+        "Absent in cv-kuberay, present in cv-kuberay-kueue"
       ]
     },
     {
@@ -171,7 +171,7 @@
       "source_digest": null,
       "target_digest": null,
       "diff_details": [
-        "Absent in clustervis-vanilla, present in clustervis-kuberay"
+        "Absent in cv-kuberay, present in cv-kuberay-kueue"
       ]
     },
     {
@@ -184,7 +184,7 @@
       "source_digest": null,
       "target_digest": "sha256:7031c1b283388d2c2e09b57badb803c05ebed362dc88d84b480cc47f72a21097",
       "diff_details": [
-        "Absent in clustervis-vanilla, present in clustervis-kuberay"
+        "Absent in cv-kuberay, present in cv-kuberay-kueue"
       ]
     },
     {
@@ -197,7 +197,7 @@
       "source_digest": null,
       "target_digest": "sha256:7031c1b283388d2c2e09b57badb803c05ebed362dc88d84b480cc47f72a21097",
       "diff_details": [
-        "Absent in clustervis-vanilla, present in clustervis-kuberay"
+        "Absent in cv-kuberay, present in cv-kuberay-kueue"
       ]
     },
     {
@@ -309,7 +309,7 @@
       "source_digest": null,
       "target_digest": "sha256:7031c1b283388d2c2e09b57badb803c05ebed362dc88d84b480cc47f72a21097",
       "diff_details": [
-        "Absent in clustervis-vanilla, present in clustervis-kuberay"
+        "Absent in cv-kuberay, present in cv-kuberay-kueue"
       ]
     },
     {
@@ -322,7 +322,7 @@
       "source_digest": null,
       "target_digest": "sha256:7031c1b283388d2c2e09b57badb803c05ebed362dc88d84b480cc47f72a21097",
       "diff_details": [
-        "Absent in clustervis-vanilla, present in clustervis-kuberay"
+        "Absent in cv-kuberay, present in cv-kuberay-kueue"
       ]
     },
     {
@@ -335,7 +335,7 @@
       "source_digest": null,
       "target_digest": "sha256:7031c1b283388d2c2e09b57badb803c05ebed362dc88d84b480cc47f72a21097",
       "diff_details": [
-        "Absent in clustervis-vanilla, present in clustervis-kuberay"
+        "Absent in cv-kuberay, present in cv-kuberay-kueue"
       ]
     },
     {
@@ -348,7 +348,7 @@
       "source_digest": null,
       "target_digest": "sha256:7031c1b283388d2c2e09b57badb803c05ebed362dc88d84b480cc47f72a21097",
       "diff_details": [
-        "Absent in clustervis-vanilla, present in clustervis-kuberay"
+        "Absent in cv-kuberay, present in cv-kuberay-kueue"
       ]
     },
     {
@@ -361,7 +361,7 @@
       "source_digest": null,
       "target_digest": "sha256:7031c1b283388d2c2e09b57badb803c05ebed362dc88d84b480cc47f72a21097",
       "diff_details": [
-        "Absent in clustervis-vanilla, present in clustervis-kuberay"
+        "Absent in cv-kuberay, present in cv-kuberay-kueue"
       ]
     },
     {
@@ -374,7 +374,7 @@
       "source_digest": null,
       "target_digest": "sha256:7031c1b283388d2c2e09b57badb803c05ebed362dc88d84b480cc47f72a21097",
       "diff_details": [
-        "Absent in clustervis-vanilla, present in clustervis-kuberay"
+        "Absent in cv-kuberay, present in cv-kuberay-kueue"
       ]
     }
   ],
