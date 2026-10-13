@@ -989,11 +989,17 @@ export class KueuePalletManager {
     if (deficit) {
       record.hud.quota_deficit = deficit;
       record.state = 'queued';
+    } else if (
+      w.phase === 'Admissible' &&
+      (w.workload_uid ?? '').startsWith('wl-kueue-')
+    ) {
+      record.state = 'reserved';
     } else {
       record.state = 'queued';
     }
     record.group.visible = true;
     this.applyStateLighting(record);
+    this.renderHud(record);
   }
 
   private applyStateLighting(record: PalletRecord): void {

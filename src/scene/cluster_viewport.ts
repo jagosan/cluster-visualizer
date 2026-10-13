@@ -395,9 +395,11 @@ export class ClusterViewport {
     this.pulsingMaterials = []; // Reset animation refs
 
     // Determine cluster characteristics for tower trays and flank labels
-    const workerCount = data.nodes.filter(
-      (n) => n.layer === 'node' || n.kind.toLowerCase() === 'node'
-    ).length || 3;
+    const nodeKindCount = data.nodes.filter((n) => n.kind.toLowerCase() === 'node').length;
+    const workerCount =
+      nodeKindCount > 0
+        ? nodeKindCount
+        : data.nodes.filter((n) => n.layer === 'node').length || 3;
     const hasRay = data.nodes.some(
       (n) => n.name.toLowerCase().includes('ray') || n.kind.toLowerCase().includes('ray')
     );
@@ -567,6 +569,11 @@ export class ClusterViewport {
     }
 
     this.stagingYard.applyClaims(data.karpenter_node_claims, pendingPositions);
+    if (!this.subterraneanFocused) {
+      this.layerTrayManager.setGroundOpacity(
+        data.karpenter_node_claims && data.karpenter_node_claims.length > 0 ? 0.28 : 1.0,
+      );
+    }
 
     // TASK-CV-1004: build cargo containment pallets from the snapshot's
     // Kueue workloads and register their constituent pod meshes so the
@@ -605,6 +612,11 @@ export class ClusterViewport {
 
   /** SSE `kueue_admission_admitted`: vivid green mag-rail transit. */
   public applyKueueAdmissionAdmitted(payload: KueueAdmissionAdmittedPayload): void {
+    this.stagingYard.clearGhostsAndBeams();
+    this.stagingYard.clearHovering();
+    if (!this.subterraneanFocused) {
+      this.layerTrayManager.setGroundOpacity(1.0);
+    }
     this.kueuePallets.applyAdmissionAdmitted(payload);
   }
 
@@ -1051,8 +1063,11 @@ export class ClusterViewport {
 
   private refreshFlankLabels(): void {
     const nodes = this.clusterData?.nodes ?? [];
+    const nodeKindCount = nodes.filter((n) => n.kind.toLowerCase() === 'node').length;
     const workerCount =
-      nodes.filter((n) => n.layer === 'node' || n.kind.toLowerCase() === 'node').length || 3;
+      nodeKindCount > 0
+        ? nodeKindCount
+        : nodes.filter((n) => n.layer === 'node').length || 3;
     const hasRay = nodes.some(
       (n) => n.name.toLowerCase().includes('ray') || n.kind.toLowerCase().includes('ray'),
     );
@@ -1565,16 +1580,20 @@ export class ClusterViewport {
           n.name.includes('ray-serving01') ||
           n.name.includes('ray-kueue-ft01'),
       );
+      const hasAutoscaledNode = this.clusterData.nodes.some(
+        (n) => n.id === 'node/worker-3' || n.name.includes('worker-3'),
+      );
       // Subtle organic micro-breathing (-1..+1) around a stable converged altitude
       const microBreath = Math.sin(time * 0.85);
       let p99ReadoutMs = 8.5;
       if (hasLlmdGateway) {
-        p99ReadoutMs = (hasOverwhelmSurge ? 12.2 : 8.5) + 0.35 * microBreath;
-        this.springEngine.setTierLatency('worker', hasOverwhelmSurge ? 5.8 : 5.2);
-        this.springEngine.setTierLatency('framework', (hasOverwhelmSurge ? 7.6 : 6.4) + 0.15 * microBreath);
-        this.springEngine.setTierLatency('services', (hasOverwhelmSurge ? 8.2 : 6.9) + 0.18 * microBreath);
-        this.springEngine.setTierLatency('etcd', (hasOverwhelmSurge ? 8.6 : 7.2) + 0.2 * microBreath);
-        this.springEngine.setTierLatency('apiserver', (hasOverwhelmSurge ? 9.4 : 7.8) + 0.25 * microBreath);
+        const baseLat = hasOverwhelmSurge ? (hasAutoscaledNode ? 10.4 : 12.2) : 8.5;
+        p99ReadoutMs = baseLat + 0.35 * microBreath;
+        this.springEngine.setTierLatency('worker', hasOverwhelmSurge ? 5.6 : 5.2);
+        this.springEngine.setTierLatency('framework', (hasOverwhelmSurge ? 7.2 : 6.4) + 0.15 * microBreath);
+        this.springEngine.setTierLatency('services', (hasOverwhelmSurge ? 7.8 : 6.9) + 0.18 * microBreath);
+        this.springEngine.setTierLatency('etcd', (hasOverwhelmSurge ? 8.2 : 7.2) + 0.2 * microBreath);
+        this.springEngine.setTierLatency('apiserver', (hasOverwhelmSurge ? 9.0 : 7.8) + 0.25 * microBreath);
         this.springEngine.setTierLatency('ingress', p99ReadoutMs);
         this.springEngine.setTierLatency('clients', p99ReadoutMs + 1.0);
       } else if (hasOverwhelmSurge) {
@@ -1636,10 +1655,14 @@ export class ClusterViewport {
         const slotPrefix = titleEl.innerText.split('(')[0]?.trim() || 'Cluster';
         const topDeltaY = this.springEngine.getDisplacement('clients') * 2.65 * multScale;
         let badge: string;
-        if (hasLlmdGateway && hasOverwhelmSurge) {
-          badge = `🛡️ PROTECTED [Kueue Queued 2 Gangs · llm-d KV 94%]: ${p99ReadoutMs.toFixed(1)}ms · Floor ΔY +${topDeltaY.toFixed(2)}u`;
+        if (hasLlmdGateway && hasOverwhelmSurge && hasAutoscaledNode) {
+          badge = `🛡️ AUTOSCALED [ComputeClass +1 Node (g2-48) · 3/3 Gangs Admitted]: ${p99ReadoutMs.toFixed(1)}ms · Floor ΔY +${topDeltaY.toFixed(2)}u`;
           titleEl.style.borderColor = '#10b981';
           titleEl.style.color = '#6ee7b7';
+        } else if (hasLlmdGateway && hasOverwhelmSurge) {
+          badge = `🛡️ QUEUED + SCALING [Kueue Hold 2 Gangs · ComputeClass +1 Node]: ${p99ReadoutMs.toFixed(1)}ms · Floor ΔY +${topDeltaY.toFixed(2)}u`;
+          titleEl.style.borderColor = '#f59e0b';
+          titleEl.style.color = '#fde68a';
         } else if (!hasLlmdGateway && hasOverwhelmSurge) {
           badge = `🚨 OVERWHELMED [No Kueue · 3/3 Batch Flooded]: ${Math.round(p99ReadoutMs)}ms · Floor ΔY +${topDeltaY.toFixed(2)}u`;
           titleEl.style.borderColor = '#ef4444';

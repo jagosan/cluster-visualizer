@@ -213,35 +213,112 @@ function buildTarmacPlane(): THREE.Group {
   return group;
 }
 
-function buildGhostChassis(position: THREE.Vector3, provisioned: boolean): GhostChassis {
+function buildGhostChassis(
+  position: THREE.Vector3,
+  provisioned: boolean,
+  claimName = '',
+): GhostChassis {
   const group = new THREE.Group();
   group.name = `ghost_node_${position.x.toFixed(2)}`;
   group.position.copy(position);
 
+  const isComputeClass =
+    claimName.toLowerCase().includes('computeclass') ||
+    claimName.toLowerCase().includes('worker-3') ||
+    claimName.toLowerCase().includes('g2-standard');
+  const boxW = isComputeClass ? 4.4 : 2.0;
+  const boxH = isComputeClass ? 0.65 : 0.6;
+  const boxD = isComputeClass ? 3.4 : 1.5;
+
   const wireMat = new THREE.MeshBasicMaterial({
-    color: TRACTOR_BEAM_AMBER,
+    color: provisioned ? 0x2eff9a : TRACTOR_BEAM_AMBER,
     wireframe: true,
     transparent: true,
-    opacity: provisioned ? 0.5 : 0.3,
+    opacity: provisioned ? 0.65 : 0.45,
     depthWrite: false,
   });
-  const chassis = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.6, 1.5), wireMat);
+  const chassis = new THREE.Mesh(new THREE.BoxGeometry(boxW, boxH, boxD), wireMat);
   group.add(chassis);
+
+  // Translucent holographic core inside the wireframe ghost chassis.
+  const coreMat = new THREE.MeshBasicMaterial({
+    color: provisioned ? 0x10b981 : TRACTOR_BEAM_AMBER,
+    transparent: true,
+    opacity: provisioned ? 0.22 : 0.14,
+    depthWrite: false,
+  });
+  const core = new THREE.Mesh(new THREE.BoxGeometry(boxW * 0.96, boxH * 0.85, boxD * 0.96), coreMat);
+  group.add(core);
 
   // Landing footprint ring on the B1 stratum.
   const ringMat = new THREE.MeshBasicMaterial({
-    color: TRACTOR_BEAM_AMBER,
+    color: provisioned ? 0x2eff9a : TRACTOR_BEAM_AMBER,
     transparent: true,
-    opacity: 0.4,
+    opacity: 0.55,
     side: THREE.DoubleSide,
     depthWrite: false,
   });
-  const ring = new THREE.Mesh(new THREE.RingGeometry(1.15, 1.3, 40), ringMat);
+  const ringOuter = isComputeClass ? 2.4 : 1.3;
+  const ring = new THREE.Mesh(new THREE.RingGeometry(ringOuter - 0.18, ringOuter, 40), ringMat);
   ring.rotation.x = -Math.PI / 2;
   ring.position.y = -0.32;
   group.add(ring);
 
-  return { claimName: '', group, wireMat, provisioned };
+  // For ComputeClass / Cluster Autoscaler node claims, project an upper-deck
+  // holo-outline at Worker Deck elevation (relative Y = +3.0 from B1 Y = -2.5)
+  // and a floating HUD badge so the provisioning node is unmistakable from
+  // the default camera angle.
+  if (isComputeClass && typeof document !== 'undefined') {
+    const deckOutline = new THREE.LineSegments(
+      new THREE.EdgesGeometry(new THREE.BoxGeometry(boxW, 0.35, boxD)),
+      new THREE.LineBasicMaterial({
+        color: provisioned ? 0x2eff9a : TRACTOR_BEAM_AMBER,
+        transparent: true,
+        opacity: 0.85,
+      }),
+    );
+    deckOutline.position.y = 3.0;
+    group.add(deckOutline);
+
+    const canvas = document.createElement('canvas');
+    canvas.width = 640;
+    canvas.height = 160;
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      const borderCol = provisioned ? '#2eff9a' : '#ffb020';
+      ctx.fillStyle = 'rgba(8, 15, 22, 0.86)';
+      ctx.fillRect(6, 6, 628, 148);
+      ctx.strokeStyle = borderCol;
+      ctx.lineWidth = 4;
+      ctx.strokeRect(6, 6, 628, 148);
+      ctx.fillStyle = borderCol;
+      ctx.font = 'bold 26px monospace';
+      ctx.fillText(
+        provisioned
+          ? '✓ COMPUTECLASS NODE READY — PROMOTING'
+          : '⚡ CLUSTER AUTOSCALER: PROVISIONING NODE',
+        22,
+        42,
+      );
+      ctx.fillStyle = '#e2e8f0';
+      ctx.font = '22px monospace';
+      ctx.fillText('Node: worker-3 (g2-standard-48 · Spot GPU)', 22, 82);
+      ctx.fillStyle = '#93c5fd';
+      ctx.fillText('ComputeClass: kueue-spot-burst-cc · 4x NVIDIA L4', 22, 120);
+    }
+    const hudSprite = new THREE.Sprite(
+      new THREE.SpriteMaterial({
+        map: new THREE.CanvasTexture(canvas),
+        transparent: true,
+        depthWrite: false,
+      }),
+    );
+    hudSprite.scale.set(5.4, 1.35, 1);
+    hudSprite.position.set(0, 4.15, 0);
+    group.add(hudSprite);
+  }
+
+  return { claimName, group, wireMat, provisioned };
 }
 
 function buildTractorBeam(
@@ -250,36 +327,38 @@ function buildTractorBeam(
   radius: number,
 ): TractorBeam {
   const group = new THREE.Group();
-  const height = Math.max(0.2, top.y - bottom.y);
-  const midX = (top.x + bottom.x) / 2;
-  const midZ = (top.z + bottom.z) / 2;
-  const midY = (top.y + bottom.y) / 2;
+  const dir = top.clone().sub(bottom);
+  const length = Math.max(0.2, dir.length());
+  const mid = bottom.clone().addScaledVector(dir, 0.5);
 
   const shaftMat = new THREE.MeshBasicMaterial({
     color: TRACTOR_BEAM_AMBER,
     transparent: true,
-    opacity: 0.28,
+    opacity: 0.34,
     side: THREE.DoubleSide,
     depthWrite: false,
   });
   const shaft = new THREE.Mesh(
-    new THREE.CylinderGeometry(radius * 0.65, radius * 1.15, height, 20, 1, true),
+    new THREE.CylinderGeometry(radius * 0.55, radius * 1.05, length, 20, 1, true),
     shaftMat,
   );
-  shaft.position.set(midX, midY, midZ);
+  shaft.position.copy(mid);
+  if (dir.lengthSq() > 1e-6) {
+    shaft.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.clone().normalize());
+  }
   group.add(shaft);
 
-  // Lifting-platform disc that pulses up the shaft (provisioning in progress).
+  // Lifting-platform disc that pulses along the shaft (provisioning in progress).
   const pulseMat = new THREE.MeshBasicMaterial({
     color: TRACTOR_BEAM_AMBER,
     transparent: true,
-    opacity: 0.7,
+    opacity: 0.8,
     side: THREE.DoubleSide,
     depthWrite: false,
   });
   const pulse = new THREE.Mesh(new THREE.RingGeometry(radius * 0.5, radius * 1.3, 28), pulseMat);
   pulse.rotation.x = -Math.PI / 2;
-  pulse.position.set(midX, bottom.y, midZ);
+  pulse.position.copy(bottom);
   group.add(pulse);
 
   // Impact flare where the beam meets the ghost chassis.
@@ -288,7 +367,7 @@ function buildTractorBeam(
     new THREE.MeshBasicMaterial({
       color: TRACTOR_BEAM_AMBER,
       transparent: true,
-      opacity: 0.45,
+      opacity: 0.55,
       side: THREE.DoubleSide,
       depthWrite: false,
     }),
@@ -367,13 +446,16 @@ export class StagingYardManager {
     provisioned = false,
   ): void {
     const existing = this.ghosts.get(claimName);
-    if (existing) {
+    if (existing && existing.provisioned === provisioned) {
       existing.group.position.copy(position);
-      existing.provisioned = provisioned;
-      existing.wireMat.opacity = provisioned ? 0.5 : 0.3;
       return;
     }
-    const ghost = buildGhostChassis(position, provisioned);
+    if (existing) {
+      this.ghostRoot.remove(existing.group);
+      disposeObject(existing.group);
+      this.ghosts.delete(claimName);
+    }
+    const ghost = buildGhostChassis(position, provisioned, claimName);
     ghost.claimName = claimName;
     this.ghosts.set(claimName, ghost);
     this.ghostRoot.add(ghost.group);
@@ -418,7 +500,12 @@ export class StagingYardManager {
     const span = GHOST_CHASSIS_SPACING_X * claims.length;
     const startX = -span / 2 + GHOST_CHASSIS_SPACING_X / 2;
     claims.forEach((claim, i) => {
-      const x = Math.min(10.0, Math.max(-10.0, startX + i * GHOST_CHASSIS_SPACING_X));
+      const isComputeClass =
+        claim.nodepool === 'kueue-spot-burst-cc' ||
+        claim.claim_name.toLowerCase().includes('computeclass');
+      const x = isComputeClass
+        ? -5.8
+        : Math.min(10.0, Math.max(-10.0, startX + i * GHOST_CHASSIS_SPACING_X));
       const dock = new THREE.Vector3(x, GHOST_NODE_Y, 0.0);
       this.upsertGhostChassis(claim.claim_name, dock, claim.is_provisioned === true);
       for (const podId of claim.pending_pod_uids ?? []) {
@@ -476,29 +563,16 @@ export class StagingYardManager {
     const shimmer = 0.22 + 0.12 * (0.5 + 0.5 * Math.sin(time * 2.6));
     for (const ghost of this.ghosts.values()) {
       ghost.wireMat.opacity = ghost.provisioned
-        ? Math.max(0.08, 0.5 - 0.3 * (0.5 + 0.5 * Math.sin(time * 1.2)))
-        : shimmer + 0.08;
+        ? Math.max(0.25, 0.65 - 0.25 * (0.5 + 0.5 * Math.sin(time * 1.2)))
+        : shimmer + 0.16;
     }
 
     // Tractor beams: shaft breathing + lifting-platform pulse climbing shaft.
     for (const beam of this.beams.values()) {
       const cycle = (time * 0.65) % 1;
-      beam.pulse.position.y = beam.bottom.y + 0.35 + (beam.top.y - beam.bottom.y - 0.5) * cycle;
-      beam.pulseMat.opacity = 0.75 * Math.sin(cycle * Math.PI);
-      beam.shaftMat.opacity = 0.2 + 0.12 * (0.5 + 0.5 * Math.sin(time * 3.4));
-      // Follow the pod's hover bob so the beam top stays attached: rescale
-      // the shaft about its bottom cap to the pod's live hover height.
-      const podId = beam.key.split('->')[0] ?? '';
-      const pod = this.hovering.find((h) => {
-        const data = h.object.userData.nodeData as { id?: string } | undefined;
-        return data?.id === podId;
-      });
-      if (pod) {
-        const nominal = Math.max(0.2, beam.top.y - beam.bottom.y);
-        const live = Math.max(0.2, pod.object.position.y - beam.bottom.y);
-        beam.shaft.scale.y = live / nominal;
-        beam.shaft.position.y = beam.bottom.y + (nominal * beam.shaft.scale.y) / 2;
-      }
+      beam.pulse.position.lerpVectors(beam.bottom, beam.top, 0.08 + 0.84 * cycle);
+      beam.pulseMat.opacity = 0.8 * Math.sin(cycle * Math.PI);
+      beam.shaftMat.opacity = 0.24 + 0.14 * (0.5 + 0.5 * Math.sin(time * 3.4));
     }
   }
 
