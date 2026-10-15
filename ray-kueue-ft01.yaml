@@ -41,15 +41,15 @@ spec:
         return {'rank': worker_rank, 'epoch': epoch, 'loss': round(loss, 4), 'grad_norm': round(0.85 / (1 + 0.1 * epoch), 4)}
 
     tokenizers = [DataShardTokenizer.remote(i) for i in range(4)]
-    for epoch in range(1, 16):
+    for epoch in range(1, 601):
         shard_stats = ray.get([t.preprocess_batch.remote(epoch) for t in tokenizers])
         total_tokens = sum(s['tokens'] for s in shard_stats)
         train_metrics = ray.get([lora_train_epoch_worker.remote(r, epoch, 2e-4) for r in range(4)])
         avg_loss = sum(m['loss'] for m in train_metrics) / len(train_metrics)
-        print(f'[Epoch {epoch:02d}/15] Ray Data streamed {total_tokens} tokens | LoRA AllReduce avg_loss={avg_loss:.4f}')
+        print(f'[Epoch {epoch:02d}/600] Ray Data streamed {total_tokens} tokens | LoRA AllReduce avg_loss={avg_loss:.4f}')
     print('[Ray Train] Checkpoint saved -> gs://demo-jago-ion/checkpoints/qwen-2.5-3b-lora-ft01')
     "
-  shutdownAfterJobFinishes: false
+  shutdownAfterJobFinishes: true
   rayClusterSpec:
     rayVersion: '2.9.0'
     headGroupSpec:
@@ -60,7 +60,6 @@ spec:
           labels:
             app.kubernetes.io/name: ray-kueue-ft01-head
             ray.io/node-type: head
-            kueue.x-k8s.io/queue-name: llm-inference-queue
             autoscaling.k8s.io/vpa-managed: "true"
           annotations:
             clustervis.io/vpa-target-cpu: "4"
@@ -102,7 +101,6 @@ spec:
             labels:
               app.kubernetes.io/name: ray-kueue-ft01-worker
               ray.io/node-type: worker
-              kueue.x-k8s.io/queue-name: llm-inference-queue
               autoscaling.k8s.io/vpa-managed: "true"
               autoscaling.k8s.io/in-place-resize: "enabled"
             annotations:

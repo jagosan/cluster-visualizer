@@ -845,7 +845,11 @@ class TopologyController:
         new_shapes: Dict[str, MachineShape] = {}
 
         kube_ver = "v1.36.4"
-        for idx, rn in enumerate(raw_nodes, 1):
+        base_nodes = [
+            rn for rn in raw_nodes
+            if not ((rn.get("metadata") or {}).get("name") or "").startswith("gk3-")
+        ]
+        for idx, rn in enumerate(base_nodes[:2], 1):
             meta = rn.get("metadata", {}) or {}
             status = rn.get("status", {}) or {}
             nname = meta.get("name", f"worker-{idx}")
@@ -1149,6 +1153,9 @@ class TopologyController:
                     continue
 
             if pns == "clustervis-system" and "clustervis-web" in pname:
+                continue
+
+            if "ray-kueue-ft02-job" in pname or "ray-kueue-ft03-job" in pname:
                 continue
 
             containers = spec.get("containers", []) or []

@@ -36,8 +36,10 @@ else
   ) &
   (
     kubectl --context=cv-kuberay-kueue apply -f "${SCRIPT_DIR}/kueue-spot-burst-cc.yaml" >/dev/null 2>&1 || true
+    kubectl --context=cv-kuberay-kueue apply -f "${SCRIPT_DIR}/kueue-queues.yaml" >/dev/null 2>&1 || true
     kubectl --context=cv-kuberay-kueue apply -f "${SCRIPT_DIR}/ray-serving01.yaml"
     kubectl --context=cv-kuberay-kueue apply -f "${SCRIPT_DIR}/ray-kueue-ft01.yaml"
+    kubectl --context=cv-kuberay-kueue delete job ray-kueue-ft02-job ray-kueue-ft03-job --ignore-not-found >/dev/null 2>&1 || true
     kubectl --context=cv-kuberay-kueue apply -f "${SCRIPT_DIR}/ray-overwhelm-burst.yaml"
     kubectl --context=cv-kuberay-kueue annotate pods -l app=ray-traffic-surge "clustervis.io/surge-ts=${SURGE_TS}" --overwrite >/dev/null 2>&1 || true
     kubectl --context=cv-kuberay-kueue annotate pods -l app=ray-kueue-ft02-head "clustervis.io/surge-ts=${SURGE_TS}" --overwrite >/dev/null 2>&1 || true

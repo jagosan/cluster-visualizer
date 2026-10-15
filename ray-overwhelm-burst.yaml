@@ -1,12 +1,11 @@
 # Canonical KubeRay + Kueue Overwhelm Burst Manifest
 # Deploys two competing GPU fine-tuning gangs (ray-kueue-ft02, ray-kueue-ft03)
-# plus a high-QPS inference traffic surge (ray-traffic-surge) to both clusters
-# using lightweight container requests (15m CPU / 32Mi RAM) so neither GKE
-# cluster is physically crushed while clearly exposing the architectural delta:
+# plus a high-QPS inference traffic surge (ray-traffic-surge) to both clusters:
 #   - cv-kuberay (Viewport A): No Kueue & no llm-d -> all batch gangs flood
 #     the Worker Deck simultaneously, starving serving pods and spiking latency.
-#   - cv-kuberay-kueue (Viewport B): Kueue holds ft02 & ft03 in Staging Cargo
-#     Pallets while llm-d routes serving traffic across warm KV-cache replicas.
+#   - cv-kuberay-kueue (Viewport B): Real Kueue v0.20.1 + Autopilot ComputeClass
+#     (autopilot-spot / kueue-spot-burst-cc) queues ft02 & ft03, triggers real GKE
+#     Autopilot Spot node provisioning / EK VM runtime resize, and admits workloads.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -204,3 +203,75 @@ spec:
             limits:
               cpu: 100m
               memory: 128Mi
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ray-kueue-ft02-job
+  namespace: default
+  labels:
+    app.kubernetes.io/name: ray-kueue-ft02
+    kueue.x-k8s.io/queue-name: llm-inference-queue
+    kueue.x-k8s.io/priority-class: spot-burst-finetune
+spec:
+  parallelism: 2
+  completions: 2
+  suspend: true
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ray-kueue-ft02-job
+        clustervis.io/compute-class: autopilot-spot
+    spec:
+      nodeSelector:
+        cloud.google.com/compute-class: autopilot-spot
+      restartPolicy: Never
+      containers:
+        - name: ek-burst-trainer
+          image: python:3.11-slim
+          command: ["python3", "-c", "import time; time.sleep(3600)"]
+          resources:
+            requests:
+              cpu: 600m
+              memory: 1Gi
+              ephemeral-storage: 1Gi
+            limits:
+              cpu: 600m
+              memory: 1Gi
+              ephemeral-storage: 1Gi
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ray-kueue-ft03-job
+  namespace: default
+  labels:
+    app.kubernetes.io/name: ray-kueue-ft03
+    kueue.x-k8s.io/queue-name: llm-inference-queue
+    kueue.x-k8s.io/priority-class: spot-burst-finetune
+spec:
+  parallelism: 2
+  completions: 2
+  suspend: true
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ray-kueue-ft03-job
+        clustervis.io/compute-class: kueue-spot-burst-cc
+    spec:
+      nodeSelector:
+        cloud.google.com/compute-class: autopilot-spot
+      restartPolicy: Never
+      containers:
+        - name: ek-burst-trainer
+          image: python:3.11-slim
+          command: ["python3", "-c", "import time; time.sleep(3600)"]
+          resources:
+            requests:
+              cpu: 600m
+              memory: 1Gi
+              ephemeral-storage: 1Gi
+            limits:
+              cpu: 600m
+              memory: 1Gi
+              ephemeral-storage: 1Gi
