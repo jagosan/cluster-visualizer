@@ -1,0 +1,70 @@
+apiVersion: kueue.x-k8s.io/v1beta2
+kind: WorkloadPriorityClass
+metadata:
+  name: spot-burst-finetune
+value: 100
+description: "Burst GPU/EK-VM fine-tuning priority class"
+---
+apiVersion: kueue.x-k8s.io/v1beta2
+kind: ResourceFlavor
+metadata:
+  name: on-demand-gpu
+spec:
+  nodeLabels:
+    cloud.google.com/gke-provisioning: standard
+---
+apiVersion: kueue.x-k8s.io/v1beta2
+kind: ResourceFlavor
+metadata:
+  name: spot-gpu
+spec:
+  nodeLabels:
+    cloud.google.com/compute-class: autopilot-spot
+  tolerations:
+    - key: cloud.google.com/autopilot-managed-node
+      operator: Equal
+      value: "true"
+      effect: NoSchedule
+    - key: cloud.google.com/compute-class
+      operator: Equal
+      value: autopilot-spot
+      effect: NoSchedule
+    - key: cloud.google.com/gke-spot
+      operator: Equal
+      value: "true"
+      effect: NoSchedule
+---
+apiVersion: kueue.x-k8s.io/v1beta2
+kind: ClusterQueue
+metadata:
+  name: spot-gpu
+spec:
+  namespaceSelector: {}
+  queueingStrategy: BestEffortFIFO
+  resourceGroups:
+    - coveredResources: ["cpu", "memory", "ephemeral-storage"]
+      flavors:
+        - name: spot-gpu
+          resources:
+            - name: "cpu"
+              nominalQuota: "1500m"
+            - name: "memory"
+              nominalQuota: "4Gi"
+            - name: "ephemeral-storage"
+              nominalQuota: "20Gi"
+        - name: on-demand-gpu
+          resources:
+            - name: "cpu"
+              nominalQuota: "1000m"
+            - name: "memory"
+              nominalQuota: "2Gi"
+            - name: "ephemeral-storage"
+              nominalQuota: "10Gi"
+---
+apiVersion: kueue.x-k8s.io/v1beta2
+kind: LocalQueue
+metadata:
+  name: llm-inference-queue
+  namespace: default
+spec:
+  clusterQueue: spot-gpu
