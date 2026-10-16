@@ -305,6 +305,18 @@ async function bootstrap() {
     });
   }
 
+  // SPEC-13 §3.6 / ADR-1304: 2D CAD Blueprint / Planar View toggle (KeyF twin)
+  const btnCadView = document.getElementById('btn-cad-view');
+  if (btnCadView) {
+    btnCadView.addEventListener('click', () => {
+      let cadActive = false;
+      for (const vp of allViewports) {
+        if (vp) cadActive = vp.toggleCadMode() || cadActive;
+      }
+      btnCadView.classList.toggle('active', cadActive);
+    });
+  }
+
   let flowsEnabled = true;
   const btnToggleFlows = document.getElementById('btn-toggle-flows');
   if (btnToggleFlows) {
@@ -383,6 +395,15 @@ async function bootstrap() {
       for (const vp of allViewports) {
         vp?.toggleGroundCutaway();
       }
+    }
+    // SPEC-13 §3.6 / ADR-1304: KeyF toggles 2D CAD Blueprint / Planar View
+    if (e.code === 'KeyF' || e.key === 'f' || e.key === 'F') {
+      e.preventDefault();
+      let cadActive = false;
+      for (const vp of allViewports) {
+        if (vp) cadActive = vp.toggleCadMode() || cadActive;
+      }
+      btnCadView?.classList.toggle('active', cadActive);
     }
     if (e.code === 'KeyB' || e.key === 'b' || e.key === 'B') {
       e.preventDefault();
@@ -642,8 +663,13 @@ async function bootstrap() {
       targetViewport.removeNode(nodeId);
       recomputeLiveDiff(false, false);
     },
-    onNodeModified: (nodeId: string, diffDetails?: string[], status?: string) => {
-      targetViewport.modifyNode(nodeId, diffDetails, status);
+    onNodeModified: (
+      nodeId: string,
+      diffDetails?: string[],
+      status?: string,
+      metrics?: Record<string, unknown>,
+    ) => {
+      targetViewport.modifyNode(nodeId, diffDetails, status, metrics);
     },
     onVpaRecommendation: (payload: any) => {
       targetViewport.applyVpaRecommendation(payload.node_id, payload.dimensions ?? null);

@@ -805,8 +805,9 @@ class TopologyController:
             )
             with urllib.request.urlopen(req, context=ctx, timeout=15) as resp:
                 return json.loads(resp.read().decode("utf-8"))
+        extra_fmt = [] if "--raw" in kubectl_args else ["-o", "json"]
         if self.context_name and self.context_name != "in-cluster":
-            cmd = ["kubectl", "--context", self.context_name] + kubectl_args + ["-o", "json"]
+            cmd = ["kubectl", "--context", self.context_name] + kubectl_args + extra_fmt
             res = subprocess.run(cmd, capture_output=True, text=True, timeout=30, check=False)
             if res.returncode == 0 and res.stdout.strip():
                 return json.loads(res.stdout)
@@ -824,7 +825,7 @@ class TopologyController:
             )
             with urllib.request.urlopen(req, context=ctx, timeout=15) as resp:
                 return json.loads(resp.read().decode("utf-8"))
-        cmd = ["kubectl"] + kubectl_args + ["-o", "json"]
+        cmd = ["kubectl"] + kubectl_args + extra_fmt
         res = subprocess.run(cmd, capture_output=True, text=True, timeout=30, check=False)
         if res.returncode == 0 and res.stdout.strip():
             return json.loads(res.stdout)
@@ -833,13 +834,124 @@ class TopologyController:
     def _poll_real_cluster(self, broadcast: bool = True) -> None:
         from src.ingestion.models import Spatial
         try:
+            t_poll_start = time.perf_counter()
             nodes_env = self._fetch_k8s_json("/api/v1/nodes", ["get", "nodes"])
             pods_env = self._fetch_k8s_json("/api/v1/pods", ["get", "pods", "-A"])
+            apiserver_list_ms = round((time.perf_counter() - t_poll_start) * 1000.0, 2)
         except Exception:
             return
 
         raw_nodes = nodes_env.get("items", []) or []
         raw_pods = pods_env.get("items", []) or []
+
+        def _parse_cpu_cores_live(val: object) -> float:
+            if val is None:
+                return 0.0
+            s = str(val).strip()
+            if not s:
+                return 0.0
+            try:
+                if s.endswith("n"):
+                    return float(s[:-1]) / 1e9
+                if s.endswith("u"):
+                    return float(s[:-1]) / 1e6
+                if s.endswith("m"):
+                    return float(s[:-1]) / 1e3
+                return float(s)
+            except Exception:
+                return 0.0
+
+        # Scrape real live CPU & Memory telemetry from metrics.k8s.io (metrics-server)
+        node_metrics_map: Dict[str, Dict[str, object]] = {}
+        pod_metrics_map: Dict[str, Dict[str, object]] = {}
+        total_cpu_m = 0
+        total_mem_mib = 0.0
+        try:
+            nm_env = self._fetch_k8s_json(
+                "/apis/metrics.k8s.io/v1beta1/nodes",
+                ["get", "--raw", "/apis/metrics.k8s.io/v1beta1/nodes"],
+            )
+            for item in nm_env.get("items", []) or []:
+                mname = (item.get("metadata") or {}).get("name")
+                usage = item.get("usage") or {}
+                cpu_cores = _parse_cpu_cores_live(usage.get("cpu"))
+                mem_gib = parse_resource_quantity(usage.get("memory"), "memory") or 0.0
+                cpu_m = int(round(cpu_cores * 1000))
+                mem_mib = round(mem_gib * 1024, 1)
+                total_cpu_m += cpu_m
+                total_mem_mib += mem_mib
+                if mname:
+                    node_metrics_map[mname] = {
+                        "cpu_usage_m": f"{cpu_m}m",
+                        "memory_usage_mib": f"{mem_mib}Mi",
+                        "cpu_cores_used": round(cpu_cores, 3),
+                        "memory_gib_used": round(mem_gib, 3),
+                    }
+        except Exception:
+            pass
+
+        try:
+            pm_env = self._fetch_k8s_json(
+                "/apis/metrics.k8s.io/v1beta1/pods",
+                ["get", "--raw", "/apis/metrics.k8s.io/v1beta1/pods"],
+            )
+            for item in pm_env.get("items", []) or []:
+                pmeta = item.get("metadata") or {}
+                pkey = f"{pmeta.get('namespace', 'default')}/{pmeta.get('name', '')}"
+                p_cpu = 0.0
+                p_mem = 0.0
+                for c in item.get("containers", []) or []:
+                    u = c.get("usage") or {}
+                    p_cpu += _parse_cpu_cores_live(u.get("cpu"))
+                    p_mem += parse_resource_quantity(u.get("memory"), "memory") or 0.0
+                pod_metrics_map[pkey] = {
+                    "cpu_usage_m": f"{int(round(p_cpu * 1000))}m",
+                    "memory_usage_mib": f"{round(p_mem * 1024, 1)}Mi",
+                }
+        except Exception:
+            pass
+
+        # Scrape real in-cluster TCP RTTs from clustervis-probe DaemonSet (/metrics/latency)
+        import json as _json
+        import os as _os
+        import urllib.request as _urllib_req
+
+        probe_latencies: Dict[str, float] = {}
+        try:
+            probe_pods = [
+                rp for rp in raw_pods
+                if ((rp.get("metadata") or {}).get("namespace") == "clustervis-system")
+                and "clustervis-probe" in ((rp.get("metadata") or {}).get("name") or "")
+                and not (rp.get("metadata") or {}).get("deletionTimestamp")
+                and ((rp.get("status") or {}).get("phase") == "Running")
+            ]
+            for pp in probe_pods:
+                try:
+                    p_name = (pp.get("metadata") or {}).get("name")
+                    p_ip = (pp.get("status") or {}).get("podIP")
+                    probe_data = None
+                    if _os.environ.get("KUBERNETES_SERVICE_HOST") and p_ip:
+                        with _urllib_req.urlopen(f"http://{p_ip}:9102/metrics/latency", timeout=2.0) as presp:
+                            probe_data = _json.loads(presp.read().decode("utf-8"))
+                    elif p_name:
+                        proxy_path = f"/api/v1/namespaces/clustervis-system/pods/{p_name}:9102/proxy/metrics/latency"
+                        probe_data = self._fetch_k8s_json(proxy_path, ["get", "--raw", proxy_path])
+                    if isinstance(probe_data, dict):
+                        for rec in probe_data.get("latencies", []) or []:
+                            if rec.get("reachable") and rec.get("rtt_ms") is not None:
+                                probe_latencies[str(rec.get("target"))] = float(rec["rtt_ms"])
+                    if probe_latencies:
+                        break
+                except Exception:
+                    continue
+        except Exception:
+            pass
+
+        probe_api_rtt_ms = probe_latencies.get("kubernetes.default.svc.cluster.local:443")
+        probe_dns_rtt_ms = probe_latencies.get("kube-dns.kube-system.svc.cluster.local:53")
+        probe_operator_rtt_ms = probe_latencies.get("kuberay-operator.default.svc.cluster.local:8080")
+        probe_service_rtt_ms = probe_latencies.get("clustervis.clustervis-system.svc.cluster.local:8080")
+        probe_kueue_rtt_ms = probe_latencies.get("kueue-webhook-service.kueue-system.svc.cluster.local:443")
 
         new_nodes: Dict[str, NodeComponent] = {}
         new_shapes: Dict[str, MachineShape] = {}
@@ -861,6 +973,7 @@ class TopologyController:
             )
             cap = status.get("capacity", {}) or {}
             alloc = status.get("allocatable", {}) or {}
+            live_nm = node_metrics_map.get(nname, {})
             comp = NodeComponent(
                 id=f"node/worker-{idx}",
                 layer="node",
@@ -874,6 +987,8 @@ class TopologyController:
                     "memory_capacity": cap.get("memory", "16Gi"),
                     "cpu_allocatable": alloc.get("cpu", "4"),
                     "memory_allocatable": alloc.get("memory", "16Gi"),
+                    "cpu_usage_live": live_nm.get("cpu_usage_m", "n/a"),
+                    "memory_usage_live": live_nm.get("memory_usage_mib", "n/a"),
                     "os_image": (status.get("nodeInfo", {}) or {}).get("osImage", "Container-Optimized OS"),
                     "gke_node_name": nname,
                 },
@@ -938,6 +1053,18 @@ class TopologyController:
             ("control-plane/kube-scheduler-0", "Scheduler", "kube-scheduler-gke", "Cuboid_Supervisor", kube_ver),
             ("control-plane/kube-controller-manager-0", "ControllerManager", "kube-controller-manager-gke", "Cuboid_Supervisor", kube_ver),
         ]:
+            cp_metrics: Dict[str, object] = {}
+            if cpid == "control-plane/kube-apiserver-0":
+                cp_metrics = {
+                    "apiserver_list_ms": apiserver_list_ms,
+                    "probe_api_rtt_ms": probe_api_rtt_ms,
+                    "probe_dns_rtt_ms": probe_dns_rtt_ms,
+                    "probe_operator_rtt_ms": probe_operator_rtt_ms,
+                    "probe_service_rtt_ms": probe_service_rtt_ms,
+                    "probe_kueue_rtt_ms": probe_kueue_rtt_ms,
+                    "cluster_cpu_m": total_cpu_m,
+                    "cluster_mem_mib": round(total_mem_mib, 1),
+                }
             new_nodes[cpid] = NodeComponent(
                 id=cpid,
                 layer="control-plane",
@@ -947,6 +1074,7 @@ class TopologyController:
                 version=cpver,
                 image=f"registry.k8s.io/{cpkind.lower()}:{cpver}",
                 status="Healthy",
+                metrics=cp_metrics,
                 spatial=Spatial(asset_type=cpasset),
             )
 
@@ -1479,6 +1607,7 @@ class TopologyController:
                     display_name = "clustervis-operator"
                     pid = f"pod/{pns}/clustervis-operator"
 
+            live_pm = pod_metrics_map.get(f"{pns}/{pname}", {})
             new_nodes[pid] = NodeComponent(
                 id=pid,
                 layer=layer,
@@ -1492,6 +1621,8 @@ class TopologyController:
                 metrics={
                     "cpu_request_cores": round(cpu_req, 3),
                     "memory_request_gib": round(mem_req, 3),
+                    "cpu_usage_live": live_pm.get("cpu_usage_m", "0m"),
+                    "memory_usage_live": live_pm.get("memory_usage_mib", "0Mi"),
                     "phase": phase,
                     "pending": is_pending,
                     "scheduled": not is_pending,
@@ -1992,6 +2123,14 @@ class TopologyController:
                             "lock_duration_ms": 1200,
                             "timestamp": ts,
                         })
+                elif "control-plane/kube-apiserver-0" in self.nodes:
+                    # Stream live probe RTTs & metrics.k8s.io CPU/Memory telemetry every poll tick
+                    self.broadcast_event("node_modified", {
+                        "nodeId": "control-plane/kube-apiserver-0",
+                        "node_id": "control-plane/kube-apiserver-0",
+                        "metrics": self.nodes["control-plane/kube-apiserver-0"].metrics,
+                        "timestamp": ts,
+                    })
 
     def _run_real_loop(self, interval: float) -> None:
         self._poll_real_cluster(broadcast=False)

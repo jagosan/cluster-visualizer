@@ -161,7 +161,12 @@ export interface LiveStreamCallbacks {
   onInitialSnapshot?: (snapshot: any) => void;
   onNodeAdded?: (node: any) => void;
   onNodeRemoved?: (nodeId: string) => void;
-  onNodeModified?: (nodeId: string, diffDetails?: string[], status?: string) => void;
+  onNodeModified?: (
+    nodeId: string,
+    diffDetails?: string[],
+    status?: string,
+    metrics?: Record<string, unknown>,
+  ) => void;
   onEdgeUpdated?: (edges: any[]) => void;
   // SPEC-09 / TASK-CV-1002 autoscaling mutation pipelines.
   onVpaRecommendation?: (payload: VpaRecommendationPayload) => void;
@@ -271,11 +276,12 @@ export class LiveStreamManager {
       this.eventSource.addEventListener('node_modified', (e: MessageEvent) => {
         try {
           const data = JSON.parse(e.data);
-          const nodeId = data.nodeId;
+          const nodeId = data.nodeId || data.node_id;
           const diffDetails = data.diffDetails;
           const status = data.status;
+          const metrics = data.metrics;
           if (this.callbacks.onNodeModified) {
-            this.callbacks.onNodeModified(nodeId, diffDetails, status);
+            this.callbacks.onNodeModified(nodeId, diffDetails, status, metrics);
           }
         } catch (err) {
           if (this.callbacks.onError) {

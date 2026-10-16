@@ -50,6 +50,8 @@ import type {
   KueueWorkloadData,
   KueueWorkloadUpdatedPayload,
 } from './kueue_pallet.js';
+// SPEC-13 §3.6 / ADR-1304: 2D CAD SVG blueprint overlay.
+import { CadOverlayManager, type CadOverlayNode } from '../ui/cad_overlay.js';
 
 export interface ClusterNodeData {
   id: string;
@@ -267,8 +269,13 @@ export class ClusterViewport {
   private animatingEntrances: Map<string, { mesh: THREE.Object3D; startTime: number; duration: number }> = new Map();
   private animatingDecays: Map<string, { mesh: THREE.Object3D; startTime: number; duration: number }> = new Map();
 
-  // Dual-mode layout controller (Skyscraper <-> Latency Field)
+  // Dual-mode layout controller (Skyscraper <-> Latency Field / 2D CAD Blueprint)
   public layoutController: LayoutTransitionController = new LayoutTransitionController();
+  // SPEC-13 §3.6: 2D CAD SVG blueprint overlay & architectural plan grid
+  public cadOverlay: CadOverlayManager = new CadOverlayManager();
+  public isCadMode = false;
+  private cadGrid: THREE.Group | null = null;
+  private wasLayoutAnimating = false;
 
   // SPEC-11 / TASK-CV-1205: Load-driven latency spring engine for floor separation.
   // Critically damped (zeta = 0.96, omegaN = 2.6) so floors smoothly converge
@@ -333,8 +340,9 @@ export class ClusterViewport {
     this.stagingYard = new StagingYardManager(this.scene);
     this.kueuePallets = new KueuePalletManager(this.scene);
     
-    // Initialize DiffCardManager
+    // Initialize DiffCardManager & 2D CAD SVG blueprint overlay (SPEC-13 §3.6)
     this.diffCard = new DiffCardManager(this.container);
+    this.cadOverlay.initialize(this.container);
 
     // Label overlay
     const titleTag = document.createElement('div');
@@ -365,6 +373,16 @@ export class ClusterViewport {
     const grid = new THREE.GridHelper(40, 40, 0x1f2937, 0x111827);
     grid.position.y = -5.0; // Base foundation level
     this.scene.add(grid);
+
+    // SPEC-13 §3.6: 2D CAD architectural blueprint grid at y = 0.05 (hidden in 3D mode)
+    const cadGroup = new THREE.Group();
+    cadGroup.name = 'cad-architectural-grid';
+    const cadHelper = new THREE.GridHelper(32, 32, 0x0ea5e9, 0x1e293b);
+    cadHelper.position.y = 0.05;
+    cadGroup.add(cadHelper);
+    cadGroup.visible = false;
+    this.scene.add(cadGroup);
+    this.cadGrid = cadGroup;
   }
 
   public async loadAssets(glbUrl: string): Promise<void> {
@@ -452,15 +470,51 @@ export class ClusterViewport {
       this.nodeMeshes.set(node.id, instance);
       nodePositions.set(node.id, new THREE.Vector3(node.spatial.x, node.spatial.y, node.spatial.z));
 
-      // Register dual coordinates for layout transitions
+      // Register dual coordinates for layout transitions (3D Skyscraper <-> 2D CAD Blueprint / Latency Field)
       const arch = { x: node.spatial.x, y: node.spatial.y, z: node.spatial.z };
       const rawLat = (node as Record<string, any>).latency_spatial;
-      const latency = rawLat ? { x: Number(rawLat.x ?? 0), y: Number(rawLat.y ?? 0), z: Number(rawLat.z ?? 0) } : {
-        x: arch.x * 0.7,
-        y: Math.max(0.5, arch.y * 0.4),
-        z: arch.z * 0.7,
-      };
+      let schematicZ = arch.z;
+      if (arch.x < -8.0) {
+        // Kueue Staging Pallets on left flank
+        schematicZ = arch.z * 1.1;
+      } else if (arch.y >= 10.5) {
+        // Clients row (top of 2D blueprint)
+        schematicZ = -9.5 + arch.z * 0.35;
+      } else if (arch.y >= 7.5) {
+        // Ingress / llm-d Gateway & EPP row
+        schematicZ = -6.8 + (arch.y - 8.5) * 0.9 + arch.z * 0.25;
+      } else if (arch.y >= 5.0) {
+        // Control Plane (APIServer, etcd, Scheduler, ControllerManager)
+        schematicZ = -3.8 + arch.z * 0.45;
+      } else if (arch.y >= 2.0) {
+        // Framework Operators & Ray Heads / Services
+        schematicZ = -0.4 + arch.z * 0.85;
+      } else if (node.kind === 'Node') {
+        // Worker Node Chassis row
+        schematicZ = 7.4;
+      } else {
+        // Worker Pods & Node Daemons
+        schematicZ = 3.8 + arch.z * 1.15;
+      }
+      const latency = rawLat
+        ? { x: Number(rawLat.x ?? 0), y: Number(rawLat.y ?? 0), z: Number(rawLat.z ?? 0) }
+        : {
+            x: arch.x * 1.08,
+            y: 0.65,
+            z: schematicZ,
+          };
       this.layoutController.registerNode(node.id, arch, latency);
+
+      if (this.isCadMode || this.layoutController.getAlpha() > 0.01) {
+        const activeAlpha = this.isCadMode ? 1.0 : this.layoutController.getAlpha();
+        const pos = {
+          x: (1 - activeAlpha) * arch.x + activeAlpha * latency.x,
+          y: (1 - activeAlpha) * arch.y + activeAlpha * latency.y,
+          z: (1 - activeAlpha) * arch.z + activeAlpha * latency.z,
+        };
+        instance.position.set(pos.x, pos.y, pos.z);
+        nodePositions.set(node.id, new THREE.Vector3(pos.x, pos.y, pos.z));
+      }
     }
 
     // Connect conduits and animated flow pulses
@@ -1137,12 +1191,30 @@ export class ClusterViewport {
     }
   }
 
-  public modifyNode(nodeId: string, diffDetails?: string[], status?: string): void {
+  public modifyNode(
+    nodeId: string,
+    diffDetails?: string[],
+    status?: string,
+    metrics?: Record<string, unknown>,
+  ): void {
     const mesh = this.nodeMeshes.get(nodeId);
     if (!mesh) return;
 
     const node = mesh.userData.nodeData as ClusterNodeData;
     if (!node) return;
+
+    if (metrics) {
+      node.metrics = { ...(node.metrics || {}), ...metrics };
+      if (this.clusterData?.nodes) {
+        const cn = this.clusterData.nodes.find((n) => n.id === nodeId);
+        if (cn) {
+          cn.metrics = { ...(cn.metrics || {}), ...metrics };
+        }
+      }
+      if (!diffDetails && !status) {
+        return;
+      }
+    }
 
     node.diffStatus = (status as any) || 'version_skew';
     node.diffDetails = diffDetails;
@@ -1583,47 +1655,68 @@ export class ClusterViewport {
       const hasAutoscaledNode = this.clusterData.nodes.some(
         (n) => n.id === 'node/worker-3' || n.name.includes('worker-3'),
       );
+      // Read real live telemetry from control-plane/kube-apiserver-0 (clustervis-probe + metrics.k8s.io)
+      const apiNode = this.clusterData.nodes.find((n) => n.id === 'control-plane/kube-apiserver-0');
+      const apiMetrics = (apiNode?.metrics || {}) as Record<string, any>;
+      const probeApiRtt =
+        typeof apiMetrics.probe_api_rtt_ms === 'number' ? apiMetrics.probe_api_rtt_ms : null;
+      const probeDnsRtt =
+        typeof apiMetrics.probe_dns_rtt_ms === 'number' ? apiMetrics.probe_dns_rtt_ms : null;
+      const probeOpRtt =
+        typeof apiMetrics.probe_operator_rtt_ms === 'number'
+          ? apiMetrics.probe_operator_rtt_ms
+          : null;
+      const liveCpuM =
+        typeof apiMetrics.cluster_cpu_m === 'number' ? apiMetrics.cluster_cpu_m : null;
+      const liveMemMib =
+        typeof apiMetrics.cluster_mem_mib === 'number' ? apiMetrics.cluster_mem_mib : null;
+
       // Subtle organic micro-breathing (-1..+1) around a stable converged altitude
       const microBreath = Math.sin(time * 0.85);
+      const realBaseRtt = (probeApiRtt ?? 1.4) + (probeOpRtt ?? 0.35) + (probeDnsRtt ?? 0.12);
+      const cpuLoadFactor = liveCpuM !== null ? Math.min(2.5, liveCpuM / 450.0) : 1.0;
       let p99ReadoutMs = 8.5;
       if (hasLlmdGateway) {
-        const baseLat = hasOverwhelmSurge ? (hasAutoscaledNode ? 10.4 : 12.2) : 8.5;
-        p99ReadoutMs = baseLat + 0.35 * microBreath;
-        this.springEngine.setTierLatency('worker', hasOverwhelmSurge ? 5.6 : 5.2);
-        this.springEngine.setTierLatency('framework', (hasOverwhelmSurge ? 7.2 : 6.4) + 0.15 * microBreath);
-        this.springEngine.setTierLatency('services', (hasOverwhelmSurge ? 7.8 : 6.9) + 0.18 * microBreath);
-        this.springEngine.setTierLatency('etcd', (hasOverwhelmSurge ? 8.2 : 7.2) + 0.2 * microBreath);
-        this.springEngine.setTierLatency('apiserver', (hasOverwhelmSurge ? 9.0 : 7.8) + 0.25 * microBreath);
+        const baseLat =
+          realBaseRtt * 3.8 +
+          cpuLoadFactor * 1.4 +
+          (hasOverwhelmSurge ? (hasAutoscaledNode ? 1.8 : 3.4) : 0.0);
+        p99ReadoutMs = baseLat + 0.18 * microBreath;
+        this.springEngine.setTierLatency('worker', (probeDnsRtt ?? 0.15) * 20.0 + 3.2);
+        this.springEngine.setTierLatency('framework', (probeOpRtt ?? 0.5) * 6.0 + 4.8 + 0.1 * microBreath);
+        this.springEngine.setTierLatency('services', realBaseRtt * 3.2 + 0.12 * microBreath);
+        this.springEngine.setTierLatency('etcd', (probeApiRtt ?? 1.4) * 4.5 + 0.15 * microBreath);
+        this.springEngine.setTierLatency('apiserver', (probeApiRtt ?? 1.4) * 5.2 + 0.2 * microBreath);
         this.springEngine.setTierLatency('ingress', p99ReadoutMs);
         this.springEngine.setTierLatency('clients', p99ReadoutMs + 1.0);
       } else if (hasOverwhelmSurge) {
-        // Stable high-separation altitude under overwhelm (680ms ± 12ms micro-breath)
-        p99ReadoutMs = 680.0 + 12.0 * microBreath;
-        this.springEngine.setTierLatency('worker', 24.0 + 0.8 * microBreath);
-        this.springEngine.setTierLatency('framework', 145.0 + 3.0 * microBreath);
-        this.springEngine.setTierLatency('services', 235.0 + 5.0 * microBreath);
-        this.springEngine.setTierLatency('etcd', 290.0 + 6.0 * microBreath);
-        this.springEngine.setTierLatency('apiserver', 420.0 + 8.0 * microBreath);
+        // High-separation altitude under overwhelm driven by real CPU load + unqueued batch contention
+        p99ReadoutMs = 540.0 + cpuLoadFactor * 95.0 + realBaseRtt * 12.0 + 6.0 * microBreath;
+        this.springEngine.setTierLatency('worker', 22.0 + cpuLoadFactor * 4.0);
+        this.springEngine.setTierLatency('framework', 135.0 + cpuLoadFactor * 18.0);
+        this.springEngine.setTierLatency('services', 220.0 + cpuLoadFactor * 25.0);
+        this.springEngine.setTierLatency('etcd', 280.0 + (probeApiRtt ?? 1.4) * 15.0);
+        this.springEngine.setTierLatency('apiserver', 410.0 + (probeApiRtt ?? 1.4) * 20.0);
         this.springEngine.setTierLatency('ingress', p99ReadoutMs);
         this.springEngine.setTierLatency('clients', p99ReadoutMs * 1.15);
       } else if (hasActiveWorkload) {
-        // Stable elevated altitude when serve.sh or ft.sh is active on cv-kuberay (165ms ± 5ms)
-        p99ReadoutMs = 165.0 + 5.0 * microBreath;
-        this.springEngine.setTierLatency('worker', 12.0 + 0.4 * microBreath);
-        this.springEngine.setTierLatency('framework', 48.0 + 1.5 * microBreath);
-        this.springEngine.setTierLatency('services', 78.0 + 2.2 * microBreath);
-        this.springEngine.setTierLatency('etcd', 95.0 + 2.8 * microBreath);
-        this.springEngine.setTierLatency('apiserver', 128.0 + 3.5 * microBreath);
+        // Elevated altitude when serve.sh or ft.sh is active on cv-kuberay without llm-d KV routing
+        p99ReadoutMs = 135.0 + cpuLoadFactor * 28.0 + realBaseRtt * 5.0 + 2.5 * microBreath;
+        this.springEngine.setTierLatency('worker', 11.0 + cpuLoadFactor * 2.0);
+        this.springEngine.setTierLatency('framework', 44.0 + cpuLoadFactor * 6.0);
+        this.springEngine.setTierLatency('services', 74.0 + cpuLoadFactor * 9.0);
+        this.springEngine.setTierLatency('etcd', 90.0 + (probeApiRtt ?? 1.4) * 6.0);
+        this.springEngine.setTierLatency('apiserver', 120.0 + (probeApiRtt ?? 1.4) * 8.0);
         this.springEngine.setTierLatency('ingress', p99ReadoutMs);
         this.springEngine.setTierLatency('clients', p99ReadoutMs * 1.12);
       } else {
-        // Stable baseline altitude on cv-kuberay when idle (42ms ± 1.8ms)
-        p99ReadoutMs = 42.0 + 1.8 * microBreath;
-        this.springEngine.setTierLatency('worker', 7.5 + 0.2 * microBreath);
-        this.springEngine.setTierLatency('framework', 16.0 + 0.6 * microBreath);
-        this.springEngine.setTierLatency('services', 22.0 + 0.8 * microBreath);
-        this.springEngine.setTierLatency('etcd', 26.0 + 1.0 * microBreath);
-        this.springEngine.setTierLatency('apiserver', 33.0 + 1.3 * microBreath);
+        // Baseline altitude on cv-kuberay when idle
+        p99ReadoutMs = 34.0 + cpuLoadFactor * 6.5 + realBaseRtt * 2.5 + 0.9 * microBreath;
+        this.springEngine.setTierLatency('worker', 6.5 + (probeDnsRtt ?? 0.12) * 10.0);
+        this.springEngine.setTierLatency('framework', 14.0 + (probeOpRtt ?? 0.25) * 10.0);
+        this.springEngine.setTierLatency('services', 20.0 + realBaseRtt * 2.0);
+        this.springEngine.setTierLatency('etcd', 24.0 + (probeApiRtt ?? 1.4) * 3.0);
+        this.springEngine.setTierLatency('apiserver', 30.0 + (probeApiRtt ?? 1.4) * 4.0);
         this.springEngine.setTierLatency('ingress', p99ReadoutMs);
         this.springEngine.setTierLatency('clients', p99ReadoutMs * 1.1);
       }
@@ -1642,7 +1735,7 @@ export class ClusterViewport {
         return 0;
       };
 
-      if (!this.layoutController.isAnimating()) {
+      if (!this.layoutController.isAnimating() && !this.isCadMode && this.layoutController.getAlpha() < 0.01) {
         for (const mesh of this.nodeMeshes.values()) {
           const nd = mesh.userData.nodeData as ClusterNodeData | undefined;
           if (!nd?.spatial) continue;
@@ -1654,25 +1747,29 @@ export class ClusterViewport {
       if (titleEl && this.clusterData.metadata?.cluster_name) {
         const slotPrefix = titleEl.innerText.split('(')[0]?.trim() || 'Cluster';
         const topDeltaY = this.springEngine.getDisplacement('clients') * 2.65 * multScale;
+        const liveTelemetryTag =
+          probeApiRtt !== null && liveCpuM !== null
+            ? `Probe RTT ${probeApiRtt.toFixed(2)}ms (API) / ${(probeDnsRtt ?? 0.12).toFixed(2)}ms (DNS) · CPU ${liveCpuM}m (${((liveMemMib ?? 0) / 1024).toFixed(1)}Gi)`
+            : `Est. p99 ${p99ReadoutMs.toFixed(1)}ms`;
         let badge: string;
         if (hasLlmdGateway && hasOverwhelmSurge && hasAutoscaledNode) {
-          badge = `🛡️ AUTOSCALED [ComputeClass +1 Node (g2-48) · 3/3 Gangs Admitted]: ${p99ReadoutMs.toFixed(1)}ms · Floor ΔY +${topDeltaY.toFixed(2)}u`;
+          badge = `🛡️ AUTOSCALED [EK-48 + worker-3]: ${liveTelemetryTag} · Est. TTFT ${p99ReadoutMs.toFixed(1)}ms · ΔY +${topDeltaY.toFixed(2)}u`;
           titleEl.style.borderColor = '#10b981';
           titleEl.style.color = '#6ee7b7';
         } else if (hasLlmdGateway && hasOverwhelmSurge) {
-          badge = `🛡️ QUEUED + SCALING [Kueue Hold 2 Gangs · ComputeClass +1 Node]: ${p99ReadoutMs.toFixed(1)}ms · Floor ΔY +${topDeltaY.toFixed(2)}u`;
+          badge = `🛡️ QUEUED + SCALING [Kueue Hold · EK Resize]: ${liveTelemetryTag} · Est. TTFT ${p99ReadoutMs.toFixed(1)}ms · ΔY +${topDeltaY.toFixed(2)}u`;
           titleEl.style.borderColor = '#f59e0b';
           titleEl.style.color = '#fde68a';
         } else if (!hasLlmdGateway && hasOverwhelmSurge) {
-          badge = `🚨 OVERWHELMED [No Kueue · 3/3 Batch Flooded]: ${Math.round(p99ReadoutMs)}ms · Floor ΔY +${topDeltaY.toFixed(2)}u`;
+          badge = `🚨 OVERWHELMED [No Kueue · 3/3 Flooded]: ${liveTelemetryTag} · Est. TTFT ${Math.round(p99ReadoutMs)}ms · ΔY +${topDeltaY.toFixed(2)}u`;
           titleEl.style.borderColor = '#ef4444';
           titleEl.style.color = '#fca5a5';
         } else if (hasLlmdGateway) {
-          badge = `⚡ llm-d + Kueue: ${p99ReadoutMs.toFixed(1)}ms [Calm] · Floor ΔY +${topDeltaY.toFixed(2)}u`;
+          badge = `⚡ llm-d + Kueue: ${liveTelemetryTag} · Est. TTFT ${p99ReadoutMs.toFixed(1)}ms · ΔY +${topDeltaY.toFixed(2)}u`;
           titleEl.style.borderColor = '';
           titleEl.style.color = '';
         } else {
-          badge = `🔥 Naive Round-Robin: ${Math.round(p99ReadoutMs)}ms [KV Miss Surge] · Floor ΔY +${topDeltaY.toFixed(2)}u`;
+          badge = `🔥 Naive Round-Robin: ${liveTelemetryTag} · Est. TTFT ${Math.round(p99ReadoutMs)}ms · ΔY +${topDeltaY.toFixed(2)}u`;
           titleEl.style.borderColor = '';
           titleEl.style.color = '';
         }
@@ -1750,8 +1847,9 @@ export class ClusterViewport {
       }
     }
 
-    // Update layout transitions
+    // Update layout transitions (3D Skyscraper <-> 2D CAD Blueprint / Latency Field)
     if (this.layoutController.isAnimating()) {
+      this.wasLayoutAnimating = true;
       this.layoutController.update(delta);
       for (const [nodeId, pos] of this.layoutController.getAllCurrentPositions().entries()) {
         const mesh = this.nodeMeshes.get(nodeId);
@@ -1759,9 +1857,113 @@ export class ClusterViewport {
           mesh.position.set(pos.x, pos.y, pos.z);
         }
       }
+    } else if (this.wasLayoutAnimating) {
+      this.wasLayoutAnimating = false;
+      this.rebuildConduitsFromCurrentMeshes();
+    }
+
+    // SPEC-13 §3.6: Update 2D CAD SVG blueprint overlay labels
+    if (this.isCadMode && this.clusterData) {
+      const cadNodes: CadOverlayNode[] = [];
+      for (const [nid, mesh] of this.nodeMeshes.entries()) {
+        const nd = mesh.userData.nodeData as ClusterNodeData | undefined;
+        if (!nd) continue;
+        // Skip internal kubelet/containerd/kube-proxy daemons to keep 2D CAD labels crisp
+        if (nd.kind === 'Kubelet' || nd.kind === 'Containerd' || nd.kind === 'DaemonSet') continue;
+        cadNodes.push({
+          id: nid,
+          name: nd.name,
+          namespace: nd.namespace || nd.layer,
+          position: mesh.position,
+        });
+      }
+      this.cadOverlay.update(this.camera, cadNodes, true);
+    } else {
+      this.cadOverlay.setVisible(false);
     }
 
     this.renderer.render(this.scene, this.camera);
+  }
+
+  private rebuildConduitsFromCurrentMeshes(): void {
+    if (!this.clusterData) return;
+    this.conduitManager.clear();
+    this.flowSystem.clear();
+    const conduitEdges: ConduitEdge[] = [];
+    for (let i = 0; i < this.clusterData.edges.length; i++) {
+      const edge = this.clusterData.edges[i]!;
+      const srcMesh = this.nodeMeshes.get(edge.source);
+      const tgtMesh = this.nodeMeshes.get(edge.target);
+      if (!srcMesh || !tgtMesh) continue;
+
+      let ctype: ConduitType = 'heartbeat-riser';
+      const p = edge.protocol.toLowerCase();
+      const v = (edge.volume_label || '').toLowerCase();
+      const s = edge.source.toLowerCase();
+
+      if (p.includes('heartbeat') || v.includes('heartbeat') || s.includes('kubelet')) {
+        ctype = 'heartbeat-riser';
+      } else if (
+        p.includes('2379') ||
+        v.includes('raft') ||
+        (s.includes('apiserver') && edge.target.includes('etcd'))
+      ) {
+        ctype = 'etcd-backing';
+      } else if (
+        s.includes('client') ||
+        v.includes('watch') ||
+        v.includes('list') ||
+        s.includes('gateway') ||
+        s.includes('llm-d') ||
+        v.includes('inference')
+      ) {
+        ctype = 'client-stream';
+      } else if (
+        v.includes('peer') ||
+        v.includes('kueue') ||
+        v.includes('quota') ||
+        (s.includes('apiserver') && edge.target.includes('apiserver'))
+      ) {
+        ctype = 'api-bridge';
+      } else if (
+        edge.flow_type === 'framework_control' ||
+        v.includes('tensor') ||
+        s.includes('ray') ||
+        edge.target.toLowerCase().includes('vllm')
+      ) {
+        ctype = 'framework-bypass';
+      }
+
+      conduitEdges.push({
+        id: `conduit-${i}-${edge.source}-${edge.target}`,
+        type: ctype,
+        source: srcMesh.position.clone(),
+        target: tgtMesh.position.clone(),
+      });
+    }
+    this.conduitManager.generate(conduitEdges);
+    const records = this.conduitManager.getConduitCurves();
+    for (const rec of records) {
+      let colorHex = 0x00ffcc;
+      let speed = 0.25;
+      if (rec.type === 'heartbeat-riser') {
+        colorHex = 0x10b981;
+        speed = 0.35;
+      } else if (rec.type === 'etcd-backing') {
+        colorHex = 0xd946ef;
+        speed = 0.45;
+      } else if (rec.type === 'client-stream') {
+        colorHex = 0x38bdf8;
+        speed = 0.4;
+      } else if (rec.type === 'api-bridge') {
+        colorHex = 0xf59e0b;
+        speed = 0.3;
+      } else if (rec.type === 'framework-bypass') {
+        colorHex = 0xf43f5e;
+        speed = 0.5;
+      }
+      this.flowSystem.addCurveParticle(rec.curve, colorHex, speed, 0.12);
+    }
   }
 
   public setLayoutAlpha(alpha: number, durationMs: number = 800): void {
@@ -1770,6 +1972,45 @@ export class ClusterViewport {
 
   public setLayoutMode(mode: 'skyscraper' | 'latency-force'): void {
     this.layoutController.setTargetAlpha(mode === 'skyscraper' ? 0.0 : 1.0, 800);
+  }
+
+  /**
+   * SPEC-13 §3.6 / ADR-1304: Toggle 2D CAD Blueprint Mode (KeyF).
+   * Transitions the camera to a top-down 2D architectural plan view, spreads
+   * skyscraper strata into non-overlapping 2D blueprint rows, and activates
+   * the crisp SVG blueprint coordinate/label overlay.
+   */
+  public toggleCadMode(): boolean {
+    this.setCadMode(!this.isCadMode);
+    return this.isCadMode;
+  }
+
+  public setCadMode(enabled: boolean): void {
+    this.isCadMode = enabled;
+    if (this.cadGrid) {
+      this.cadGrid.visible = enabled;
+    }
+    this.setLayoutAlpha(enabled ? 1.0 : 0.0, 600);
+    if (enabled) {
+      this.cameraTween = {
+        elapsed: 0,
+        duration: 0.6,
+        fromPos: this.camera.position.clone(),
+        toPos: new THREE.Vector3(0, 29, 0.05),
+        fromTarget: this.controls.target.clone(),
+        toTarget: new THREE.Vector3(0, 0.5, -0.5),
+      };
+    } else {
+      this.cadOverlay.setVisible(false);
+      this.cameraTween = {
+        elapsed: 0,
+        duration: 0.6,
+        fromPos: this.camera.position.clone(),
+        toPos: new THREE.Vector3(16, 7, 20),
+        fromTarget: this.controls.target.clone(),
+        toTarget: new THREE.Vector3(0, 3.5, 0),
+      };
+    }
   }
 
   /**
