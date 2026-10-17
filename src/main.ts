@@ -713,34 +713,32 @@ async function bootstrap() {
 
   if (btnLiveStream) {
     btnLiveStream.addEventListener('click', () => {
-      if (liveStream.getStatus() === 'connected' || liveStreamB.getStatus() === 'connected') {
+      const aConnected = liveStream.getStatus() === 'connected';
+      const bConnected = liveStreamB.getStatus() === 'connected';
+      if (aConnected && bConnected) {
         const confirmDisconnect = confirm('Live GKE Streams are active. Disconnect and return to static offline mode?');
         if (confirmDisconnect) {
           liveStream.disconnect();
           liveStreamB.disconnect();
         }
       } else {
-        liveStream.connect(`${window.location.origin}/clusters/vanilla/api/v1/topology/stream`);
-        liveStreamB.connect(`${window.location.origin}/clusters/kuberay/api/v1/topology/stream`);
+        if (!aConnected) {
+          liveStream.connect(`${window.location.origin}/clusters/vanilla/api/v1/topology/stream`);
+        }
+        if (!bConnected) {
+          liveStreamB.connect(`${window.location.origin}/clusters/kuberay/api/v1/topology/stream`);
+        }
       }
     });
   }
 
-  // Auto-connect to live GKE clusters (or ?stream= override)
+  // Auto-connect to both live GKE clusters (with automatic backoff retry on daemon restart)
   const streamParam = new URLSearchParams(window.location.search).get('stream');
   if (streamParam) {
     liveStream.connect(streamParam);
   } else {
-    fetch(`${window.location.origin}/clusters/vanilla/api/v1/healthz`)
-      .then((r) => {
-        if (r.ok) liveStream.connect(`${window.location.origin}/clusters/vanilla/api/v1/topology/stream`);
-      })
-      .catch(() => {});
-    fetch(`${window.location.origin}/clusters/kuberay/api/v1/healthz`)
-      .then((r) => {
-        if (r.ok) liveStreamB.connect(`${window.location.origin}/clusters/kuberay/api/v1/topology/stream`);
-      })
-      .catch(() => {});
+    liveStream.connect(`${window.location.origin}/clusters/vanilla/api/v1/topology/stream`);
+    liveStreamB.connect(`${window.location.origin}/clusters/kuberay/api/v1/topology/stream`);
   }
 
   // 9b. SPEC-10 / TASK-CV-1101 + 1102: Interactive Cluster Onboarding.
@@ -772,7 +770,12 @@ async function bootstrap() {
       const streamUrl = base.endsWith('/api/v1/topology/stream')
         ? base
         : `${base}/api/v1/topology/stream`;
-      const targetSlot = config?.targetSlot ?? (base.includes('kuberay') || base.includes('8082') ? 'b' : 'a');
+      const isSlotB =
+        base.includes('kuberay-kueue') ||
+        base.endsWith('/clusters/kuberay') ||
+        base.includes('/clusters/kuberay/') ||
+        base.includes('8082');
+      const targetSlot = config?.targetSlot ?? (isSlotB ? 'b' : 'a');
       if (targetSlot === 'b') {
         liveStreamB.connect(streamUrl);
       } else {

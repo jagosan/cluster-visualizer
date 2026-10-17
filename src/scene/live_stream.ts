@@ -219,10 +219,13 @@ export class LiveStreamManager {
       };
 
       this.eventSource.onerror = (event: Event) => {
-        // If the connection is closed, attempt to reconnect with backoff
-        if (this.eventSource?.readyState === EventSource.CLOSED) {
-          this.handleReconnect();
+        // Close and schedule reconnect with backoff whenever SSE stream errors
+        // (including Vite 502 proxy errors during backend daemon restarts).
+        if (this.eventSource) {
+          this.eventSource.close();
+          this.eventSource = null;
         }
+        this.handleReconnect();
         // Notify error callback if provided
         if (this.callbacks.onError) {
           this.callbacks.onError(event);
