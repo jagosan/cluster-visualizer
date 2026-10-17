@@ -1120,12 +1120,12 @@ class TopologyController:
             elapsed_surge = time.time() - (self.overwhelm_started_at or time.time())
             if elapsed_surge < 6.0:
                 cur_overwhelm_stage = 1
-            elif elapsed_surge < 11.5:
-                cur_overwhelm_stage = 2
-            elif elapsed_surge < 15.0:
-                cur_overwhelm_stage = 3
             else:
-                cur_overwhelm_stage = 4
+                # Stage 2: worker-2 EK VM has resized in-place (16 -> 48 vCPU) admitting ft02,
+                # while ft03 remains visibly staged on the Kueue Staging Rail (X = -18.0) with
+                # its Cargo Containment Pallet, Gantry Lock, B1 Ghost Node, and Tractor Beams
+                # until the user triggers gang admission (KeyK / 📦 ADMIT GANG).
+                cur_overwhelm_stage = 2
             self.overwhelm_stage = cur_overwhelm_stage
 
         if has_ai_stack:
@@ -1723,6 +1723,24 @@ class TopologyController:
                         total_gpu_requested=4,
                         phase="Admitted",
                     ),
+                    "wl-kueue-z-eval-ft04": KueueWorkloadStatus(
+                        workload_uid="wl-kueue-z-eval-ft04",
+                        workload_name="ray-kueue-ft04 (QUEUED: AWAITING QUOTA)",
+                        namespace="default",
+                        local_queue="llm-inference-queue",
+                        cluster_queue="spot-gpu",
+                        is_admitted=False,
+                        admission_checks=[{
+                            "type": "QuotaCheck",
+                            "status": "False",
+                            "reason": "ComputeClass kueue-spot-burst-cc scaling +1 Node (ek-standard-32)",
+                        }],
+                        pod_uids=[],
+                        total_cpu_requested=16.0,
+                        total_memory_gib_requested=64.0,
+                        total_gpu_requested=4,
+                        phase="Inadmissible",
+                    ),
                 }
             else:
                 self.kueue_workloads = {}
@@ -1807,6 +1825,24 @@ class TopologyController:
                         total_gpu_requested=4,
                         phase="Admissible",
                     )
+                    self.kueue_workloads["wl-kueue-z-eval-ft04"] = KueueWorkloadStatus(
+                        workload_uid="wl-kueue-z-eval-ft04",
+                        workload_name="ray-kueue-ft04 (QUEUED: AWAITING QUOTA)",
+                        namespace="default",
+                        local_queue="llm-inference-queue",
+                        cluster_queue="spot-gpu",
+                        is_admitted=False,
+                        admission_checks=[{
+                            "type": "QuotaCheck",
+                            "status": "False",
+                            "reason": "ComputeClass kueue-spot-burst-cc scaling +1 Node (ek-standard-32)",
+                        }],
+                        pod_uids=[],
+                        total_cpu_requested=16.0,
+                        total_memory_gib_requested=64.0,
+                        total_gpu_requested=4,
+                        phase="Inadmissible",
+                    )
                 else:
                     self.kueue_workloads["wl-kueue-dpo-ft03"] = KueueWorkloadStatus(
                         workload_uid="wl-kueue-dpo-ft03",
@@ -1881,26 +1917,26 @@ class TopologyController:
             elif has_ai_stack and cur_overwhelm_stage in (2, 3):
                 # Stages 2-3: worker-2 EK VM has resized in-place at runtime (16 -> 48 vCPU),
                 # so ft02 is already admitted onto worker-2! Meanwhile ft03 waits in the Kueue
-                # Cargo Pallet (QuotaReserved in Stage 2, Mag-Rail Transit in Stage 3) for worker-3!
+                # Cargo Pallet on the Staging Rail (X = -18.0, Z = 3.2) for worker-3!
                 custom_coords.update({
                     "pod/default/ray-kueue-ft02-head": (1.9, 2.5, -0.6, "Framework_Ray"),
                     "pod/default/ray-kueue-ft02-worker-1": (1.6, 0.85, -1.5, "Pod_Cylinder"),
                     "pod/default/ray-kueue-ft02-worker-2": (3.2, 0.85, -1.5, "Pod_Cylinder"),
-                    "pod/default/ray-kueue-ft03-head": (-10.6, 1.4, -2.8, "Framework_Ray"),
-                    "pod/default/ray-kueue-ft03-worker-1": (-9.8, 1.4, -2.2, "Pod_Cylinder"),
-                    "pod/default/ray-kueue-ft03-worker-2": (-9.0, 1.4, -2.2, "Pod_Cylinder"),
+                    "pod/default/ray-kueue-ft03-head": (-18.9, 1.0, 3.2, "Framework_Ray"),
+                    "pod/default/ray-kueue-ft03-worker-1": (-18.0, 1.0, 3.2, "Pod_Cylinder"),
+                    "pod/default/ray-kueue-ft03-worker-2": (-17.1, 1.0, 3.2, "Pod_Cylinder"),
                 })
             elif has_ai_stack:
                 # Stage 1 on cv-kuberay-kueue (Viewport B): Kueue holds both ft02 & ft03 inside
-                # the left-flank Cargo Containment Pallets (X = -9.8) while worker-2 resizes its EK VM
-                # at runtime and ComputeClass scales out worker-3.
+                # the Staging Rail Cargo Containment Pallets (X = -18.0, Z = 3.2 and -3.2) while
+                # worker-2 resizes its EK VM at runtime and ComputeClass scales out worker-3.
                 custom_coords.update({
-                    "pod/default/ray-kueue-ft02-head": (-10.6, 1.4, 2.0, "Framework_Ray"),
-                    "pod/default/ray-kueue-ft02-worker-1": (-9.8, 1.4, 2.6, "Pod_Cylinder"),
-                    "pod/default/ray-kueue-ft02-worker-2": (-9.0, 1.4, 2.6, "Pod_Cylinder"),
-                    "pod/default/ray-kueue-ft03-head": (-10.6, 1.4, -2.8, "Framework_Ray"),
-                    "pod/default/ray-kueue-ft03-worker-1": (-9.8, 1.4, -2.2, "Pod_Cylinder"),
-                    "pod/default/ray-kueue-ft03-worker-2": (-9.0, 1.4, -2.2, "Pod_Cylinder"),
+                    "pod/default/ray-kueue-ft02-head": (-18.9, 1.0, 3.2, "Framework_Ray"),
+                    "pod/default/ray-kueue-ft02-worker-1": (-18.0, 1.0, 3.2, "Pod_Cylinder"),
+                    "pod/default/ray-kueue-ft02-worker-2": (-17.1, 1.0, 3.2, "Pod_Cylinder"),
+                    "pod/default/ray-kueue-ft03-head": (-18.9, 1.0, -3.2, "Framework_Ray"),
+                    "pod/default/ray-kueue-ft03-worker-1": (-18.0, 1.0, -3.2, "Pod_Cylinder"),
+                    "pod/default/ray-kueue-ft03-worker-2": (-17.1, 1.0, -3.2, "Pod_Cylinder"),
                 })
             else:
                 # On cv-kuberay (Viewport A), there is NO Kueue admission control ->

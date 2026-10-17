@@ -662,7 +662,7 @@ export class KueuePalletManager {
         workload.phase !== 'Admitted' &&
         (workload.workload_uid ?? '').startsWith('wl-kueue-');
       const anchor = isQueuedLive
-        ? new THREE.Vector3(-9.8, 1.5, 2.3 - queuedLiveIdx++ * 4.6)
+        ? new THREE.Vector3(KUEUE_PALLET_RAIL_X, 1.1, 3.2 - queuedLiveIdx++ * 6.4)
         : kueuePalletAnchor(index);
       const record = this.buildPallet(workload, this.hudFromWorkload(workload), anchor);
       this.settleStateForWorkload(record);

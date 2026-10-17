@@ -501,10 +501,10 @@ export class StagingYardManager {
     const startX = -span / 2 + GHOST_CHASSIS_SPACING_X / 2;
     claims.forEach((claim, i) => {
       const isComputeClass =
-        claim.nodepool === 'kueue-spot-burst-cc' ||
+        claim.nodepool?.includes('kueue-spot-burst-cc') ||
         claim.claim_name.toLowerCase().includes('computeclass');
       const x = isComputeClass
-        ? -5.8
+        ? STAGING_YARD_FOCUS_X
         : Math.min(10.0, Math.max(-10.0, startX + i * GHOST_CHASSIS_SPACING_X));
       const dock = new THREE.Vector3(x, GHOST_NODE_Y, 0.0);
       this.upsertGhostChassis(claim.claim_name, dock, claim.is_provisioned === true);

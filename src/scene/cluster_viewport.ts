@@ -499,7 +499,7 @@ export class ClusterViewport {
       const latency = rawLat
         ? { x: Number(rawLat.x ?? 0), y: Number(rawLat.y ?? 0), z: Number(rawLat.z ?? 0) }
         : {
-            x: arch.x * 1.08,
+            x: arch.x < -8.0 ? -9.2 + (arch.x + 18.0) * 0.85 : arch.x * 1.08,
             y: 0.65,
             z: schematicZ,
           };
