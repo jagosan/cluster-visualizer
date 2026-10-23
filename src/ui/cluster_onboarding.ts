@@ -504,12 +504,12 @@ export class ClusterOnboardingModal {
       })();
     });
 
-    // Quick-connect presets for live GKE clusters in demo-fleet
+    // Quick-connect presets for live GKE clusters (demo)
     const quickBar = document.createElement('div');
     quickBar.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 12px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.3);border-radius:8px;';
     const quickLabel = document.createElement('span');
     quickLabel.style.cssText = 'font-size:11px;font-weight:600;color:#10b981;text-transform:uppercase;letter-spacing:0.05em;';
-    quickLabel.textContent = '⚡ GKE Live Clusters (demo-fleet):';
+    quickLabel.textContent = '⚡ GKE Live Clusters (demo):';
     quickBar.appendChild(quickLabel);
 
     const btnVanilla = this.btn('🟢 Connect clustervis-vanilla → Viewport A', 'Stream clustervis-vanilla (us-central1-a) into Viewport A');

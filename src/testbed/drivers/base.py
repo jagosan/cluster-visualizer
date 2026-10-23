@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional
 from ..models import ClusterSpec, ClusterStatus
 
 class ClusterDriver(ABC):
-    def __init__(self, host: str = "cluster-host", mock_mode: bool = False):
+    def __init__(self, host: str = "localhost", mock_mode: bool = False):
         self.host = host
         self.mock_mode = mock_mode
 

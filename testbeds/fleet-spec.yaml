@@ -1,6 +1,6 @@
 version: "clustervis.io/v1alpha1"
 fleet_name: "homelab-canary-matrix"
-host: "cluster-host"
+host: "localhost"
 clusters:
   - name: "stage-regular"
     driver: "k3d"

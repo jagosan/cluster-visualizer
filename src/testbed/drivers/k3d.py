@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 class K3dDriver(ClusterDriver):
-    def __init__(self, host: str = "cluster-host", mock_mode: bool = False, tailscale_ip: str = "127.0.0.1"):
+    def __init__(self, host: str = "localhost", mock_mode: bool = False, tailscale_ip: str = "127.0.0.1"):
         self.host = host
         self.mock_mode = mock_mode
         self.tailscale_ip = tailscale_ip

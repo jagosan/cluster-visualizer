@@ -30,7 +30,7 @@ class TestTestbedSubsystem(unittest.TestCase):
         self.assertTrue(self.fleet_yaml_path.exists(), "testbeds/fleet-spec.yaml must exist")
         fleet = load_fleet_spec(self.fleet_yaml_path)
         self.assertEqual(fleet.fleet_name, "homelab-canary-matrix")
-        self.assertEqual(fleet.host, "cluster-host")
+        self.assertEqual(fleet.host, "localhost")
         self.assertGreaterEqual(len(fleet.clusters), 3)
 
         cluster_stage = fleet.get_cluster("stage-regular")
@@ -54,7 +54,7 @@ class TestTestbedSubsystem(unittest.TestCase):
 
     def test_k3d_driver_mock_lifecycle(self):
         """Verify K3dDriver create, status, kubeconfig, and delete lifecycle in mock mode."""
-        driver = K3dDriver(host="cluster-host", mock_mode=True)
+        driver = K3dDriver(host="localhost", mock_mode=True)
         spec = ClusterSpec(
             name="test-cluster-1",
             driver="k3d",

@@ -4,7 +4,7 @@
   "summary": {
     "identical_nodes": 17,
     "version_skew_nodes": 1,
-    "missing_in_target": 0,
+    "missing_in_target": 1,
     "added_in_target": 13
   },
   "nodes": [
@@ -375,6 +375,19 @@
       "target_digest": "sha256:7031c1b283388d2c2e09b57badb803c05ebed362dc88d84b480cc47f72a21097",
       "diff_details": [
         "Absent in cv-kuberay, present in cv-kuberay-kueue"
+      ]
+    },
+    {
+      "node_id": "pod/default/legacy-collector-0",
+      "status": "missing",
+      "source_version": "v1.2.0",
+      "target_version": null,
+      "source_image": "registry.k8s.io/metrics/legacy-collector:v1.2.0",
+      "target_image": null,
+      "source_digest": "sha256:4a5b6c7d8e9f0123456789abcdef0123456789abcdef0123456789abcdef0123",
+      "target_digest": null,
+      "diff_details": [
+        "Present in cv-kuberay, absent in cv-kuberay-kueue"
       ]
     }
   ],

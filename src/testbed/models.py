@@ -39,7 +39,7 @@ class ClusterSpec(BaseModel):
 class FleetSpec(BaseModel):
     version: str = Field(default="clustervis.io/v1alpha1")
     fleet_name: str = "homelab-canary-matrix"
-    host: str = "cluster-host"
+    host: str = "localhost"
     network_name: Optional[str] = None
     clusters: List[ClusterSpec] = Field(default_factory=list)
     metadata: Dict[str, Any] = Field(default_factory=dict)

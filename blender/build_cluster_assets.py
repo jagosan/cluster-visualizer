@@ -1,4 +1,4 @@
-#!~/.hermes/toolchains/bpy_env/bin/python
+#!/usr/bin/env python3
 """
 TASK-CV-103: Headless Blender 3D procedural asset generator for cluster-vis.
 

@@ -592,6 +592,23 @@
       },
       "pod_geometry": null,
       "autoscaling": null
+    },
+    {
+      "id": "pod/default/legacy-collector-0",
+      "name": "legacy-collector-0",
+      "namespace": "default",
+      "kind": "Pod",
+      "layer": "workload",
+      "tier": "workload",
+      "version": "v1.2.0",
+      "image": "registry.k8s.io/metrics/legacy-collector:v1.2.0",
+      "digest": "sha256:4a5b6c7d8e9f0123456789abcdef0123456789abcdef0123456789abcdef0123",
+      "status": "Running",
+      "position": [
+        -6.0,
+        4.0,
+        2.0
+      ]
     }
   ],
   "edges": [

@@ -6,8 +6,24 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Vite](https://img.shields.io/badge/Vite-7.1-646CFF?logo=vite&logoColor=white)](https://vite.dev/)
 [![Helm](https://img.shields.io/badge/Helm-v3-0F1689?logo=helm&logoColor=white)](https://helm.sh/)
+[![Interactive Demo](https://img.shields.io/badge/🎮%20Interactive%20Demo-Launch%20Simulation-brightgreen?style=for-the-badge&logo=webgl)](https://jagosan.github.io/cluster-visualizer/)
 
 **Cluster Visualizer** (`cluster-vis`) is an interactive 3D Kubernetes cluster comparison, architectural topology, and real-time data-flow visualization engine. Built with Three.js, TypeScript, and Python, it renders multi-cluster topologies in interactive 3D space, highlights semantic version skews down to container image SHA256 digests, visualizes distributed compute frameworks (Ray, Spark) and stateful databases (PostgreSQL HA, Redis), and streams live cluster state changes via lightweight in-cluster operators.
+
+---
+
+## 🎮 Live Interactive Demo
+
+Experience Cluster Visualizer directly in your browser with zero installation or live cluster requirements:
+
+👉 **[Launch Interactive 3D Demo](https://jagosan.github.io/cluster-visualizer/)**
+
+The interactive demo runs entirely client-side using Three.js WebGL and pre-packaged simulation models:
+- **3D Spatial Navigation:** Click and drag to orbit, right-click to pan, scroll to zoom. Toggle `🔗 Link Cameras` in the topbar to synchronize movement across split viewports.
+- **Side-by-Side Architectural Diff:** Inspect Cluster Alpha vs. Cluster Beta. Amber halos highlight version skews and image digest drift, green represents newly added workloads, and red wireframes indicate missing resources.
+- **Autoscaling Traffic Simulation Test Harness (`KeyT` / `⚡ TRAFFIC HARNESS`):** Open the dockable traffic deck to inject step spikes, sinusoidal waves, or chaos surges. Observe real-time $M/M/c/K$ queuing physics, particle conduit flow speed/color changes, and pre-warmed vs. cold provisioning latency.
+- **Instant Sample Catalog:** Click `➕ ADD CLUSTER` or use sample presets to switch between KubeRay AI clusters, Google Online Boutique microservices, and upstream Kubernetes control planes.
+- **Time-Travel Playback:** Scrub the bottom timeline bar to inspect deployment rollout keyframes and historical topology mutations.
 
 ---
 
@@ -53,8 +69,8 @@ Below is a live rendering of Cluster Visualizer performing a side-by-side compar
 
 ### 1. Install & Launch Frontend
 ```bash
-git clone https://github.com/jagosan/cluster-vis.git
-cd cluster-vis
+git clone https://github.com/jagosan/cluster-visualizer.git
+cd cluster-visualizer
 npm install
 npm run dev
 ```
