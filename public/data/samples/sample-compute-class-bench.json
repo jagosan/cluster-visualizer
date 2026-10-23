@@ -546,7 +546,7 @@
       "name": "bench-frontend-scaleup-6d7c8f9a-a1x",
       "namespace": "bench-scaleup",
       "version": "v1.0.0",
-      "image": "ghcr.io/jagosan/bench-frontend:v1.0.0",
+      "image": "ghcr.io/example/bench-frontend:v1.0.0",
       "digest": null,
       "status": "Healthy",
       "metrics": {
@@ -587,7 +587,7 @@
       "name": "bench-frontend-scaleup-6d7c8f9a-b2y",
       "namespace": "bench-scaleup",
       "version": "v1.0.0",
-      "image": "ghcr.io/jagosan/bench-frontend:v1.0.0",
+      "image": "ghcr.io/example/bench-frontend:v1.0.0",
       "digest": null,
       "status": "Healthy",
       "metrics": {
@@ -628,7 +628,7 @@
       "name": "bench-frontend-scaleup-6d7c8f9a-c3z",
       "namespace": "bench-scaleup",
       "version": "v1.0.0",
-      "image": "ghcr.io/jagosan/bench-frontend:v1.0.0",
+      "image": "ghcr.io/example/bench-frontend:v1.0.0",
       "digest": null,
       "status": "Healthy",
       "metrics": {
@@ -669,7 +669,7 @@
       "name": "bench-frontend-scaleup-6d7c8f9a-d4w",
       "namespace": "bench-scaleup",
       "version": "v1.0.0",
-      "image": "ghcr.io/jagosan/bench-frontend:v1.0.0",
+      "image": "ghcr.io/example/bench-frontend:v1.0.0",
       "digest": null,
       "status": "Healthy",
       "metrics": {
@@ -710,7 +710,7 @@
       "name": "bench-inference-perf-8b8d9f7c-pe4rf",
       "namespace": "bench-scaleup",
       "version": "v1.0.0",
-      "image": "ghcr.io/jagosan/bench-inference:v1.0.0",
+      "image": "ghcr.io/example/bench-inference:v1.0.0",
       "digest": null,
       "status": "Healthy",
       "metrics": {
@@ -748,7 +748,7 @@
       "name": "bench-frontend-static-abcdb123-e5p",
       "namespace": "bench-static",
       "version": "v1.0.0",
-      "image": "ghcr.io/jagosan/bench-frontend:v1.0.0",
+      "image": "ghcr.io/example/bench-frontend:v1.0.0",
       "digest": null,
       "status": "Pending",
       "metrics": {
@@ -783,7 +783,7 @@
       "name": "bench-frontend-static-abcdb123-f6q",
       "namespace": "bench-static",
       "version": "v1.0.0",
-      "image": "ghcr.io/jagosan/bench-frontend:v1.0.0",
+      "image": "ghcr.io/example/bench-frontend:v1.0.0",
       "digest": null,
       "status": "Pending",
       "metrics": {
@@ -818,7 +818,7 @@
       "name": "bench-frontend-static-abcdb123-g7r",
       "namespace": "bench-static",
       "version": "v1.0.0",
-      "image": "ghcr.io/jagosan/bench-frontend:v1.0.0",
+      "image": "ghcr.io/example/bench-frontend:v1.0.0",
       "digest": null,
       "status": "Pending",
       "metrics": {
@@ -853,7 +853,7 @@
       "name": "bench-frontend-static-abcdb123-h8s",
       "namespace": "bench-static",
       "version": "v1.0.0",
-      "image": "ghcr.io/jagosan/bench-frontend:v1.0.0",
+      "image": "ghcr.io/example/bench-frontend:v1.0.0",
       "digest": null,
       "status": "Pending",
       "metrics": {

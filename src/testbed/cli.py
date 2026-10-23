@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import os
 import sys
 from pathlib import Path
 
@@ -239,11 +240,15 @@ def main(argv=None) -> int:
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
     
     # Allow subcommands directly
+    default_config = os.environ.get(
+        "CLUSTERVIS_FLEET_SPEC",
+        "testbeds/fleet-spec.local.yaml" if Path("testbeds/fleet-spec.local.yaml").exists() else "testbeds/fleet-spec.yaml"
+    )
     common_parser = argparse.ArgumentParser(add_help=False)
     common_parser.add_argument(
         "--config",
         type=str,
-        default="testbeds/fleet-spec.yaml",
+        default=default_config,
         help="Path to the fleet specification file"
     )
     common_parser.add_argument(

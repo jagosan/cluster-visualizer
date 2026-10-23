@@ -5,5 +5,9 @@ dist/
 .DS_Store
 tmp/
 .hermes/
+.env*
+!.env.example
+*.local.yaml
+*.local.yml
 __pycache__/
 *.pyc

@@ -4,16 +4,28 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [[ -f "${SCRIPT_DIR}/.env.local" ]]; then
+  set -a
+  source "${SCRIPT_DIR}/.env.local"
+  set +a
+elif [[ -f "${SCRIPT_DIR}/.env" ]]; then
+  set -a
+  source "${SCRIPT_DIR}/.env"
+  set +a
+fi
 
-echo "▶ Resetting demo workloads on cv-kuberay and cv-kuberay-kueue..."
+CTX_A="${CLUSTER_A_CONTEXT:-cv-kuberay}"
+CTX_B="${CLUSTER_B_CONTEXT:-cv-kuberay-kueue}"
+
+echo "▶ Resetting demo workloads on ${CTX_A} and ${CTX_B}..."
 (
-  kubectl --context=cv-kuberay delete --ignore-not-found \
+  kubectl --context="${CTX_A}" delete --ignore-not-found \
     -f "${SCRIPT_DIR}/ray-overwhelm-burst.yaml" \
     -f "${SCRIPT_DIR}/ray-kueue-ft01.yaml" \
     -f "${SCRIPT_DIR}/ray-serving01.yaml"
 ) &
 (
-  kubectl --context=cv-kuberay-kueue delete --ignore-not-found \
+  kubectl --context="${CTX_B}" delete --ignore-not-found \
     -f "${SCRIPT_DIR}/ray-overwhelm-burst.yaml" \
     -f "${SCRIPT_DIR}/ray-kueue-ft01.yaml" \
     -f "${SCRIPT_DIR}/ray-serving01.yaml"

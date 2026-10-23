@@ -118,7 +118,7 @@ export class ClusterOnboardingModal {
     const safeNs = namespace.trim() || 'clustervis-system';
     return [
       `# Option A: Direct Helm OCI install → ${safeName}`,
-      'helm upgrade --install clustervis oci://ghcr.io/jagosan/charts/clustervis \\',
+      'helm upgrade --install clustervis oci://ghcr.io/example/charts/clustervis \\',
       `  --namespace ${safeNs} \\`,
       '  --create-namespace \\',
       '  --set auth.type=token \\',

@@ -4,6 +4,19 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [[ -f "${SCRIPT_DIR}/.env.local" ]]; then
+  set -a
+  source "${SCRIPT_DIR}/.env.local"
+  set +a
+elif [[ -f "${SCRIPT_DIR}/.env" ]]; then
+  set -a
+  source "${SCRIPT_DIR}/.env"
+  set +a
+fi
+
+CTX_A="${CLUSTER_A_CONTEXT:-cv-kuberay}"
+CTX_B="${CLUSTER_B_CONTEXT:-cv-kuberay-kueue}"
+
 ACTION="${1:-apply}"
 if [[ "$ACTION" == "stop" || "$ACTION" == "down" || "$ACTION" == "rm" ]]; then
   ACTION="delete"
@@ -14,8 +27,8 @@ if [[ "$ACTION" == "delete" ]]; then
   EXTRA_ARGS=(--ignore-not-found)
 fi
 
-echo "▶ Running 'kubectl ${ACTION}' for ray-kueue-ft01.yaml on cv-kuberay and cv-kuberay-kueue..."
-kubectl --context=cv-kuberay "$ACTION" "${EXTRA_ARGS[@]}" -f "${SCRIPT_DIR}/ray-kueue-ft01.yaml" &
-kubectl --context=cv-kuberay-kueue "$ACTION" "${EXTRA_ARGS[@]}" -f "${SCRIPT_DIR}/ray-kueue-ft01.yaml" &
+echo "▶ Running 'kubectl ${ACTION}' for ray-kueue-ft01.yaml on ${CTX_A} and ${CTX_B}..."
+kubectl --context="${CTX_A}" "$ACTION" "${EXTRA_ARGS[@]}" -f "${SCRIPT_DIR}/ray-kueue-ft01.yaml" &
+kubectl --context="${CTX_B}" "$ACTION" "${EXTRA_ARGS[@]}" -f "${SCRIPT_DIR}/ray-kueue-ft01.yaml" &
 wait
 echo "✓ Done (ray-kueue-ft01.yaml -> cv-kuberay & cv-kuberay-kueue)."

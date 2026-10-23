@@ -14,11 +14,50 @@ from ..models import ClusterSpec, ClusterStatus
 logger = logging.getLogger(__name__)
 
 
+def _load_env_defaults() -> None:
+    """Load default environment parameters from .env or .env.local if present."""
+    base_dir = Path(__file__).resolve().parent.parent.parent.parent
+    for env_name in (".env.local", ".env"):
+        env_file = base_dir / env_name
+        if env_file.exists():
+            try:
+                for line in env_file.read_text(encoding="utf-8").splitlines():
+                    line = line.strip()
+                    if not line or line.startswith("#") or "=" not in line:
+                        continue
+                    k, v = line.split("=", 1)
+                    k, v = k.strip(), v.strip().strip('"').strip("'")
+                    if k and k not in os.environ:
+                        os.environ[k] = v
+            except Exception:
+                pass
+
+
+_load_env_defaults()
+
+
 class K3dDriver(ClusterDriver):
-    def __init__(self, host: str = "localhost", mock_mode: bool = False, tailscale_ip: str = "127.0.0.1"):
+    def __init__(
+        self,
+        host: Optional[str] = None,
+        mock_mode: bool = False,
+        tailscale_ip: Optional[str] = None,
+        remote_bin_dir: Optional[str] = None,
+    ):
+        if host is None:
+            host = os.environ.get("CLUSTERVIS_TESTBED_HOST", "localhost")
+        if tailscale_ip is None:
+            if host in ("localhost", "127.0.0.1"):
+                tailscale_ip = "127.0.0.1"
+            else:
+                tailscale_ip = os.environ.get("CLUSTERVIS_TESTBED_IP") or os.environ.get("CLUSTERVIS_TAILSCALE_IP") or "127.0.0.1"
+        if remote_bin_dir is None:
+            remote_bin_dir = os.environ.get("CLUSTERVIS_REMOTE_BIN_DIR", "~/.local/bin")
+
         self.host = host
         self.mock_mode = mock_mode
         self.tailscale_ip = tailscale_ip
+        self.remote_bin_dir = remote_bin_dir
         self._mock_clusters: Dict[str, Dict[str, Any]] = {}
 
     def create_cluster(self, spec: ClusterSpec) -> bool:
@@ -237,7 +276,7 @@ users:
         if self.host not in ("localhost", "127.0.0.1") and cmd_list and cmd_list[0] in ("k3d", "docker"):
             import shlex
             cmd_str = " ".join(shlex.quote(c) for c in cmd_list)
-            remote_cmd = f"export PATH=$PATH:~/.local/bin; {cmd_str}"
+            remote_cmd = f"export PATH=$PATH:{self.remote_bin_dir}; {cmd_str}"
             run_cmd = ["ssh", "-o", "ConnectTimeout=15", "-o", "BatchMode=yes", self.host, remote_cmd]
         else:
             run_cmd = cmd_list

@@ -15,34 +15,47 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [[ -f "${SCRIPT_DIR}/.env.local" ]]; then
+  set -a
+  source "${SCRIPT_DIR}/.env.local"
+  set +a
+elif [[ -f "${SCRIPT_DIR}/.env" ]]; then
+  set -a
+  source "${SCRIPT_DIR}/.env"
+  set +a
+fi
+
+CTX_A="${CLUSTER_A_CONTEXT:-cv-kuberay}"
+CTX_B="${CLUSTER_B_CONTEXT:-cv-kuberay-kueue}"
+
 ACTION="${1:-apply}"
 if [[ "$ACTION" == "stop" || "$ACTION" == "down" || "$ACTION" == "rm" || "$ACTION" == "clear" ]]; then
   ACTION="delete"
 fi
 
 if [[ "$ACTION" == "delete" ]]; then
-  echo "▶ Clearing overwhelm burst (ray-overwhelm-burst.yaml) from cv-kuberay and cv-kuberay-kueue..."
-  kubectl --context=cv-kuberay delete --ignore-not-found -f "${SCRIPT_DIR}/ray-overwhelm-burst.yaml" &
-  kubectl --context=cv-kuberay-kueue delete --ignore-not-found -f "${SCRIPT_DIR}/ray-overwhelm-burst.yaml" &
+  echo "▶ Clearing overwhelm burst (ray-overwhelm-burst.yaml) from ${CTX_A} and ${CTX_B}..."
+  kubectl --context="${CTX_A}" delete --ignore-not-found -f "${SCRIPT_DIR}/ray-overwhelm-burst.yaml" &
+  kubectl --context="${CTX_B}" delete --ignore-not-found -f "${SCRIPT_DIR}/ray-overwhelm-burst.yaml" &
   wait
   echo "✓ Overwhelm burst cleared (worker-3 scaled back down to 2-node baseline)."
 else
   SURGE_TS="$(date +%s)"
-  echo "▶ Launching Overwhelm Surge + ComputeClass Autoscaling (ts=${SURGE_TS}) on cv-kuberay and cv-kuberay-kueue..."
+  echo "▶ Launching Overwhelm Surge + ComputeClass Autoscaling (ts=${SURGE_TS}) on ${CTX_A} and ${CTX_B}..."
   (
-    kubectl --context=cv-kuberay apply -f "${SCRIPT_DIR}/ray-serving01.yaml"
-    kubectl --context=cv-kuberay apply -f "${SCRIPT_DIR}/ray-kueue-ft01.yaml"
-    kubectl --context=cv-kuberay apply -f "${SCRIPT_DIR}/ray-overwhelm-burst.yaml"
+    kubectl --context="${CTX_A}" apply -f "${SCRIPT_DIR}/ray-serving01.yaml"
+    kubectl --context="${CTX_A}" apply -f "${SCRIPT_DIR}/ray-kueue-ft01.yaml"
+    kubectl --context="${CTX_A}" apply -f "${SCRIPT_DIR}/ray-overwhelm-burst.yaml"
   ) &
   (
-    kubectl --context=cv-kuberay-kueue apply -f "${SCRIPT_DIR}/kueue-spot-burst-cc.yaml" >/dev/null 2>&1 || true
-    kubectl --context=cv-kuberay-kueue apply -f "${SCRIPT_DIR}/kueue-queues.yaml" >/dev/null 2>&1 || true
-    kubectl --context=cv-kuberay-kueue apply -f "${SCRIPT_DIR}/ray-serving01.yaml"
-    kubectl --context=cv-kuberay-kueue apply -f "${SCRIPT_DIR}/ray-kueue-ft01.yaml"
-    kubectl --context=cv-kuberay-kueue delete job ray-kueue-ft02-job ray-kueue-ft03-job --ignore-not-found >/dev/null 2>&1 || true
-    kubectl --context=cv-kuberay-kueue apply -f "${SCRIPT_DIR}/ray-overwhelm-burst.yaml"
-    kubectl --context=cv-kuberay-kueue annotate pods -l app=ray-traffic-surge "clustervis.io/surge-ts=${SURGE_TS}" --overwrite >/dev/null 2>&1 || true
-    kubectl --context=cv-kuberay-kueue annotate pods -l app=ray-kueue-ft02-head "clustervis.io/surge-ts=${SURGE_TS}" --overwrite >/dev/null 2>&1 || true
+    kubectl --context="${CTX_B}" apply -f "${SCRIPT_DIR}/kueue-spot-burst-cc.yaml" >/dev/null 2>&1 || true
+    kubectl --context="${CTX_B}" apply -f "${SCRIPT_DIR}/kueue-queues.yaml" >/dev/null 2>&1 || true
+    kubectl --context="${CTX_B}" apply -f "${SCRIPT_DIR}/ray-serving01.yaml"
+    kubectl --context="${CTX_B}" apply -f "${SCRIPT_DIR}/ray-kueue-ft01.yaml"
+    kubectl --context="${CTX_B}" delete job ray-kueue-ft02-job ray-kueue-ft03-job --ignore-not-found >/dev/null 2>&1 || true
+    kubectl --context="${CTX_B}" apply -f "${SCRIPT_DIR}/ray-overwhelm-burst.yaml"
+    kubectl --context="${CTX_B}" annotate pods -l app=ray-traffic-surge "clustervis.io/surge-ts=${SURGE_TS}" --overwrite >/dev/null 2>&1 || true
+    kubectl --context="${CTX_B}" annotate pods -l app=ray-kueue-ft02-head "clustervis.io/surge-ts=${SURGE_TS}" --overwrite >/dev/null 2>&1 || true
   ) &
   wait
   echo "✓ Overwhelm Surge active on both clusters!"
